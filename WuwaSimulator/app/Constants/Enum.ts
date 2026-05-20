@@ -14,8 +14,19 @@ export enum Side {
 export enum StatsType {
     AtkP = "Atk%",       // พลังโจมตี %
     FlatAtk = "FlatAtk", // พลังโจมตี Raw
-    CR = "Crit rate",           // อัตราคริ
-    CD = "Crit Dmg"            // ความแรงคริ
+    Hp = "Hp%",   
+    FlatHp = "FlatHp", 
+    DefP = "Def%",       
+    FlatDef = "FlatDef", 
+    CR = "Crit rate",           // อัตราคริ   
+    CD = "Crit Dmg",            // ความแรงคริ
+    Dmg = "Dmg Bonus",
+    Amp = "Amplify",
+    Sp = "Speacial",
+    DefRed = "Def Reduction",
+    Respen = "Res Penetration",
+    DmgRed = "Damage Reduction",
+    ElemRed = "Elemental Reduction",
 }
 
 export enum ActionType {
