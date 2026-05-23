@@ -1,4 +1,4 @@
-import { IndexedPriorityQueue } from "../Utils/IndexedPriorityQueue"; // เปลี่ยน path ให้ตรงกับไฟล์ของคุณ
+import { IndexedPriorityQueue } from "../Utils/indexedPriorityQueue"; // เปลี่ยน path ให้ตรงกับไฟล์ของคุณ
 
 // 1. จำลองข้อมูล Unit ในเกม
 interface BattleUnit {
