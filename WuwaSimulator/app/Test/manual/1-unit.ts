@@ -1,5 +1,5 @@
-import { Unit } from "../Models/Unit";
-import { StatsType, ActionType, ElementType, UnitStatus } from "../Constants/Enum";
+import { Unit } from "../../Models/Unit";
+import { StatsType, ActionType, ElementType, UnitStatus } from "../../Constants/Enum";
 
 function runUnitTests() {
     console.log("--- Starting Unit System Test ---");

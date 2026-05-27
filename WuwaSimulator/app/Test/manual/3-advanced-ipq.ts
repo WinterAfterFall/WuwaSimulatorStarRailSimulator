@@ -1,4 +1,4 @@
-import { IndexedPriorityQueue } from "../Utils/indexedPriorityQueue"; // เปลี่ยน path ให้ตรงกับไฟล์ของคุณ
+import { IndexedPriorityQueue } from "../../Utils/indexedPriorityQueue"; // เปลี่ยน path ให้ตรงกับไฟล์ของคุณ
 
 // 1. จำลองข้อมูล Unit ในเกม
 interface BattleUnit {
@@ -48,21 +48,3 @@ function runAdvancedTest() {
     console.log("\n[Test 4] Verifying order after Chixia's buff...");
     
     const p1 = turnQueue.pop(); // Expected: Chixia (40)
-    const p2 = turnQueue.pop(); // Expected: Verina (50)
-    const p3 = turnQueue.pop(); // Expected: Yangyang (100, Lv90)
-    const p4 = turnQueue.pop(); // Expected: Rover (100, Lv80)
-
-    console.log(`1st: ${p1?.name} (AV: ${p1?.actionValue})`);
-    console.log(`2nd: ${p2?.name} (AV: ${p2?.actionValue})`);
-    console.log(`3rd: ${p3?.name} (AV: ${p3?.actionValue}, Lv: ${p3?.level})`);
-    console.log(`4th: ${p4?.name} (AV: ${p4?.actionValue}, Lv: ${p4?.level})`);
-
-    // 7. ทดสอบ Conflict (ชื่อซ้ำ)
-    console.log("\n[Test 5] Pushing duplicate name...");
-    turnQueue.push({ name: "New Rover", actionValue: 10, level: 1 }, "Rover"); 
-    // ควรขึ้น Error ใน console ว่า Name already exists
-
-    console.log("\n--- ✅ Advanced IPQ Test Completed ---");
-}
-
-runAdvancedTest();

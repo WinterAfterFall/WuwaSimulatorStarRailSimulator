@@ -1,5 +1,5 @@
-// queue.test.ts
-import { Queue } from "../Utils/queue";
+// queue manual test
+import { Queue } from "../../Utils/queue";
 
 // สร้างฟังก์ชันช่วยเช็คค่า (แบบง่ายๆ แทน expect)
 function assert(condition: boolean, message: string) {

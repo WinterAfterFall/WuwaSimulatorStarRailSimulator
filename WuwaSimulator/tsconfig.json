@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "types": ["bun"],
+    "types": ["jest", "bun"],
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "noEmit": true,
