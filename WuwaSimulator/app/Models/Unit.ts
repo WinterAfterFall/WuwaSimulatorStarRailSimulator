@@ -20,77 +20,84 @@ export class Unit {
         }
     }
 
-    // --- Type Guards (ปรับปรุงเพื่อรองรับ String Enum) ---
-    private isElementType(value: any): value is ElementType {
-        return Object.values(ElementType).includes(value);
-    }
-
     private generateKey(st: StatsType, atOrEt?: ActionType | ElementType, at?: ActionType): string {
-        // 1. กรณีรับแค่ Stat อย่างเดียว -> "AtkP"
+        // 1. กรณีรับแค่ Stat อย่างเดียว -> "Atk%"
         if (atOrEt === undefined) {
             return st;
         }
 
-        // 2. กรณีรับ 2 พารามิเตอร์ (แยกว่าตัวที่สองคือ Element หรือ Action)
+        // 2. กรณีรับ Stat + Element หรือ Stat + Action -> "Dmg Bonus-Glacio" หรือ "Atk%-BA"
         if (at === undefined) {
-            if (this.isElementType(atOrEt)) {
-                // เป็น Element -> "AtkP-Glacio-None" (ใช้ Enum.None แทนเลข 0)
-                return `${st}-${atOrEt}-${ActionType.None}`;
-            } else {
-                // เป็น Action -> "AtkP-None-BA"
-                return `${st}-${ElementType.None}-${atOrEt}`;
-            }
+            return `${st}-${atOrEt}`;
         }
 
-        // 3. กรณีรับครบ 3 ตัว (Stat-Element-Action) -> "AtkP-Glacio-BA"
+        // 3. กรณีรับครบ 3 ตัว (Stat-Element-Action) -> "Dmg Bonus-Glacio-BA"
         return `${st}-${atOrEt}-${at}`;
+    }
+
+    // --- Lifecycle helpers ---
+    public isAlive(): boolean {
+        return this.status === UnitStatus.Alive;
+    }
+
+    public setDead(): void {
+        this.status = UnitStatus.Death;
     }
 
     // --- Get Stats ---
     public getStats(st: StatsType): number;
     public getStats(st: StatsType, at: ActionType): number;
     public getStats(st: StatsType, et: ElementType, at: ActionType): number;
-    public getStats(st: StatsType, arg2?: any, arg3?: any): number {
+    public getStats(st: StatsType, arg2?: ActionType | ElementType, arg3?: ActionType): number {
         const key = this.generateKey(st, arg2, arg3);
-        return this.stats.get(key) || 0;
+        return this.stats.get(key) ?? 0;
     }
 
     // --- Set Stat ---
     public setStat(st: StatsType, value: number): void;
     public setStat(st: StatsType, at: ActionType, value: number): void;
     public setStat(st: StatsType, et: ElementType, at: ActionType, value: number): void;
-    public setStat(st: StatsType, arg2: any, arg3?: any, arg4?: any): void {
+    public setStat(st: StatsType, arg2: ActionType | ElementType | number, arg3?: ActionType | number, arg4?: number): void {
         let key: string;
         let val: number;
 
         if (arg3 === undefined && arg4 === undefined) {
             key = this.generateKey(st);
-            val = arg2;
+            val = arg2 as number;
         } else if (arg4 === undefined) {
-            key = this.generateKey(st, arg2);
-            val = arg3;
+            key = this.generateKey(st, arg2 as ActionType | ElementType);
+            val = arg3 as number;
         } else {
-            key = this.generateKey(st, arg2, arg3);
+            key = this.generateKey(st, arg2 as ElementType, arg3 as ActionType);
             val = arg4;
         }
 
-        if (val !== undefined) this.stats.set(key, val);
+        if (val === undefined) throw new Error(`setStat: value is undefined for key "${key}"`);
+        this.stats.set(key, val);
     }
 
     // --- Add Stat ---
     public addStat(st: StatsType, value: number): void;
     public addStat(st: StatsType, at: ActionType, value: number): void;
     public addStat(st: StatsType, et: ElementType, at: ActionType, value: number): void;
-    public addStat(st: StatsType, arg2: any, arg3?: any, arg4?: any): void {
+    public addStat(st: StatsType, arg2: ActionType | ElementType | number, arg3?: ActionType | number, arg4?: number): void {
         if (arg3 === undefined) {
             // แบบ 1: (st, value)
-            this.setStat(st, this.getStats(st) + arg2);
+            this.setStat(st, this.getStats(st) + (arg2 as number));
         } else if (arg4 === undefined) {
-            // แบบ 2: (st, atOrEt, value)
-            this.setStat(st, arg2, this.getStats(st, arg2) + arg3);
+            // แบบ 2: (st, at, value)
+            this.setStat(st, arg2 as ActionType, this.getStats(st, arg2 as ActionType) + (arg3 as number));
         } else {
             // แบบ 3: (st, et, at, value)
-            this.setStat(st, arg2, arg3, this.getStats(st, arg2, arg3) + arg4);
+            this.setStat(st, arg2 as ElementType, arg3 as ActionType, this.getStats(st, arg2 as ElementType, arg3 as ActionType) + arg4);
         }
+    }
+
+    // --- Has Stat ---
+    public hasStat(st: StatsType): boolean;
+    public hasStat(st: StatsType, at: ActionType): boolean;
+    public hasStat(st: StatsType, et: ElementType, at: ActionType): boolean;
+    public hasStat(st: StatsType, arg2?: ActionType | ElementType, arg3?: ActionType): boolean {
+        return this.stats.has(this.generateKey(st, arg2, arg3));
     }
 }

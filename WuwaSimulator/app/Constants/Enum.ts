@@ -22,7 +22,7 @@ export enum StatsType {
     CD = "Crit Dmg",            // ความแรงคริ
     Dmg = "Dmg Bonus",
     Amp = "Amplify",
-    Sp = "Speacial",
+    Sp = "Special",
     DefRed = "Def Reduction",
     Respen = "Res Penetration",
     DmgRed = "Damage Reduction",

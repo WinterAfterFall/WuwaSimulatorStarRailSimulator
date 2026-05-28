@@ -14,7 +14,7 @@ export class AllyUnit extends Unit {
     public baseDef : number = 0;
 
     public currentHP : number = 0;
-    public currentSheild : number = 0; 
+    public currentShield : number = 0;
 
     public stacks: Map<string, number> = new Map();
     public buffNote: Map<string, number> = new Map();
