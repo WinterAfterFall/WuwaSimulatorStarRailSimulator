@@ -2,6 +2,18 @@ import { Damage } from "../../Models/Combat/Damage";
 import { AllyUnit } from "../../Models/AllyUnit";
 import { StatsType, ActionType, ElementType } from "../../Constants/Enum";
 
+export function calculateDamage(damage: Damage, target: AllyUnit): number {
+    const base      = getBaseDamage(damage);
+    const dmgBonus  = getDmgBonus(damage);
+    const crit      = getCritMultiplier(damage);
+    const amp       = 1 + damage.attacker.getStats(StatsType.Amp);
+    const def       = getDefMultiplier(damage.attacker, target);
+    const res       = getResMultiplier(damage, target);
+    const reduction = getDmgReduction(target);
+
+    return base * dmgBonus * crit * amp * def * res * reduction;
+}
+
 function getBaseDamage(damage: Damage): number {
     const attacker = damage.attacker;
     const m = damage.multipliers;
@@ -55,16 +67,4 @@ function getResMultiplier(damage: Damage, target: AllyUnit): number {
 
 function getDmgReduction(target: AllyUnit): number {
     return Math.max(0, 1 - target.getStats(StatsType.DmgRed));
-}
-
-export function calculateDamage(damage: Damage, target: AllyUnit): number {
-    const base      = getBaseDamage(damage);
-    const dmgBonus  = getDmgBonus(damage);
-    const crit      = getCritMultiplier(damage);
-    const amp       = 1 + damage.attacker.getStats(StatsType.Amp);
-    const def       = getDefMultiplier(damage.attacker, target);
-    const res       = getResMultiplier(damage, target);
-    const reduction = getDmgReduction(target);
-
-    return base * dmgBonus * crit * amp * def * res * reduction;
 }

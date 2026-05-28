@@ -13,7 +13,7 @@ export class Damage{
     public name : string = "";
     public attacker : AllyUnit = null as any;
     public element : ElementType = ElementType.None;
-    public actionTypeList: ActionType[] = [];
+    public attackTypeList: ActionType[] = [];
     public isCritable : boolean = true;
     public multipliers : SkillScaling = {
         atk : 0,
