@@ -40,7 +40,7 @@ function getDmgBonus(damage: Damage): number {
     }
 
     return 1 + bonus;
-}
+} 
 
 function getCritMultiplier(damage: Damage): number {
     if (!damage.isCritable) return 1;
