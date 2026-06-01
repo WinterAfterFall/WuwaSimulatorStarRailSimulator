@@ -14,13 +14,16 @@ export class CombatTimeline {
     public currentTime: number = 0;
 
     constructor() {
-        // compare: time น้อยกว่า = priority สูงกว่า = ออกก่อน
-        this.ipq = new IndexedPriorityQueue<CombatEvent>((a, b) => a.time - b.time);
+        // compare: time น้อยกว่า = ออกก่อน, ถ้า time เท่ากันให้ใช้ priority เป็น tie-breaker
+        this.ipq = new IndexedPriorityQueue<CombatEvent>((a, b) => {
+            const timeDiff = a.time - b.time;
+            return timeDiff !== 0 ? timeDiff : a.priority - b.priority;
+        });
     }
 
     /** เพิ่ม CombatEvent เข้า timeline */
     public schedule(event: CombatEvent): void {
-        this.ipq.push(event, event.id);
+        this.ipq.push(event, event.name);
     }
 
     /**

@@ -25,20 +25,15 @@ export class RotationBuilder {
 
     /**
      * เพิ่ม action ของ unit เข้า timeline ณ เวลาที่กำหนด
-     * @param unit     unit ที่จะทำ action
-     * @param action   ประเภทของ action
-     * @param time     เวลาที่ action จะเกิดขึ้น (วินาที)
-     * @param callback โค้ดที่รันเมื่อถึงเวลา — ถ้าไม่ส่งจะ log ให้อัตโนมัติ
-     * @returns this   เพื่อรองรับ method chaining
+     * @param unit      unit ที่จะทำ action
+     * @param action    ประเภทของ action
+     * @param time      เวลาที่ action จะเกิดขึ้น (วินาที)
+     * @param priority  tie-breaker เมื่อ time เท่ากัน (น้อย = ออกก่อน) ค่า default คือ 0
+     * @returns this    เพื่อรองรับ method chaining
      */
-    public add(unit: AllyUnit, action: ActionType, time: number, callback?: () => void): this {
+    public add(unit: AllyUnit, action: ActionType, time: number, priority: number = 0): this {
         const id = `${unit.name}-${action}-${this.eventCounter++}`;
-
-        const execute = callback ?? (() => {
-            console.log(`[t=${time.toFixed(2)}s] ${unit.name} → ${action}`);
-        });
-
-        this.timeline.schedule(new CombatEvent(id, time, execute));
+        this.timeline.schedule(new CombatEvent(id, time, priority, action, () => unit.execute(action)));
         return this;
     }
 

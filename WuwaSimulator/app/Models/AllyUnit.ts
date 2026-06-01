@@ -27,4 +27,7 @@ export class AllyUnit extends Unit {
         super(name); // ต้องเรียก super() ก่อนเสมอเพื่อใช้งาน this
     }
 
+    /** รันเมื่อถึงเวลาของ event — subclass override เพื่อกำหนด logic เอง */
+    public execute(action: ActionType): void {}
+
 }
