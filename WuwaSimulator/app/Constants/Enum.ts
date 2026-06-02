@@ -59,3 +59,15 @@ export enum WeaponType {
     Gauntlets = "Gauntlets",
     Rectifier = "Rectifier"
 }
+
+export enum ActionState {
+    Free = "Free",   // unit ว่าง พร้อมรับ action ใหม่
+    Busy = "Busy"    // unit กำลัง action อยู่
+}
+
+export enum NotificationType {
+    ChangeToAuto  = "ChangeToAuto",   // action transition จาก manual → auto
+    EndAction     = "EndAction",      // action จบสมบูรณ์
+    BuffExpired   = "BuffExpired",    // buff หมดอายุ
+    DebuffExpired = "DebuffExpired"   // debuff หมดอายุ
+}

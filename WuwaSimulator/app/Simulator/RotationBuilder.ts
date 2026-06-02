@@ -1,22 +1,18 @@
-import { CombatTimeline } from "./CombatTimeline";
-import { CombatEvent } from "../Models/Combat/CombatEvent";
-import { AllyUnit } from "../Models/AllyUnit";
 import { ActionType } from "../Constants/Enum";
+import { AllyUnit } from "../Models/AllyUnit";
+import { AttackActionEvent } from "../Models/Combat/AttackActionEvent";
+import { CombatTimeline } from "./CombatTimeline";
 
 /**
- * RotationBuilder — ตัวช่วย pre-define rotation ของแต่ละ unit
- * สร้าง CombatEvent แล้วยัดลง CombatTimeline ผ่าน method chaining
+ * RotationBuilder — pre-define rotation ของแต่ละ unit
+ * ทุก action ที่ add เข้ามาเป็น Manual เสมอ
  *
- * การใช้งาน:
- *   builder
- *     .add(rover, ActionType.BA,    0.00)
- *     .add(rover, ActionType.Skill, 1.50)
- *     .add(jiyan, ActionType.Intro, 3.00)
+ * ก่อน push จะเช็ค:
+ *   1. isGlobalLocked → ถ้า lock อยู่ข้าม (manual action อื่นกำลังทำงาน)
+ *   2. unit.isFree()  → ถ้า unit ยัง busy ข้าม
  */
 export class RotationBuilder {
     private timeline: CombatTimeline;
-
-    /** ใช้นับ event เพื่อสร้าง id ที่ไม่ซ้ำกัน */
     private eventCounter: number = 0;
 
     constructor(timeline: CombatTimeline) {
@@ -24,20 +20,31 @@ export class RotationBuilder {
     }
 
     /**
-     * เพิ่ม action ของ unit เข้า timeline ณ เวลาที่กำหนด
+     * เพิ่ม manual action เข้า timeline
      * @param unit      unit ที่จะทำ action
      * @param action    ประเภทของ action
-     * @param time      เวลาที่ action จะเกิดขึ้น (วินาที)
-     * @param priority  tie-breaker เมื่อ time เท่ากัน (น้อย = ออกก่อน) ค่า default คือ 0
-     * @returns this    เพื่อรองรับ method chaining
+     * @param frame     frame ที่ action จะเกิดขึ้น (1 วิ = 60 frame)
+     * @param duration  action กินเวลากี่ frame
+     * @param priority  tie-breaker เมื่อ frame เท่ากัน (น้อย = ออกก่อน)
      */
-    public add(unit: AllyUnit, action: ActionType, time: number, priority: number = 0): this {
+    public add(
+        unit: AllyUnit,
+        action: ActionType,
+        frame: number,
+        duration: number,
+        priority: number = 0
+    ): this {
+        // GlobalLock ON → manual action อื่นกำลังทำอยู่ → ข้าม
+        if (this.timeline.isGlobalLocked) return this;
+
+        // unit ยัง busy → ข้าม
+        if (!unit.isFree()) return this;
+
         const id = `${unit.name}-${action}-${this.eventCounter++}`;
-        this.timeline.schedule(new CombatEvent(id, time, priority, action, () => unit.execute(action)));
+        this.timeline.schedule(new AttackActionEvent(id, frame, duration, unit, action, true, priority));
         return this;
     }
 
-    /** จำนวน event ที่ queue ไว้ใน timeline ทั้งหมด */
     public get size(): number {
         return this.timeline.size;
     }
