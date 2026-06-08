@@ -1,6 +1,6 @@
 import { ActionType } from "../Constants/Enum";
 import { AllyUnit } from "../Models/AllyUnit";
-import { AttackActionEvent } from "../Models/Combat/AttackActionEvent";
+import { AttackActionEvent } from "../Models/Combat/CombatEvent/AttackActionEvent";
 import { CombatTimeline } from "./CombatTimeline";
 
 /**

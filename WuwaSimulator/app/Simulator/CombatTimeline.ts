@@ -1,8 +1,8 @@
 import { NotificationType } from "../Constants/Enum";
 import { AllyUnit } from "../Models/AllyUnit";
-import { CombatEvent } from "../Models/Combat/CombatEvent";
-import { ActionEvent } from "../Models/Combat/ActionEvent";
-import { NotificationEvent } from "../Models/Combat/NotificationEvent";
+import { CombatEvent } from "../Models/Combat/CombatEvent/CombatEvent";
+import { ActionEvent } from "../Models/Combat/CombatEvent/ActionEvent";
+import { NotificationEvent } from "../Models/Combat/CombatEvent/NotificationEvent";
 import { IndexedPriorityQueue } from "../Utils/indexedPriorityQueue";
 
 /**

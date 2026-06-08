@@ -2,7 +2,7 @@ import { AllyUnit } from "./Models/AllyUnit";
 import { ActionType, ElementType, NotificationType } from "./Constants/Enum";
 import { CombatTimeline } from "./Simulator/CombatTimeline";
 import { RotationBuilder } from "./Simulator/RotationBuilder";
-import { NotificationEvent } from "./Models/Combat/NotificationEvent";
+import { NotificationEvent } from "./Models/Combat/CombatEvent/NotificationEvent";
 
 const F = 60; // 1 วินาที = 60 frame
 
