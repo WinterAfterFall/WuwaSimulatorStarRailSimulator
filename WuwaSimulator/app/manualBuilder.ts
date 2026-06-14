@@ -37,8 +37,8 @@ function mergeQueues(...queues: Queue<RotationAction>[]): Queue<RotationAction> 
     return merged;
 }
 
-const setupQueue = mergeQueues(test1.rotations.get("Burst")!(), test2.rotations.get("Burst")!());
-const loopQueue  = mergeQueues(test1.rotations.get("Standard")!(), test2.rotations.get("Standard")!());
+const setupQueue = mergeQueues(test1.rotations.get("Burst")!(timeline), test2.rotations.get("Burst")!(timeline));
+const loopQueue  = mergeQueues(test1.rotations.get("Standard")!(timeline), test2.rotations.get("Standard")!(timeline));
 
 // ─────────────────────────────────────────────────────────────
 // 4. RotationDirector — ขับ setupQueue ก่อน แล้ววน loopQueue ตาม maxLoops

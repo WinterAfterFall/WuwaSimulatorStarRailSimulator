@@ -2,6 +2,13 @@ import { Unit } from "./Unit";
 import { StatsType, ElementType, WeaponType, ActionState } from "../Constants/Enum";
 import { Queue } from "../Utils/queue";
 import { RotationAction } from "./Combat/RotationAction";
+import { CombatEvent } from "./Combat/CombatEvent/CombatEvent";
+
+/** Structural type — หลีกเลี่ยง circular import กับ CombatTimeline */
+export type TimelineRef = {
+    schedule(event: CombatEvent): void;
+    readonly currentFrame: number;
+};
 
 export class AllyUnit extends Unit {
 
@@ -20,8 +27,8 @@ export class AllyUnit extends Unit {
     public resonanceChain : number = 0;
 
     // --- Rotation Definitions ---
-    /** key = ชื่อ rotation (เลือกโดย user), value = factory สร้าง Queue<RotationAction> ใหม่ทุกครั้งที่เรียก */
-    public rotations: Map<string, () => Queue<RotationAction>> = new Map();
+    /** key = ชื่อ rotation, value = factory รับ timeline แล้วคืน Queue<RotationAction> */
+    public rotations: Map<string, (timeline: TimelineRef) => Queue<RotationAction>> = new Map();
 
     // --- Energy ---
     public energy    : number = 0;

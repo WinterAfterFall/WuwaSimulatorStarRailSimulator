@@ -7,6 +7,8 @@ import { ActionEvent } from "./ActionEvent";
  * ใช้เช็ค "เมื่อมีการ action โจมตี" ด้วย instanceof AttackActionEvent
  */
 export class AttackActionEvent extends ActionEvent {
+    private readonly onExecute?: () => void;
+
     constructor(
         name: string,
         time: number,
@@ -14,12 +16,15 @@ export class AttackActionEvent extends ActionEvent {
         unit: AllyUnit,
         actionType: ActionType,
         isManual: boolean,
-        priority: number = 0
+        priority: number = 0,
+        onExecute?: () => void
     ) {
         super(name, time, duration, unit, actionType, isManual, priority);
+        this.onExecute = onExecute;
     }
 
     public execute(): void {
         this.unit.setBusy();
+        this.onExecute?.();
     }
 }
