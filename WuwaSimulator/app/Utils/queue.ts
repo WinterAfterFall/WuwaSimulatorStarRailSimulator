@@ -53,12 +53,34 @@ export class Queue<T> {
     }
 
     /**
+     * Removes the front item and re-enqueues it at the back (pushback).
+     * Useful for cycling through a loop rotation indefinitely.
+     * @returns The rotated item, or undefined if the queue is empty.
+     * Time complexity: O(1)
+     */
+    rotate(): T | undefined {
+        const item = this.dequeue();
+        if (item !== undefined) this.enqueue(item);
+        return item;
+    }
+
+    /**
      * Returns the front item WITHOUT removing it.
      * @returns The front item, or undefined if the queue is empty.
      * Time complexity: O(1)
      */
     peek(): T | undefined {
         return this.items[this.head];
+    }
+
+    /**
+     * Returns the item at the given position from the front (0 = front),
+     * WITHOUT removing it.
+     * @returns The item at that position, or undefined if out of range.
+     * Time complexity: O(1)
+     */
+    get(index: number): T | undefined {
+        return this.items[this.head + index];
     }
 
     /**

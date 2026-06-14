@@ -1,5 +1,7 @@
 import { Unit } from "./Unit";
 import { StatsType, ActionType, ElementType, WeaponType, ActionState } from "../Constants/Enum";
+import { Queue } from "../Utils/queue";
+import { RotationAction } from "./Combat/RotationAction";
 
 export class AllyUnit extends Unit {
 
@@ -16,6 +18,10 @@ export class AllyUnit extends Unit {
     public elementType    : ElementType = ElementType.None;
     public weaponType     : WeaponType  = WeaponType.None;
     public resonanceChain : number = 0;
+
+    // --- Rotation Definitions ---
+    /** key = ชื่อ rotation (เลือกโดย user), value = factory สร้าง Queue<RotationAction> ใหม่ทุกครั้งที่เรียก */
+    public movesetList: Map<string, () => Queue<RotationAction>> = new Map();
 
     // --- Energy ---
     public energy    : number = 0;

@@ -1,56 +1,40 @@
 import { AllyUnit } from "./Models/AllyUnit";
-import { ActionType, ElementType } from "./Constants/Enum";
+import { setupTest1 } from "./Models/Characters/Test1";
 import { CombatTimeline } from "./Simulator/CombatTimeline";
-import { RotationBuilder } from "./Simulator/RotationBuilder";
 import { RotationDirector } from "./Simulator/RotationDirector";
 
 const F = 60; // 1 วินาที = 60 frame
 
 // ─────────────────────────────────────────────────────────────
-// 1. สร้าง Unit
+// 1. สร้าง Unit จาก setup function
 // ─────────────────────────────────────────────────────────────
-const rover = new AllyUnit("Rover");
-rover.baseAtk     = 1000;
-rover.elementType = ElementType.Spectro;
-rover.isOnField   = true;   // Rover เริ่มบนสนาม
+const test1 = new AllyUnit("Test1");
+setupTest1(test1);
+test1.isOnField = true;
 
 // ─────────────────────────────────────────────────────────────
-// 2. สร้าง CombatTimeline (Variable 2 — engine)
+// 2. สร้าง CombatTimeline
 // ─────────────────────────────────────────────────────────────
 const timeline = new CombatTimeline();
-timeline.onFieldChar = rover;
+timeline.onFieldChar = test1;
 
 // ─────────────────────────────────────────────────────────────
-// 3. Setup Rotation (Variable 1) — รอบแรกเท่านั้น ดึงจนหมดแล้วไม่เติม
+// 3. เลือก rotation จาก movesetList ของตัวละคร (factory → Queue ใหม่)
+//    - Setup queue: ใช้ครั้งเดียวตอนเปิดฉาก (Burst)
+//    - Loop queue : วนซ้ำตาม maxLoops (Standard)
 // ─────────────────────────────────────────────────────────────
-const setupQueue = new RotationBuilder()
-    .add(rover, ActionType.Intro, 30)
-    .build();
+const setupQueue = test1.movesetList.get("Burst")!();
+const loopQueue  = test1.movesetList.get("Standard")!();
 
 // ─────────────────────────────────────────────────────────────
-// 4. Loop Rotation (Variable 3) — รอบวนซ้ำ แบบ pushback
-// ─────────────────────────────────────────────────────────────
-const loopQueue = new RotationBuilder()
-    .add(rover, ActionType.BA,    20)
-    .add(rover, ActionType.BA,    20)
-    .add(rover, ActionType.BA,    20)
-    .add(rover, ActionType.Skill, 40)
-    .add(rover, ActionType.Ult,   60)
-    .add(rover, ActionType.Outro, 30)
-    .build();
-
-// ─────────────────────────────────────────────────────────────
-// 5. RotationDirector — central dispatcher (pull-based)
-//    maxLoops กำหนดก่อน simulation เริ่ม (วน loopQueue ได้กี่รอบ)
+// 4. RotationDirector — ขับ setupQueue ก่อน แล้ววน loopQueue ตาม maxLoops
 // ─────────────────────────────────────────────────────────────
 const maxLoops = 2;
 const director = new RotationDirector(timeline, setupQueue, loopQueue, maxLoops);
 
 // ─────────────────────────────────────────────────────────────
-// 6. รัน Simulation
-//    NotificationEvent(EndAction) ของแต่ละ action ถูก schedule
-//    อัตโนมัติโดย CombatTimeline.tick() — ไม่ต้อง push เองอีกต่อไป
+// 5. รัน Simulation
 // ─────────────────────────────────────────────────────────────
-console.log(`=== Combat Start — setup=${setupQueue.length}, loop=${loopQueue.length}, maxLoops=${maxLoops} ===\n`);
+console.log(`=== Combat Start — setup=[${setupQueue.toArray().map(a => a.name).join(", ")}], loop=[${loopQueue.toArray().map(a => a.name).join(", ")}], maxLoops=${maxLoops} ===\n`);
 director.run();
 console.log(`\n=== Combat End (frame=${timeline.currentFrame}, t=${(timeline.currentFrame / F).toFixed(2)}s, loops completed=${director.currentLoopCount}) ===`);
