@@ -1,5 +1,5 @@
-import { NotificationType } from "../../Constants/Enum";
-import { AllyUnit } from "../AllyUnit";
+import { NotificationType } from "../../../Constants/Enum";
+import { AllyUnit } from "../../AllyUnit";
 import { CombatEvent } from "./CombatEvent";
 
 /**

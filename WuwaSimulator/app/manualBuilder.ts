@@ -1,8 +1,8 @@
 import { AllyUnit } from "./Models/AllyUnit";
-import { ActionType, ElementType, NotificationType } from "./Constants/Enum";
+import { ActionType, ElementType } from "./Constants/Enum";
 import { CombatTimeline } from "./Simulator/CombatTimeline";
 import { RotationBuilder } from "./Simulator/RotationBuilder";
-import { NotificationEvent } from "./Models/Combat/CombatEvent/NotificationEvent";
+import { RotationDirector } from "./Simulator/RotationDirector";
 
 const F = 60; // 1 วินาที = 60 frame
 
@@ -14,44 +14,43 @@ rover.baseAtk     = 1000;
 rover.elementType = ElementType.Spectro;
 rover.isOnField   = true;   // Rover เริ่มบนสนาม
 
-const jiyan = new AllyUnit("Jiyan");
-jiyan.baseAtk     = 1200;
-jiyan.elementType = ElementType.Aero;
-
 // ─────────────────────────────────────────────────────────────
-// 2. สร้าง CombatTimeline
+// 2. สร้าง CombatTimeline (Variable 2 — engine)
 // ─────────────────────────────────────────────────────────────
 const timeline = new CombatTimeline();
 timeline.onFieldChar = rover;
 
 // ─────────────────────────────────────────────────────────────
-// 3. Rotation ผ่าน RotationBuilder
-//    .add(unit, ActionType, startFrame, durationFrame)
+// 3. Setup Rotation (Variable 1) — รอบแรกเท่านั้น ดึงจนหมดแล้วไม่เติม
 // ─────────────────────────────────────────────────────────────
-const builder = new RotationBuilder(timeline);
-
-builder
-    // Rover Rotation
-    .add(rover, ActionType.Intro,  0 * F,  30)   // Intro: 0.0s, กินเวลา 0.5s
-    .add(rover, ActionType.BA,    30 * F,  20)
-    .add(rover, ActionType.BA,    50 * F,  20)
-    .add(rover, ActionType.BA,    70 * F,  20)
-    .add(rover, ActionType.Skill, 90 * F,  40)
-    .add(rover, ActionType.Ult,  150 * F,  60)
-    .add(rover, ActionType.Outro, 210 * F, 30);
-
-// ตัวอย่าง notification event: Rover Ult transition → auto ที่ frame 170
-// (push ด้วยมือ — ปกติ subclass ของ AllyUnit จะ push ใน execute())
-timeline.schedule(new NotificationEvent(
-    "rover-Ult-changeToAuto", 170 * F, NotificationType.ChangeToAuto, rover
-));
-timeline.schedule(new NotificationEvent(
-    "rover-Ult-end", 210 * F, NotificationType.EndAction, rover
-));
+const setupQueue = new RotationBuilder()
+    .add(rover, ActionType.Intro, 30)
+    .build();
 
 // ─────────────────────────────────────────────────────────────
-// 4. รัน Simulation
+// 4. Loop Rotation (Variable 3) — รอบวนซ้ำ แบบ pushback
 // ─────────────────────────────────────────────────────────────
-console.log(`=== Combat Start — ${builder.size} events queued ===\n`);
-timeline.runAll();
-console.log(`\n=== Combat End (frame=${timeline.currentFrame}, t=${(timeline.currentFrame / F).toFixed(2)}s) ===`);
+const loopQueue = new RotationBuilder()
+    .add(rover, ActionType.BA,    20)
+    .add(rover, ActionType.BA,    20)
+    .add(rover, ActionType.BA,    20)
+    .add(rover, ActionType.Skill, 40)
+    .add(rover, ActionType.Ult,   60)
+    .add(rover, ActionType.Outro, 30)
+    .build();
+
+// ─────────────────────────────────────────────────────────────
+// 5. RotationDirector — central dispatcher (pull-based)
+//    maxLoops กำหนดก่อน simulation เริ่ม (วน loopQueue ได้กี่รอบ)
+// ─────────────────────────────────────────────────────────────
+const maxLoops = 2;
+const director = new RotationDirector(timeline, setupQueue, loopQueue, maxLoops);
+
+// ─────────────────────────────────────────────────────────────
+// 6. รัน Simulation
+//    NotificationEvent(EndAction) ของแต่ละ action ถูก schedule
+//    อัตโนมัติโดย CombatTimeline.tick() — ไม่ต้อง push เองอีกต่อไป
+// ─────────────────────────────────────────────────────────────
+console.log(`=== Combat Start — setup=${setupQueue.length}, loop=${loopQueue.length}, maxLoops=${maxLoops} ===\n`);
+director.run();
+console.log(`\n=== Combat End (frame=${timeline.currentFrame}, t=${(timeline.currentFrame / F).toFixed(2)}s, loops completed=${director.currentLoopCount}) ===`);

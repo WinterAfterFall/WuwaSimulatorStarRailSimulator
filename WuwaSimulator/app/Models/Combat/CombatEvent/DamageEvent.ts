@@ -1,5 +1,5 @@
-import { AllyUnit } from "../AllyUnit";
-import { Damage } from "./Damage";
+import { AllyUnit } from "../../AllyUnit";
+import { Damage } from "../Damage";
 import { CombatEvent } from "./CombatEvent";
 
 /**

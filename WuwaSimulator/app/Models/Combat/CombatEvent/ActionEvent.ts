@@ -1,5 +1,5 @@
-import { ActionType } from "../../Constants/Enum";
-import { AllyUnit } from "../AllyUnit";
+import { ActionType } from "../../../Constants/Enum";
+import { AllyUnit } from "../../AllyUnit";
 import { CombatEvent } from "./CombatEvent";
 
 /**
