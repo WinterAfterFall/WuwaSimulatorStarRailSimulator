@@ -1,5 +1,5 @@
 import { Unit } from "./Unit";
-import { StatsType, ActionType, ElementType, WeaponType, ActionState } from "../Constants/Enum";
+import { StatsType, ElementType, WeaponType, ActionState } from "../Constants/Enum";
 import { Queue } from "../Utils/queue";
 import { RotationAction } from "./Combat/RotationAction";
 
@@ -21,7 +21,7 @@ export class AllyUnit extends Unit {
 
     // --- Rotation Definitions ---
     /** key = ชื่อ rotation (เลือกโดย user), value = factory สร้าง Queue<RotationAction> ใหม่ทุกครั้งที่เรียก */
-    public movesetList: Map<string, () => Queue<RotationAction>> = new Map();
+    public rotations: Map<string, () => Queue<RotationAction>> = new Map();
 
     // --- Energy ---
     public energy    : number = 0;
@@ -32,7 +32,7 @@ export class AllyUnit extends Unit {
     public currentShield : number = 0;
 
     // --- Buff Tracking ---
-    public stacks    : Map<string, number>  = new Map();
+    public stacks    : Map<string, number>  = new Map();//ใช้สำหรับนับ stack ของบัพในแต่ละชื่อ
     public buffNote  : Map<string, number>  = new Map();
     public buffCheck : Map<string, boolean> = new Map();
 
@@ -43,9 +43,6 @@ export class AllyUnit extends Unit {
     constructor(name: string) {
         super(name);
     }
-
-    /** รันเมื่อถึงเวลาของ event — subclass override เพื่อกำหนด logic เอง */
-    public execute(action: ActionType): void {}
 
     public isFree(): boolean {
         return this.actionState === ActionState.Free;

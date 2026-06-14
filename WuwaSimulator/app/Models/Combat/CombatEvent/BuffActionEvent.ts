@@ -21,6 +21,5 @@ export class BuffActionEvent extends ActionEvent {
 
     public execute(): void {
         this.unit.setBusy();
-        this.unit.execute(this.actionType);
     }
 }

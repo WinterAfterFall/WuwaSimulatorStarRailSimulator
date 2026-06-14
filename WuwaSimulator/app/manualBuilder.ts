@@ -19,12 +19,12 @@ const timeline = new CombatTimeline();
 timeline.onFieldChar = test1;
 
 // ─────────────────────────────────────────────────────────────
-// 3. เลือก rotation จาก movesetList ของตัวละคร (factory → Queue ใหม่)
+// 3. เลือก rotation จาก rotations ของตัวละคร (factory → Queue ใหม่)
 //    - Setup queue: ใช้ครั้งเดียวตอนเปิดฉาก (Burst)
 //    - Loop queue : วนซ้ำตาม maxLoops (Standard)
 // ─────────────────────────────────────────────────────────────
-const setupQueue = test1.movesetList.get("Burst")!();
-const loopQueue  = test1.movesetList.get("Standard")!();
+const setupQueue = test1.rotations.get("Burst")!();
+const loopQueue  = test1.rotations.get("Standard")!();
 
 // ─────────────────────────────────────────────────────────────
 // 4. RotationDirector — ขับ setupQueue ก่อน แล้ววน loopQueue ตาม maxLoops

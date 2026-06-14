@@ -1,6 +1,6 @@
 import { AllyUnit } from "../AllyUnit";
 import { RotationBuilder } from "../../Simulator/RotationBuilder";
-import { ActionType, ElementType, WeaponType, StatsType } from "../../Constants/Enum";
+import { ElementType, WeaponType, StatsType } from "../../Constants/Enum";
 
 /**
  * Test1 — ตัวละครทดสอบ มี 2 rotations
@@ -18,18 +18,18 @@ export function setupTest1(unit: AllyUnit): void {
     unit.setStat(StatsType.CD, 1.5);
 
     // --- Rotations ---
-    unit.movesetList.set("Standard", () =>
+    unit.rotations.set("Standard", () =>
         new RotationBuilder()
-            .add("Test1-BA1",   () => unit.execute(ActionType.BA))
-            .add("Test1-BA2",   () => unit.execute(ActionType.BA))
-            .add("Test1-Skill", () => unit.execute(ActionType.Skill))
+            .add("Test1-BA1",   () => {})
+            .add("Test1-BA2",   () => {})
+            .add("Test1-Skill", () => {})
             .build()
     );
 
-    unit.movesetList.set("Burst", () =>
+    unit.rotations.set("Burst", () =>
         new RotationBuilder()
-            .add("Test1-Ult", () => unit.execute(ActionType.Ult))
-            .add("Test1-BA1", () => unit.execute(ActionType.BA))
+            .add("Test1-Ult", () => {})
+            .add("Test1-BA1", () => {})
             .build()
     );
 }
