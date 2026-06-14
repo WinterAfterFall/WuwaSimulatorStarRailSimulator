@@ -20,23 +20,23 @@ export function setupTest2(unit: AllyUnit): void {
     // --- Rotations ---
     unit.rotations.set("Standard", () =>
         new RotationBuilder()
-            .add("Test2-BA1",   () => {})
-            .add("Test2-Skill", () => {})
-            .add("Test2-BA2",   () => {})
+            .add("Test2-BA1",   () => console.log("Test2-BA1"))
+            .add("Test2-Skill", () => console.log("Test2-Skill"))
+            .add("Test2-BA2",   () => console.log("Test2-BA2"))
             .build()
     );
 
     unit.rotations.set("Burst", () =>
         new RotationBuilder()
-            .add("Test2-Ult", () => {})
-            .add("Test2-BA1", () => {})
+            .add("Test2-Ult", () => console.log("Test2-Ult"))
+            .add("Test2-BA1", () => console.log("Test2-BA1"))
             .build()
     );
 
     unit.rotations.set("Echo Focus", () =>
         new RotationBuilder()
-            .add("Test2-Echo",  () => {})
-            .add("Test2-Skill", () => {})
+            .add("Test2-Echo",  () => console.log("Test2-Echo"))
+            .add("Test2-Skill", () => console.log("Test2-Skill"))
             .build()
     );
 }

@@ -20,16 +20,16 @@ export function setupTest1(unit: AllyUnit): void {
     // --- Rotations ---
     unit.rotations.set("Standard", () =>
         new RotationBuilder()
-            .add("Test1-BA1",   () => {})
-            .add("Test1-BA2",   () => {})
-            .add("Test1-Skill", () => {})
+            .add("Test1-BA1",   () => console.log("Test1-BA1"))
+            .add("Test1-BA2",   () => console.log("Test1-BA2"))
+            .add("Test1-Skill", () => console.log("Test1-Skill"))
             .build()
     );
 
     unit.rotations.set("Burst", () =>
         new RotationBuilder()
-            .add("Test1-Ult", () => {})
-            .add("Test1-BA1", () => {})
+            .add("Test1-Ult", () => console.log("Test1-Ult"))
+            .add("Test1-BA1", () => console.log("Test1-BA1"))
             .build()
     );
 }
