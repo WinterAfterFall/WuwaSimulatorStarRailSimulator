@@ -71,3 +71,17 @@ export enum NotificationType {
     BuffExpired   = "BuffExpired",    // buff หมดอายุ
     DebuffExpired = "DebuffExpired"   // debuff หมดอายุ
 }
+
+export enum EnemyPosition{
+    Vanguard = "0",      
+    Midrange = "1",   
+    Rearguard = "2",    
+    OutOfRange = "3"
+}
+
+export enum SkillRange {
+    Contact = "1",      
+    Midrange = "2",   
+    Ranged = "3",    
+    Global = "999"
+}

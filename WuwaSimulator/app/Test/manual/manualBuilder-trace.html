@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>manualBuilder.ts — Execution Trace</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;font-size:13px;padding:24px 28px}
+h1{font-size:16px;font-weight:700;color:#e6edf3;margin-bottom:4px}
+.sub{font-size:11px;color:#484f58;font-family:monospace;margin-bottom:22px}
+
+.step{display:flex;gap:12px;margin-bottom:10px;position:relative}
+.step:not(:last-child)::after{content:'';position:absolute;left:16px;top:36px;width:2px;bottom:-10px;background:#21262d}
+.num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;z-index:1}
+.body{flex:1;border:1px solid #21262d;border-radius:8px;overflow:hidden}
+.head{display:flex;align-items:center;gap:8px;padding:7px 12px;background:#161b22;flex-wrap:wrap}
+.file{font-family:monospace;font-size:11px;font-weight:600}
+.fn{font-size:11px;color:#8b949e}
+.new-badge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;background:#1a4229;color:#56d364}
+.changed-badge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;background:#2e2005;color:#e3b341}
+.desc{font-size:12px;color:#8b949e;padding:6px 12px 0;background:#0d1117}
+pre{background:#010409;padding:10px 12px;margin:6px 0 0;overflow-x:auto;font-size:11.5px;line-height:1.6;font-family:'Consolas','Courier New',monospace}
+
+/* syntax */
+.kw{color:#ff7b72}
+.fn-name{color:#d2a8ff}
+.str{color:#a5d6ff}
+.cmt{color:#8b949e}
+.num-lit{color:#79c0ff}
+.prop{color:#e3b341}
+.cls{color:#ffa657}
+.type{color:#3fb950}
+
+/* step colors */
+.s-orange .num{background:#7c2d12;color:#ffa657}
+.s-orange .head{border-bottom:1px solid #7c2d12}
+.s-orange .file{color:#ffa657}
+.s-blue .num{background:#0c2d6b;color:#79c0ff}
+.s-blue .head{border-bottom:1px solid #1f3a6e}
+.s-blue .file{color:#79c0ff}
+.s-green .num{background:#0f2419;color:#56d364}
+.s-green .head{border-bottom:1px solid #1a4229}
+.s-green .file{color:#56d364}
+.s-purple .num{background:#2d1160;color:#d2a8ff}
+.s-purple .head{border-bottom:1px solid #3d1f7e}
+.s-purple .file{color:#d2a8ff}
+.s-yellow .num{background:#2e2005;color:#e3b341}
+.s-yellow .head{border-bottom:1px solid #4d3800}
+.s-yellow .file{color:#e3b341}
+.s-teal .num{background:#062929;color:#3fb950}
+.s-teal .head{border-bottom:1px solid #0a4040}
+.s-teal .file{color:#3fb950}
+.s-red .num{background:#3d0c0c;color:#f97583}
+.s-red .head{border-bottom:1px solid #5a1010}
+.s-red .file{color:#f97583}
+
+.loop-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px}
+.lb-setup{background:#1a4229;color:#56d364}
+.lb-loop{background:#0c2d6b;color:#79c0ff}
+
+.result-box{background:#010409;border:1px solid #21262d;border-radius:6px;padding:8px 12px;margin:6px 0 0;font-family:monospace;font-size:11px}
+.res-kv{display:flex;gap:6px;margin:2px 0;flex-wrap:wrap}
+.res-k{color:#8b949e;white-space:nowrap}
+.res-v{color:#e3b341}
+.res-vg{color:#56d364}
+.res-vb{color:#79c0ff}
+.res-vr{color:#f97583}
+
+/* frame timeline table */
+.frame-table{width:100%;border-collapse:collapse;font-size:11px;font-family:monospace;margin-top:6px}
+.frame-table th{text-align:left;padding:5px 8px;background:#161b22;color:#8b949e;font-weight:600;border-bottom:1px solid #21262d}
+.frame-table td{padding:5px 8px;border-bottom:1px solid #161b22;vertical-align:middle}
+.frame-table tr:hover td{background:#0f1319}
+.tag-setup{background:#0f2419;color:#56d364;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px}
+.tag-loop1{background:#0c2040;color:#79c0ff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px}
+.tag-loop2{background:#200c40;color:#d2a8ff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px}
+.t1c{color:#79c0ff}
+.t2c{color:#d2a8ff}
+
+/* timeline bar */
+.bar-wrap{height:10px;background:#161b22;border-radius:3px;overflow:hidden}
+.bar{height:10px;border-radius:3px}
+
+.console-out{background:#010e10;border:1px solid #0a4040;border-radius:6px;padding:10px 12px;margin-top:10px;font-family:monospace;font-size:11px;line-height:1.7}
+.cout-t1{color:#79c0ff}
+.cout-t2{color:#d2a8ff}
+.cout-hd{color:#e3b341;font-weight:700}
+.cout-dim{color:#2a3a4a}
+.cout-fr{color:#8b949e}
+</style>
+</head>
+<body>
+
+<h1>manualBuilder.ts — Execution Flow ทีละ Function</h1>
+<p class="sub">ไล่ตั้งแต่บรรทัดแรกจนจบ · อัปเดตตาม pull ล่าสุด</p>
+
+<!-- ══ STEP 1 ══ -->
+<div class="step s-orange">
+  <div class="num">1</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/manualBuilder.ts</span>
+      <span class="fn">— top-level (entry point)</span>
+    </div>
+    <div class="desc">โปรแกรมเริ่มต้น — ประกาศค่าและสร้าง Unit + Timeline</div>
+<pre><span class="kw">const</span> F = <span class="num-lit">60</span>; <span class="cmt">// 1 วินาที = 60 frame</span>
+
+<span class="kw">const</span> test1 = <span class="kw">new</span> <span class="cls">AllyUnit</span>(<span class="str">"Test1"</span>);
+<span class="fn-name">setupTest1</span>(test1);
+test1.isOnField = <span class="kw">true</span>;
+
+<span class="kw">const</span> test2 = <span class="kw">new</span> <span class="cls">AllyUnit</span>(<span class="str">"Test2"</span>);
+<span class="fn-name">setupTest2</span>(test2);
+
+<span class="kw">const</span> timeline = <span class="kw">new</span> <span class="cls">CombatTimeline</span>();
+timeline.onFieldChar = test1;</pre>
+  </div>
+</div>
+
+<!-- ══ STEP 2 ══ -->
+<div class="step s-blue">
+  <div class="num">2</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Models/AllyUnit.ts</span>
+      <span class="fn">— TimelineRef + constructor</span>
+      <span class="changed-badge">CHANGED</span>
+    </div>
+    <div class="desc">เพิ่ม type <code>TimelineRef</code> เพื่อหลีกเลี่ยง circular import · rotations factory เปลี่ยนเป็นรับ <code>(timeline)</code></div>
+<pre><span class="cmt">/** Structural type — หลีกเลี่ยง circular import กับ CombatTimeline */</span>
+<span class="kw">export type</span> <span class="type">TimelineRef</span> = {
+    <span class="fn-name">schedule</span>(event: <span class="cls">CombatEvent</span>): <span class="kw">void</span>;
+    <span class="kw">readonly</span> <span class="prop">currentFrame</span>: <span class="kw">number</span>;
+};
+
+<span class="kw">export class</span> <span class="cls">AllyUnit</span> <span class="kw">extends</span> <span class="cls">Unit</span> {
+    <span class="cmt">// key = ชื่อ rotation, value = factory รับ timeline → Queue</span>
+    <span class="kw">public</span> <span class="prop">rotations</span>: <span class="cls">Map</span>&lt;<span class="kw">string</span>, (<span class="prop">timeline</span>: <span class="type">TimelineRef</span>) => <span class="cls">Queue</span>&lt;<span class="cls">RotationAction</span>&gt;&gt; = <span class="kw">new</span> <span class="cls">Map</span>();
+    <span class="cmt">// ... (ส่วนอื่นเหมือนเดิม)</span>
+}
+
+<span class="kw">constructor</span>(name: <span class="kw">string</span>) {
+    <span class="fn-name">super</span>(name); <span class="cmt">// → Unit.constructor</span>
+}</pre>
+    <div class="result-box">
+      <div class="res-kv"><span class="res-k">เดิม</span><span class="res-vr">Map&lt;string, () =&gt; Queue&lt;RotationAction&gt;&gt;</span></div>
+      <div class="res-kv"><span class="res-k">ใหม่</span><span class="res-vg">Map&lt;string, (timeline: TimelineRef) =&gt; Queue&lt;RotationAction&gt;&gt;</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STEP 3 ══ -->
+<div class="step s-blue">
+  <div class="num">3</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Models/Unit.ts</span>
+      <span class="fn">— constructor("Test1")</span>
+    </div>
+    <div class="desc">Base class initialize stats Map · initialStats ไม่ได้ส่งมา → ข้าม if block</div>
+<pre><span class="kw">constructor</span>(name: <span class="kw">string</span>, initialStats?: ...) {
+    <span class="kw">this</span>.<span class="prop">name</span>   = name;        <span class="cmt">// "Test1"</span>
+    <span class="kw">this</span>.<span class="prop">stats</span>  = <span class="kw">new</span> <span class="cls">Map</span>();  <span class="cmt">// ว่าง</span>
+    <span class="kw">this</span>.<span class="prop">status</span> = <span class="cls">UnitStatus</span>.Alive
+    <span class="kw">this</span>.<span class="prop">side</span>   = <span class="cls">Side</span>.None
+}</pre>
+  </div>
+</div>
+
+<!-- ══ STEP 4 ══ -->
+<div class="step s-green">
+  <div class="num">4</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Models/Characters/Test1.ts</span>
+      <span class="fn">— setupTest1(test1)</span>
+      <span class="changed-badge">MAJOR CHANGE</span>
+    </div>
+    <div class="desc">ตอนนี้ factory รับ <code>(timeline)</code> และ schedule AttackActionEvent + NotificationEvent จริงๆ แทน console.log</div>
+<pre><span class="kw">const</span> BA_DURATION    = <span class="num-lit">30</span>;  <span class="cmt">// 0.5s</span>
+<span class="kw">const</span> SKILL_DURATION = <span class="num-lit">60</span>;  <span class="cmt">// 1.0s</span>
+<span class="kw">const</span> ULT_DURATION   = <span class="num-lit">90</span>;  <span class="cmt">// 1.5s</span>
+
+<span class="kw">export function</span> <span class="fn-name">setupTest1</span>(unit: <span class="cls">AllyUnit</span>): <span class="kw">void</span> {
+    unit.<span class="prop">baseAtk</span>     = <span class="num-lit">100</span>;
+    unit.<span class="prop">baseHp</span>      = <span class="num-lit">1000</span>;
+    unit.<span class="prop">baseDef</span>     = <span class="num-lit">100</span>;
+    unit.<span class="prop">elementType</span> = <span class="cls">ElementType</span>.Spectro;
+    unit.<span class="prop">weaponType</span>  = <span class="cls">WeaponType</span>.Sword;
+    unit.<span class="prop">maxEnergy</span>   = <span class="num-lit">100</span>;
+    unit.<span class="fn-name">setStat</span>(<span class="cls">StatsType</span>.CR, <span class="num-lit">0.05</span>);
+    unit.<span class="fn-name">setStat</span>(<span class="cls">StatsType</span>.CD, <span class="num-lit">1.5</span>);
+
+    unit.<span class="prop">rotations</span>.<span class="fn-name">set</span>(<span class="str">"Standard"</span>, (<span class="prop">timeline</span>) =>    <span class="cmt">// ← รับ timeline</span>
+        <span class="kw">new</span> <span class="cls">RotationBuilder</span>()
+            .<span class="fn-name">add</span>(<span class="str">"Test1-BA1"</span>, () => {
+                <span class="kw">const</span> t = timeline.<span class="prop">currentFrame</span>;   <span class="cmt">// อ่าน frame ตอน execute</span>
+                timeline.<span class="fn-name">schedule</span>(<span class="kw">new</span> <span class="cls">AttackActionEvent</span>(
+                    <span class="str">`Test1-BA1-f${t}`</span>, t, BA_DURATION, unit,
+                    <span class="cls">ActionType</span>.BA, <span class="kw">true</span>, <span class="num-lit">0</span>,
+                    () => console.<span class="fn-name">log</span>(<span class="str">`[f${t}] Test1-BA1`</span>)  <span class="cmt">// onExecute</span>
+                ));
+                timeline.<span class="fn-name">schedule</span>(<span class="kw">new</span> <span class="cls">NotificationEvent</span>(
+                    <span class="str">`Test1-BA1-end-f${t}`</span>, t + BA_DURATION,
+                    <span class="cls">NotificationType</span>.EndAction, unit
+                ));
+            })
+            .<span class="fn-name">add</span>(<span class="str">"Test1-BA2"</span>, () => { <span class="cmt">/* เหมือนกัน */</span> })
+            .<span class="fn-name">add</span>(<span class="str">"Test1-Skill"</span>, () => { <span class="cmt">/* SKILL_DURATION=60 */</span> })
+            .<span class="fn-name">build</span>()
+    );
+
+    unit.<span class="prop">rotations</span>.<span class="fn-name">set</span>(<span class="str">"Burst"</span>, (<span class="prop">timeline</span>) =>
+        <span class="kw">new</span> <span class="cls">RotationBuilder</span>()
+            .<span class="fn-name">add</span>(<span class="str">"Test1-Ult"</span>, () => {
+                <span class="kw">const</span> t = timeline.<span class="prop">currentFrame</span>;
+                timeline.<span class="fn-name">schedule</span>(<span class="kw">new</span> <span class="cls">AttackActionEvent</span>(
+                    <span class="str">`Test1-Ult-f${t}`</span>, t, ULT_DURATION, unit,
+                    <span class="cls">ActionType</span>.Ult, <span class="kw">true</span>, <span class="num-lit">0</span>,
+                    () => console.<span class="fn-name">log</span>(<span class="str">`[f${t}] Test1-Ult`</span>)
+                ));
+                timeline.<span class="fn-name">schedule</span>(<span class="kw">new</span> <span class="cls">NotificationEvent</span>(
+                    <span class="str">`Test1-Ult-end-f${t}`</span>, t + ULT_DURATION,
+                    <span class="cls">NotificationType</span>.EndAction, unit
+                ));
+            })
+            .<span class="fn-name">add</span>(<span class="str">"Test1-BA1"</span>, () => { <span class="cmt">/* BA_DURATION=30 */</span> })
+            .<span class="fn-name">build</span>()
+    );
+}</pre>
+    <div class="result-box">
+      <div class="res-kv"><span class="res-k">test1.rotations</span><span class="res-v">= Map { "Standard"→fn(timeline), "Burst"→fn(timeline) }</span></div>
+      <div class="res-kv"><span class="res-k">fn ยังไม่รัน</span><span class="res-vg">— เก็บเป็น factory ไว้ก่อน เรียกตอน mergeQueues</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STEP 5 ══ -->
+<div class="step s-green">
+  <div class="num">5</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Models/Unit.ts</span>
+      <span class="fn">— setStat(StatsType.CR, 0.05)</span>
+    </div>
+    <div class="desc">overload แบบ 2 args → generateKey(st) → "Crit rate" → stats.set</div>
+<pre><span class="kw">public</span> <span class="fn-name">setStat</span>(st, arg2, arg3?, arg4?): <span class="kw">void</span> {
+    <span class="cmt">// arg3=undefined → overload แบบที่ 1: (st, value)</span>
+    key = <span class="kw">this</span>.<span class="fn-name">generateKey</span>(st);   <span class="cmt">// → "Crit rate"</span>
+    val = arg2 <span class="kw">as</span> <span class="kw">number</span>;          <span class="cmt">// → 0.05</span>
+    <span class="kw">this</span>.<span class="prop">stats</span>.<span class="fn-name">set</span>(<span class="str">"Crit rate"</span>, <span class="num-lit">0.05</span>);
+}
+
+<span class="kw">private</span> <span class="fn-name">generateKey</span>(st, atOrEt?, at?): <span class="kw">string</span> {
+    <span class="kw">if</span> (atOrEt === <span class="kw">undefined</span>) <span class="kw">return</span> st; <span class="cmt">// → "Crit rate"</span>
+}</pre>
+  </div>
+</div>
+
+<!-- ══ STEP 6 ══ -->
+<div class="step s-green">
+  <div class="num">6</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Models/Characters/Test2.ts</span>
+      <span class="fn">— setupTest2(test2)</span>
+      <span class="changed-badge">MAJOR CHANGE</span>
+    </div>
+    <div class="desc">pattern เดียวกับ Test1 — factory รับ (timeline) และ schedule event จริงๆ · เพิ่ม ECHO_DURATION=45</div>
+<pre><span class="kw">const</span> BA_DURATION    = <span class="num-lit">30</span>;
+<span class="kw">const</span> SKILL_DURATION = <span class="num-lit">60</span>;
+<span class="kw">const</span> ULT_DURATION   = <span class="num-lit">90</span>;
+<span class="kw">const</span> ECHO_DURATION  = <span class="num-lit">45</span>;  <span class="cmt">// ← ใหม่</span>
+
+<span class="kw">export function</span> <span class="fn-name">setupTest2</span>(unit: <span class="cls">AllyUnit</span>): <span class="kw">void</span> {
+    unit.<span class="prop">baseAtk</span> = <span class="num-lit">80</span>;  unit.<span class="prop">baseHp</span> = <span class="num-lit">1200</span>;  unit.<span class="prop">baseDef</span> = <span class="num-lit">120</span>;
+    unit.<span class="prop">elementType</span> = <span class="cls">ElementType</span>.Havoc;
+    unit.<span class="prop">weaponType</span>  = <span class="cls">WeaponType</span>.Gauntlets;
+    unit.<span class="prop">maxEnergy</span>   = <span class="num-lit">150</span>;
+    unit.<span class="fn-name">setStat</span>(<span class="cls">StatsType</span>.CR, <span class="num-lit">0.05</span>);
+    unit.<span class="fn-name">setStat</span>(<span class="cls">StatsType</span>.CD, <span class="num-lit">1.5</span>);
+
+    unit.<span class="prop">rotations</span>.<span class="fn-name">set</span>(<span class="str">"Standard"</span>, (<span class="prop">timeline</span>) => <span class="kw">new</span> <span class="cls">RotationBuilder</span>()
+        .<span class="fn-name">add</span>(<span class="str">"Test2-BA1"</span>, () => { <span class="cmt">/* BA=30 */</span> })
+        .<span class="fn-name">add</span>(<span class="str">"Test2-Skill"</span>, () => { <span class="cmt">/* Skill=60 */</span> })
+        .<span class="fn-name">add</span>(<span class="str">"Test2-BA2"</span>, () => { <span class="cmt">/* BA=30 */</span> })
+        .<span class="fn-name">build</span>());
+    unit.<span class="prop">rotations</span>.<span class="fn-name">set</span>(<span class="str">"Burst"</span>, (<span class="prop">timeline</span>) => <span class="kw">new</span> <span class="cls">RotationBuilder</span>()
+        .<span class="fn-name">add</span>(<span class="str">"Test2-Ult"</span>, () => { <span class="cmt">/* Ult=90 */</span> })
+        .<span class="fn-name">add</span>(<span class="str">"Test2-BA1"</span>, () => { <span class="cmt">/* BA=30 */</span> })
+        .<span class="fn-name">build</span>());
+    unit.<span class="prop">rotations</span>.<span class="fn-name">set</span>(<span class="str">"Echo Focus"</span>, (<span class="prop">timeline</span>) => <span class="kw">new</span> <span class="cls">RotationBuilder</span>()
+        .<span class="fn-name">add</span>(<span class="str">"Test2-Echo"</span>, () => { <span class="cmt">/* Echo=45 */</span> })
+        .<span class="fn-name">add</span>(<span class="str">"Test2-Skill"</span>, () => { <span class="cmt">/* Skill=60 */</span> })
+        .<span class="fn-name">build</span>());
+}</pre>
+  </div>
+</div>
+
+<!-- ══ STEP 7 ══ -->
+<div class="step s-purple">
+  <div class="num">7</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Simulator/CombatTimeline.ts</span>
+      <span class="fn">— constructor()</span>
+    </div>
+    <div class="desc">สร้าง IPQ พร้อม comparator เรียง event ตาม frame, tie-breaker ด้วย priority</div>
+<pre><span class="kw">constructor</span>() {
+    <span class="kw">this</span>.<span class="prop">ipq</span> = <span class="kw">new</span> <span class="cls">IndexedPriorityQueue</span>&lt;<span class="cls">CombatEvent</span>&gt;((a, b) => {
+        <span class="kw">const</span> diff = a.<span class="prop">time</span> - b.<span class="prop">time</span>;
+        <span class="kw">return</span> diff !== <span class="num-lit">0</span> ? diff : a.<span class="prop">priority</span> - b.<span class="prop">priority</span>;
+    });
+}
+<span class="cmt">// currentFrame = 0 · isGlobalLocked = false · onFieldChar = null</span></pre>
+  </div>
+</div>
+
+<!-- ══ STEP 8 ══ -->
+<div class="step s-purple">
+  <div class="num">8</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Utils/indexedPriorityQueue.ts</span>
+      <span class="fn">— constructor(comparator)</span>
+    </div>
+<pre><span class="kw">constructor</span>(<span class="kw">private</span> compare: (a: T, b: T) => <span class="kw">number</span>) {}
+<span class="cmt">// heap = [] · positionMap = new Map()</span></pre>
+  </div>
+</div>
+
+<!-- ══ STEP 9 ══ -->
+<div class="step s-orange">
+  <div class="num">9</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/manualBuilder.ts</span>
+      <span class="fn">— เรียก factory พร้อมส่ง (timeline) → mergeQueues</span>
+      <span class="changed-badge">CHANGED</span>
+    </div>
+    <div class="desc">ตอนนี้ factory ถูกเรียกพร้อม <code>timeline</code> เป็น argument — ตรงนี้แหละที่ RotationBuilder สร้าง Queue จริงๆ</div>
+<pre><span class="kw">const</span> setupQueue = <span class="fn-name">mergeQueues</span>(
+    test1.<span class="prop">rotations</span>.<span class="fn-name">get</span>(<span class="str">"Burst"</span>)!(timeline),    <span class="cmt">// ← ส่ง timeline เข้าไป</span>
+    test2.<span class="prop">rotations</span>.<span class="fn-name">get</span>(<span class="str">"Burst"</span>)!(timeline)
+);
+<span class="kw">const</span> loopQueue = <span class="fn-name">mergeQueues</span>(
+    test1.<span class="prop">rotations</span>.<span class="fn-name">get</span>(<span class="str">"Standard"</span>)!(timeline),
+    test2.<span class="prop">rotations</span>.<span class="fn-name">get</span>(<span class="str">"Standard"</span>)!(timeline)
+);</pre>
+    <div class="result-box">
+      <div class="res-kv"><span class="res-k">เดิม</span><span class="res-vr">rotations.get("Burst")()</span></div>
+      <div class="res-kv"><span class="res-k">ใหม่</span><span class="res-vg">rotations.get("Burst")!(timeline)</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STEP 10 ══ -->
+<div class="step s-yellow">
+  <div class="num">10</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Simulator/RotationBuilder.ts</span>
+      <span class="fn">— new RotationBuilder().add(...).build()</span>
+    </div>
+    <div class="desc">Fluent builder: แต่ละ .add() สร้าง RotationAction เก็บ fn ไว้ใน queue · .build() คืน Queue</div>
+<pre><span class="kw">public</span> <span class="fn-name">add</span>(name: <span class="kw">string</span>, execute: () => <span class="kw">void</span>): <span class="kw">this</span> {
+    <span class="kw">this</span>.<span class="prop">queue</span>.<span class="fn-name">enqueue</span>(<span class="kw">new</span> <span class="cls">RotationAction</span>(name, execute));
+    <span class="kw">return this</span>; <span class="cmt">// chain ต่อได้</span>
+}
+<span class="kw">public</span> <span class="fn-name">build</span>(): <span class="cls">Queue</span>&lt;<span class="cls">RotationAction</span>&gt; {
+    <span class="kw">return this</span>.<span class="prop">queue</span>;
+}
+<span class="cmt">// execute fn ยังไม่รัน! เก็บเป็น closure ใน RotationAction.execute</span></pre>
+  </div>
+</div>
+
+<!-- ══ STEP 11 ══ -->
+<div class="step s-orange">
+  <div class="num">11</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/manualBuilder.ts</span>
+      <span class="fn">— mergeQueues(queue1, queue2)</span>
+    </div>
+<pre><span class="kw">function</span> <span class="fn-name">mergeQueues</span>(...queues): <span class="cls">Queue</span>&lt;<span class="cls">RotationAction</span>&gt; {
+    <span class="kw">const</span> merged = <span class="kw">new</span> <span class="cls">Queue</span>&lt;<span class="cls">RotationAction</span>&gt;();
+    <span class="kw">for</span> (<span class="kw">const</span> q <span class="kw">of</span> queues) {
+        <span class="kw">while</span> (!q.<span class="fn-name">isEmpty</span>()) merged.<span class="fn-name">enqueue</span>(q.<span class="fn-name">dequeue</span>()!);
+    }
+    <span class="kw">return</span> merged;
+}</pre>
+    <div class="result-box">
+      <div class="res-kv"><span class="res-k">setupQueue</span><span class="res-vg">[ Test1-Ult, Test1-BA1, Test2-Ult, Test2-BA1 ]</span></div>
+      <div class="res-kv"><span class="res-k">loopQueue</span><span class="res-vb">[ Test1-BA1, Test1-BA2, Test1-Skill, Test2-BA1, Test2-Skill, Test2-BA2 ]</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STEP 12 ══ -->
+<div class="step s-purple">
+  <div class="num">12</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Simulator/RotationDirector.ts</span>
+      <span class="fn">— constructor(timeline, setupQueue, loopQueue, maxLoops=2)</span>
+    </div>
+<pre><span class="kw">constructor</span>(timeline, setupQueue, loopQueue, maxLoops) {
+    <span class="kw">this</span>.<span class="prop">timeline</span>   = timeline;
+    <span class="kw">this</span>.<span class="prop">setupQueue</span> = setupQueue;  <span class="cmt">// 4 actions</span>
+    <span class="kw">this</span>.<span class="prop">loopQueue</span>  = loopQueue;   <span class="cmt">// 6 actions</span>
+    <span class="kw">this</span>.<span class="prop">maxLoops</span>   = maxLoops;    <span class="cmt">// 2</span>
+}
+<span class="cmt">// loopStepCount=0 · currentLoopCount=0</span></pre>
+  </div>
+</div>
+
+<!-- ══ STEP 13 ══ -->
+<div class="step s-orange">
+  <div class="num">13</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/manualBuilder.ts</span>
+      <span class="fn">— console.log(Combat Start) + director.run()</span>
+    </div>
+<pre>console.<span class="fn-name">log</span>(<span class="str">`=== Combat Start — setup=[...], loop=[...], maxLoops=2 ===`</span>);
+director.<span class="fn-name">run</span>(); <span class="cmt">// ← เริ่ม simulation จริงๆ</span></pre>
+  </div>
+</div>
+
+<!-- ══ STEP 14 ══ -->
+<div class="step s-purple">
+  <div class="num">14</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Simulator/RotationDirector.ts</span>
+      <span class="fn">— run()</span>
+    </div>
+<pre><span class="kw">public</span> <span class="fn-name">run</span>(): <span class="kw">void</span> {
+    <span class="kw">while</span> (<span class="kw">this</span>.<span class="fn-name">step</span>()) {}   <span class="cmt">// ← วนจนได้ false</span>
+    <span class="kw">this</span>.<span class="prop">timeline</span>.<span class="fn-name">runAll</span>(); <span class="cmt">// ← drain event ค้างใน IPQ</span>
+}</pre>
+  </div>
+</div>
+
+<!-- ══ STEP 15 ══ -->
+<div class="step s-purple">
+  <div class="num">15</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Simulator/RotationDirector.ts</span>
+      <span class="fn">— step() — วนทุก action</span>
+    </div>
+    <div class="desc">แต่ละ action: check lock → nextAction() → execute() → รัน tick() จนปลด lock</div>
+<pre><span class="kw">private</span> <span class="fn-name">step</span>(): <span class="kw">boolean</span> {
+    <span class="cmt">// ① ถ้า GlobalLock ค้างอยู่ (จาก action ก่อน) → หยุด</span>
+    <span class="kw">if</span> (<span class="kw">this</span>.<span class="prop">timeline</span>.<span class="prop">isGlobalLocked</span>) <span class="kw">return false</span>;
+
+    <span class="cmt">// ② ดึง action ถัดไป</span>
+    <span class="kw">const</span> action = <span class="kw">this</span>.<span class="fn-name">nextAction</span>();
+    <span class="kw">if</span> (!action) <span class="kw">return false</span>; <span class="cmt">// หมด action → จบ</span>
+
+    <span class="cmt">// ③ execute fn ใน RotationAction → schedule event ลง timeline</span>
+    action.<span class="fn-name">execute</span>();
+
+    <span class="cmt">// ④ รัน tick จนปลด lock (หรือ timeline ว่าง)</span>
+    <span class="kw">do</span> {
+        <span class="kw">this</span>.<span class="prop">timeline</span>.<span class="fn-name">tick</span>();
+    } <span class="kw">while</span> (<span class="kw">this</span>.<span class="prop">timeline</span>.<span class="prop">isGlobalLocked</span> &amp;&amp; !<span class="kw">this</span>.<span class="prop">timeline</span>.<span class="prop">isEmpty</span>);
+
+    <span class="kw">return true</span>;
+}</pre>
+  </div>
+</div>
+
+<!-- ══ STEP 16 ══ -->
+<div class="step s-purple">
+  <div class="num">16</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Simulator/RotationDirector.ts</span>
+      <span class="fn">— nextAction()</span>
+    </div>
+    <div class="desc">setupQueue ก่อน (dequeue) → หมดแล้วใช้ loopQueue (rotate วน) จนครบ maxLoops</div>
+<pre><span class="kw">private</span> <span class="fn-name">nextAction</span>(): <span class="cls">RotationAction</span> | <span class="kw">undefined</span> {
+    <span class="kw">if</span> (!<span class="kw">this</span>.<span class="prop">setupQueue</span>.<span class="fn-name">isEmpty</span>()) {
+        <span class="kw">return this</span>.<span class="prop">setupQueue</span>.<span class="fn-name">dequeue</span>(); <span class="cmt">// FIFO ก่อน</span>
+    }
+    <span class="kw">if</span> (<span class="kw">this</span>.<span class="prop">loopQueue</span>.<span class="fn-name">isEmpty</span>()) <span class="kw">return undefined</span>;
+    <span class="kw">if</span> (<span class="kw">this</span>.<span class="prop">currentLoopCount</span> >= <span class="kw">this</span>.<span class="prop">maxLoops</span>) <span class="kw">return undefined</span>; <span class="cmt">// ครบแล้ว</span>
+
+    <span class="kw">const</span> action = <span class="kw">this</span>.<span class="prop">loopQueue</span>.<span class="fn-name">rotate</span>(); <span class="cmt">// dequeue + enqueue ท้าย</span>
+    <span class="kw">this</span>.<span class="prop">loopStepCount</span>++;
+    <span class="kw">if</span> (<span class="kw">this</span>.<span class="prop">loopStepCount</span> === <span class="kw">this</span>.<span class="prop">loopQueue</span>.<span class="prop">length</span>) { <span class="cmt">// ครบ 1 รอบ (6 actions)</span>
+        <span class="kw">this</span>.<span class="prop">loopStepCount</span> = <span class="num-lit">0</span>;
+        <span class="kw">this</span>.<span class="prop">currentLoopCount</span>++;
+    }
+    <span class="kw">return</span> action;
+}</pre>
+  </div>
+</div>
+
+<!-- ══ STEP 17 ══ -->
+<div class="step s-yellow">
+  <div class="num">17</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Models/Characters/Test1.ts</span>
+      <span class="fn">— action.execute() — closure ที่ถูก call ตอน step()</span>
+      <span class="new-badge">NEW</span>
+    </div>
+    <div class="desc">ตรงนี้คือ fn ที่เก็บใน RotationAction ถูกเรียกจริงๆ — อ่าน currentFrame แล้ว schedule event 2 ตัว</div>
+<pre><span class="cmt">// ตัวอย่าง: action "Test1-Ult" ถูก execute ตอน t=0</span>
+() => {
+    <span class="kw">const</span> t = timeline.<span class="prop">currentFrame</span>; <span class="cmt">// → 0 (frame ปัจจุบัน)</span>
+
+    <span class="cmt">// schedule AttackActionEvent ที่ frame=0 duration=90</span>
+    timeline.<span class="fn-name">schedule</span>(<span class="kw">new</span> <span class="cls">AttackActionEvent</span>(
+        <span class="str">"Test1-Ult-f0"</span>, <span class="cmt">// name (unique key ใน IPQ)</span>
+        <span class="num-lit">0</span>,              <span class="cmt">// time = frame ที่จะ execute</span>
+        <span class="num-lit">90</span>,             <span class="cmt">// duration = ULT_DURATION</span>
+        unit,           <span class="cmt">// test1</span>
+        <span class="cls">ActionType</span>.Ult,
+        <span class="kw">true</span>,           <span class="cmt">// isManual → GlobalLock เมื่อ execute</span>
+        <span class="num-lit">0</span>,              <span class="cmt">// priority</span>
+        () => console.<span class="fn-name">log</span>(<span class="str">"[f0] Test1-Ult"</span>) <span class="cmt">// onExecute callback</span>
+    ));
+
+    <span class="cmt">// schedule EndAction notification ที่ frame=0+90=90</span>
+    timeline.<span class="fn-name">schedule</span>(<span class="kw">new</span> <span class="cls">NotificationEvent</span>(
+        <span class="str">"Test1-Ult-end-f0"</span>,
+        <span class="num-lit">90</span>,                           <span class="cmt">// frame ที่ action จบ</span>
+        <span class="cls">NotificationType</span>.EndAction,
+        unit
+    ));
+}
+<span class="cmt">// IPQ ตอนนี้มี: [AttackActionEvent(t=0), NotificationEvent(t=90)]</span></pre>
+  </div>
+</div>
+
+<!-- ══ STEP 18 ══ -->
+<div class="step s-red">
+  <div class="num">18</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Models/Combat/CombatEvent/AttackActionEvent.ts</span>
+      <span class="fn">— constructor + execute()</span>
+      <span class="changed-badge">CHANGED</span>
+    </div>
+    <div class="desc">เพิ่ม <code>onExecute?: () =&gt; void</code> — execute() เรียก setBusy() แล้วยิง callback</div>
+<pre><span class="kw">export class</span> <span class="cls">AttackActionEvent</span> <span class="kw">extends</span> <span class="cls">ActionEvent</span> {
+    <span class="kw">private readonly</span> <span class="prop">onExecute</span>?: () => <span class="kw">void</span>; <span class="cmt">// ← ใหม่</span>
+
+    <span class="kw">constructor</span>(
+        name, time, duration, unit, actionType, isManual,
+        priority = <span class="num-lit">0</span>,
+        onExecute?: () => <span class="kw">void</span>  <span class="cmt">// ← param ใหม่</span>
+    ) {
+        <span class="fn-name">super</span>(name, time, duration, unit, actionType, isManual, priority);
+        <span class="kw">this</span>.<span class="prop">onExecute</span> = onExecute;
+    }
+
+    <span class="kw">public</span> <span class="fn-name">execute</span>(): <span class="kw">void</span> {
+        <span class="kw">this</span>.<span class="prop">unit</span>.<span class="fn-name">setBusy</span>();    <span class="cmt">// unit.actionState = Busy</span>
+        <span class="kw">this</span>.<span class="prop">onExecute</span>?.();    <span class="cmt">// → console.log("[f0] Test1-Ult")</span>
+    }
+}</pre>
+  </div>
+</div>
+
+<!-- ══ STEP 19 ══ -->
+<div class="step s-teal">
+  <div class="num">19</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/Simulator/CombatTimeline.ts</span>
+      <span class="fn">— tick() — ตอนนี้ทำงานจริง</span>
+      <span class="changed-badge">CHANGED</span>
+    </div>
+    <div class="desc">pop event → ขยับ currentFrame → execute() → จัดการ GlobalLock จาก ActionEvent / NotificationEvent</div>
+<pre><span class="kw">public</span> <span class="fn-name">tick</span>(): <span class="cls">CombatEvent</span> | <span class="kw">undefined</span> {
+    <span class="kw">const</span> event = <span class="kw">this</span>.<span class="prop">ipq</span>.<span class="fn-name">pop</span>(); <span class="cmt">// ดึง event frame น้อยสุด</span>
+    <span class="kw">if</span> (!event) <span class="kw">return undefined</span>;
+
+    <span class="kw">this</span>.<span class="prop">currentFrame</span> = event.<span class="prop">time</span>; <span class="cmt">// ← ขยับ frame!</span>
+    event.<span class="fn-name">execute</span>();               <span class="cmt">// ← รัน event</span>
+
+    <span class="cmt">// ── Lock management ──</span>
+    <span class="kw">if</span> (event <span class="kw">instanceof</span> <span class="cls">ActionEvent</span> &amp;&amp; event.<span class="prop">isManual</span>) {
+        <span class="kw">this</span>.<span class="prop">isGlobalLocked</span> = <span class="kw">true</span>;  <span class="cmt">// AttackActionEvent isManual=true → lock</span>
+    }
+    <span class="kw">if</span> (event <span class="kw">instanceof</span> <span class="cls">NotificationEvent</span>) {
+        <span class="kw">if</span> (event.<span class="prop">notifyType</span> === <span class="cls">NotificationType</span>.ChangeToAuto) {
+            <span class="kw">this</span>.<span class="prop">isGlobalLocked</span> = <span class="kw">false</span>; <span class="cmt">// ปลด lock แต่ unit ยัง Busy</span>
+        }
+        <span class="kw">if</span> (event.<span class="prop">notifyType</span> === <span class="cls">NotificationType</span>.EndAction) {
+            <span class="kw">this</span>.<span class="prop">isGlobalLocked</span> = <span class="kw">false</span>; <span class="cmt">// ปลด lock</span>
+            event.<span class="prop">unit</span>?.<span class="fn-name">setFree</span>();        <span class="cmt">// unit.actionState = Free</span>
+        }
+    }
+    <span class="kw">return</span> event;
+}</pre>
+    <div class="result-box">
+      <div style="font-size:11px;color:#8b949e;margin-bottom:4px;">cycle ของ 1 action (เช่น Test1-Ult):</div>
+      <div class="res-kv"><span class="res-k">tick #1</span><span class="res-vg">pop AttackActionEvent(t=0) → currentFrame=0 → setBusy + log → isGlobalLocked=true</span></div>
+      <div class="res-kv"><span class="res-k">tick #2</span><span class="res-vb">pop NotificationEvent(t=90) → currentFrame=90 → isGlobalLocked=false + setFree()</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STEP 20 ══ -->
+<div class="step s-orange">
+  <div class="num">20</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">frame timeline</span>
+      <span class="fn">— ลำดับ action ทั้งหมด 16 ตัว พร้อม frame</span>
+    </div>
+    <div class="desc">แต่ละ action รันที่ frame = endFrame ของ action ก่อนหน้า</div>
+    <table class="frame-table" style="margin-top:6px">
+      <thead>
+        <tr>
+          <th>#</th><th>Phase</th><th>Action</th><th>Unit</th><th>Type</th><th>start frame</th><th>dur</th><th>end frame</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td><span class="tag-setup">SETUP</span></td><td class="t1c">Test1-Ult</td><td class="t1c">Test1</td><td>Ult</td><td>0</td><td>90</td><td>90</td></tr>
+        <tr><td>2</td><td><span class="tag-setup">SETUP</span></td><td class="t1c">Test1-BA1</td><td class="t1c">Test1</td><td>BA</td><td>90</td><td>30</td><td>120</td></tr>
+        <tr><td>3</td><td><span class="tag-setup">SETUP</span></td><td class="t2c">Test2-Ult</td><td class="t2c">Test2</td><td>Ult</td><td>120</td><td>90</td><td>210</td></tr>
+        <tr><td>4</td><td><span class="tag-setup">SETUP</span></td><td class="t2c">Test2-BA1</td><td class="t2c">Test2</td><td>BA</td><td>210</td><td>30</td><td>240</td></tr>
+        <tr><td>5</td><td><span class="tag-loop1">LOOP 1</span></td><td class="t1c">Test1-BA1</td><td class="t1c">Test1</td><td>BA</td><td>240</td><td>30</td><td>270</td></tr>
+        <tr><td>6</td><td><span class="tag-loop1">LOOP 1</span></td><td class="t1c">Test1-BA2</td><td class="t1c">Test1</td><td>BA</td><td>270</td><td>30</td><td>300</td></tr>
+        <tr><td>7</td><td><span class="tag-loop1">LOOP 1</span></td><td class="t1c">Test1-Skill</td><td class="t1c">Test1</td><td>Skill</td><td>300</td><td>60</td><td>360</td></tr>
+        <tr><td>8</td><td><span class="tag-loop1">LOOP 1</span></td><td class="t2c">Test2-BA1</td><td class="t2c">Test2</td><td>BA</td><td>360</td><td>30</td><td>390</td></tr>
+        <tr><td>9</td><td><span class="tag-loop1">LOOP 1</span></td><td class="t2c">Test2-Skill</td><td class="t2c">Test2</td><td>Skill</td><td>390</td><td>60</td><td>450</td></tr>
+        <tr><td>10</td><td><span class="tag-loop1">LOOP 1</span></td><td class="t2c">Test2-BA2</td><td class="t2c">Test2</td><td>BA</td><td>450</td><td>30</td><td>480</td></tr>
+        <tr><td>11</td><td><span class="tag-loop2">LOOP 2</span></td><td class="t1c">Test1-BA1</td><td class="t1c">Test1</td><td>BA</td><td>480</td><td>30</td><td>510</td></tr>
+        <tr><td>12</td><td><span class="tag-loop2">LOOP 2</span></td><td class="t1c">Test1-BA2</td><td class="t1c">Test1</td><td>BA</td><td>510</td><td>30</td><td>540</td></tr>
+        <tr><td>13</td><td><span class="tag-loop2">LOOP 2</span></td><td class="t1c">Test1-Skill</td><td class="t1c">Test1</td><td>Skill</td><td>540</td><td>60</td><td>600</td></tr>
+        <tr><td>14</td><td><span class="tag-loop2">LOOP 2</span></td><td class="t2c">Test2-BA1</td><td class="t2c">Test2</td><td>BA</td><td>600</td><td>30</td><td>630</td></tr>
+        <tr><td>15</td><td><span class="tag-loop2">LOOP 2</span></td><td class="t2c">Test2-Skill</td><td class="t2c">Test2</td><td>Skill</td><td>630</td><td>60</td><td>690</td></tr>
+        <tr><td>16</td><td><span class="tag-loop2">LOOP 2</span></td><td class="t2c">Test2-BA2</td><td class="t2c">Test2</td><td>BA</td><td>690</td><td>30</td><td><b style="color:#56d364">720</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ STEP 21 ══ -->
+<div class="step s-orange">
+  <div class="num">21</div>
+  <div class="body">
+    <div class="head">
+      <span class="file">app/manualBuilder.ts</span>
+      <span class="fn">— console.log(Combat End) + จบโปรแกรม</span>
+    </div>
+<pre>console.<span class="fn-name">log</span>(<span class="str">`=== Combat End (frame=720, t=12.00s, loops completed=2) ===`</span>);</pre>
+    <div class="console-out">
+      <div class="cout-hd">=== Combat Start — setup=[Test1-Ult, Test1-BA1, Test2-Ult, Test2-BA1], loop=[Test1-BA1, Test1-BA2, Test1-Skill, Test2-BA1, Test2-Skill, Test2-BA2], maxLoops=2 ===</div>
+      <br>
+      <div class="cout-dim">── SETUP ──────────────</div>
+      <div><span class="cout-fr">[f0]   </span><span class="cout-t1">Test1-Ult</span></div>
+      <div><span class="cout-fr">[f90]  </span><span class="cout-t1">Test1-BA1</span></div>
+      <div><span class="cout-fr">[f120] </span><span class="cout-t2">Test2-Ult</span></div>
+      <div><span class="cout-fr">[f210] </span><span class="cout-t2">Test2-BA1</span></div>
+      <div class="cout-dim">── LOOP 1 ─────────────</div>
+      <div><span class="cout-fr">[f240] </span><span class="cout-t1">Test1-BA1</span></div>
+      <div><span class="cout-fr">[f270] </span><span class="cout-t1">Test1-BA2</span></div>
+      <div><span class="cout-fr">[f300] </span><span class="cout-t1">Test1-Skill</span></div>
+      <div><span class="cout-fr">[f360] </span><span class="cout-t2">Test2-BA1</span></div>
+      <div><span class="cout-fr">[f390] </span><span class="cout-t2">Test2-Skill</span></div>
+      <div><span class="cout-fr">[f450] </span><span class="cout-t2">Test2-BA2</span></div>
+      <div class="cout-dim">── LOOP 2 ─────────────</div>
+      <div><span class="cout-fr">[f480] </span><span class="cout-t1">Test1-BA1</span></div>
+      <div><span class="cout-fr">[f510] </span><span class="cout-t1">Test1-BA2</span></div>
+      <div><span class="cout-fr">[f540] </span><span class="cout-t1">Test1-Skill</span></div>
+      <div><span class="cout-fr">[f600] </span><span class="cout-t2">Test2-BA1</span></div>
+      <div><span class="cout-fr">[f630] </span><span class="cout-t2">Test2-Skill</span></div>
+      <div><span class="cout-fr">[f690] </span><span class="cout-t2">Test2-BA2</span></div>
+      <br>
+      <div class="cout-hd">=== Combat End (frame=720, t=12.00s, loops completed=2) ===</div>
+    </div>
+    <div class="result-box" style="margin-top:8px">
+      <div class="res-kv"><span class="res-k">เดิม (stub)</span><span class="res-vr">frame=0, t=0.00s — IPQ ว่าง ไม่ขยับ frame เลย</span></div>
+      <div class="res-kv"><span class="res-k">ใหม่ (จริง)</span><span class="res-vg">frame=720, t=12.00s — IPQ ทำงานจริง lock ถูก manage</span></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Void-fn Approach Problem — WuwaSimulator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;font-size:13px;padding:20px}
+
+/* NAV */
+.nav{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+.nav-btn{padding:6px 14px;border-radius:6px;border:1px solid #30363d;background:#161b22;color:#8b949e;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
+.nav-btn:hover{border-color:#58a6ff;color:#58a6ff}
+.nav-btn.active{background:#1f3a6e;border-color:#58a6ff;color:#79c0ff}
+
+/* PAGE */
+.page{display:none}
+.page.active{display:block}
+
+/* SECTION */
+.section{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:16px;margin-bottom:14px}
+.section-title{font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px}
+.b-ok{background:#0f2419;color:#56d364;border:1px solid #1a4229}
+.b-bad{background:#3d0c0c;color:#f97583;border:1px solid #5a1010}
+.b-warn{background:#2e2005;color:#e3b341;border:1px solid #4d3800}
+.b-info{background:#0c2d6b;color:#79c0ff;border:1px solid #1f3a6e}
+
+/* STEP */
+.step-row{display:flex;gap:12px;margin-bottom:8px;align-items:flex-start}
+.step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px}
+.step-body{flex:1}
+.step-title{font-size:12px;font-weight:600;margin-bottom:4px}
+.step-desc{font-size:11.5px;color:#8b949e;line-height:1.5}
+
+/* CODE INLINE */
+code{font-family:'Consolas','Courier New',monospace;font-size:11px;background:#010409;padding:1px 5px;border-radius:3px;color:#e3b341}
+pre.block{background:#010409;border:1px solid #21262d;border-radius:6px;padding:10px 12px;font-family:'Consolas','Courier New',monospace;font-size:11px;line-height:1.7;margin:6px 0;overflow-x:auto}
+.kw{color:#ff7b72}.fn{color:#d2a8ff}.str{color:#a5d6ff}.cmt{color:#6a737d}.num{color:#79c0ff}.cls{color:#ffa657}
+
+/* IPQ VISUALIZER */
+.ipq-wrap{background:#010409;border:1px solid #21262d;border-radius:8px;padding:12px;margin:8px 0}
+.ipq-label{font-size:10px;font-weight:700;color:#6a737d;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.ipq-items{display:flex;flex-direction:column;gap:4px}
+.ipq-row{display:flex;align-items:center;gap:8px}
+.event-chip{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:6px;font-family:monospace;font-size:11px;font-weight:600;border:1px solid}
+.ec-atk1{background:#0c2040;border-color:#1f6feb;color:#79c0ff}
+.ec-notif1{background:#0f2419;border-color:#2ea043;color:#56d364}
+.ec-atk2{background:#2d0c3a;border-color:#8b5cf6;color:#d2a8ff}
+.ec-notif2{background:#1a1500;border-color:#9e6a03;color:#e3b341}
+.ec-conflict{background:#3d0c0c;border-color:#f85149;color:#f97583;animation:pulse .8s infinite}
+.ec-empty{color:#30363d;font-style:italic;font-size:11px;padding:4px 0}
+@keyframes pulse{0%,100%{border-color:#f85149}50%{border-color:#ff7b72;box-shadow:0 0 6px #f8514940}}
+.frame-tag{font-size:10px;padding:1px 5px;border-radius:3px;background:#1c2030;color:#58a6ff;border:1px solid #1f3a6e;flex-shrink:0}
+.dur-tag{font-size:10px;padding:1px 5px;border-radius:3px;background:#1a1a1a;color:#6a737d;border:1px solid #30363d;flex-shrink:0}
+
+/* LOCK STATE */
+.lock-row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+.lock-chip{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid}
+.lock-on{background:#3d0c0c;border-color:#f85149;color:#f97583}
+.lock-off{background:#0f2419;border-color:#2ea043;color:#56d364}
+.lock-neutral{background:#1c1c1c;border-color:#30363d;color:#6a737d}
+
+/* PROBLEM BOX */
+.problem-box{background:#1a0505;border:1px solid #f85149;border-radius:8px;padding:12px;margin:8px 0}
+.problem-title{color:#f97583;font-weight:700;font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.problem-body{font-size:12px;line-height:1.6;color:#c9d1d9}
+
+/* COMPARE TABLE */
+.cmp{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.cmp th{padding:7px 10px;background:#1c2030;color:#8b949e;font-weight:600;text-align:left;border-bottom:1px solid #21262d}
+.cmp td{padding:7px 10px;border-bottom:1px solid #161b22;vertical-align:top}
+.cmp tr:last-child td{border-bottom:none}
+.ok{color:#56d364}.bad{color:#f97583}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="show(0)">1 · แบบเสนอทำงานยังไง</button>
+  <button class="nav-btn" onclick="show(1)">2 · ปัญหา IPQ</button>
+  <button class="nav-btn" onclick="show(2)">3 · Conflict ที่เกิดขึ้น</button>
+  <button class="nav-btn" onclick="show(3)">4 · ทำไมแบบปัจจุบันไม่มีปัญหา</button>
+  <button class="nav-btn" onclick="show(4)">5 · สรุป</button>
+</div>
+
+<!-- PAGE 0 -->
+<div class="page active">
+  <div class="section">
+    <div class="section-title">แบบเสนอ — void fn ทำอะไร <span class="badge b-info">แบบเสนอ</span></div>
+    <div class="step-row">
+      <div class="step-num" style="background:#0c2d6b;color:#79c0ff">1</div>
+      <div class="step-body">
+        <div class="step-title">rotation เป็น fn ที่ schedule ทั้ง rotation พร้อมกันทีเดียว</div>
+<pre class="block"><span class="cls">unit</span>.rotations.<span class="fn">set</span>(<span class="str">"Burst"</span>, (<span class="cls">timeline</span>) =&gt; {
+    <span class="kw">let</span> t = timeline.currentFrame; <span class="cmt">// อ่าน frame ครั้งเดียว</span>
+
+    <span class="cmt">// schedule Ult + จบ Ult ทันที</span>
+    timeline.<span class="fn">schedule</span>(<span class="kw">new</span> <span class="cls">AttackActionEvent</span>(<span class="str">"Ult"</span>, t, <span class="num">90</span>, ...));
+    timeline.<span class="fn">schedule</span>(<span class="kw">new</span> <span class="cls">NotificationEvent</span>(<span class="str">"Ult-end"</span>, t+<span class="num">90</span>, EndAction));
+    t += <span class="num">90</span>;
+
+    <span class="cmt">// schedule BA1 + จบ BA1 ทันที</span>
+    timeline.<span class="fn">schedule</span>(<span class="kw">new</span> <span class="cls">AttackActionEvent</span>(<span class="str">"BA1"</span>, t, <span class="num">30</span>, ...));
+    timeline.<span class="fn">schedule</span>(<span class="kw">new</span> <span class="cls">NotificationEvent</span>(<span class="str">"BA1-end"</span>, t+<span class="num">30</span>, EndAction));
+}); <span class="cmt">// ← push 4 events เข้า IPQ พร้อมกันทีเดียว</span></pre>
+      </div>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num" style="background:#0c2d6b;color:#79c0ff">2</div>
+      <div class="step-body">
+        <div class="step-title">manualBuilder ใช้ builder อันเดียว แต่ละ fn เป็น 1 action</div>
+<pre class="block"><span class="kw">const</span> builder = <span class="kw">new</span> <span class="cls">RotationBuilder</span>();
+builder.<span class="fn">add</span>(<span class="str">"Test1-Burst"</span>, () =&gt; test1.rotations.<span class="fn">get</span>(<span class="str">"Burst"</span>)!(timeline));
+builder.<span class="fn">add</span>(<span class="str">"Test2-Burst"</span>, () =&gt; test2.rotations.<span class="fn">get</span>(<span class="str">"Burst"</span>)!(timeline));
+<span class="kw">const</span> setupQueue = builder.<span class="fn">build</span>();
+<span class="cmt">// setupQueue มีแค่ 2 RotationAction (ไม่ใช่ 4)</span></pre>
+        <div class="step-desc" style="margin-top:6px">ดูเหมือนเรียบง่ายกว่า — แต่ปัญหาอยู่ตอนรัน ไปดู page ถัดไป</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 1 -->
+<div class="page">
+  <div class="section">
+    <div class="section-title">step() #1 — Test1-Burst fn execute <span class="badge b-warn">ปัญหาเริ่มที่นี่</span></div>
+
+    <div class="step-row">
+      <div class="step-num" style="background:#2d1160;color:#d2a8ff">1</div>
+      <div class="step-body">
+        <div class="step-title">Test1-Burst fn ถูก execute → push 4 events เข้า IPQ พร้อมกัน</div>
+        <div class="ipq-wrap">
+          <div class="ipq-label">IPQ หลัง Test1-Burst fn execute (currentFrame=0)</div>
+          <div class="ipq-items">
+            <div class="ipq-row"><div class="event-chip ec-atk1">⚔ AttackEvent · Test1-Ult</div><div class="frame-tag">t=0</div><div class="dur-tag">dur=90</div></div>
+            <div class="ipq-row"><div class="event-chip ec-notif1">🔔 NotifEvent · Test1-Ult-end</div><div class="frame-tag">t=90</div></div>
+            <div class="ipq-row"><div class="event-chip ec-atk1">⚔ AttackEvent · Test1-BA1</div><div class="frame-tag">t=90</div><div class="dur-tag">dur=30</div></div>
+            <div class="ipq-row"><div class="event-chip ec-notif1">🔔 NotifEvent · Test1-BA1-end</div><div class="frame-tag">t=120</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num" style="background:#2d1160;color:#d2a8ff">2</div>
+      <div class="step-body">
+        <div class="step-title">do { tick() } วิ่งจนปลด lock</div>
+        <div class="lock-row">
+          <div class="lock-chip lock-neutral">tick #1 → AttackEvent(Ult, t=0)</div>
+          <div class="lock-chip lock-on">🔒 isGlobalLocked = true</div>
+        </div>
+        <div class="lock-row">
+          <div class="lock-chip lock-neutral">tick #2 → NotifEvent(Ult-end, t=90)</div>
+          <div class="lock-chip lock-off">🔓 isGlobalLocked = false</div>
+        </div>
+        <div style="font-size:12px;color:#e3b341;background:#1a1200;border:1px solid #4d3800;border-radius:6px;padding:8px 10px;margin:6px 0">
+          ⚠ do-while เช็ค <code>isGlobalLocked=false</code> → <b>ออกทันที</b><br>
+          ไม่ได้เช็คว่า IPQ ว่างหรือเปล่า!
+        </div>
+      </div>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num" style="background:#3d0c0c;color:#f97583">3</div>
+      <div class="step-body">
+        <div class="step-title">IPQ ยังมี Test1-BA1 ค้างอยู่!</div>
+        <div class="ipq-wrap">
+          <div class="ipq-label">IPQ หลัง do-while ออก (currentFrame=90)</div>
+          <div class="ipq-items">
+            <div class="ipq-row"><div class="event-chip ec-atk1" style="border-color:#f85149;background:#3d1010">⚔ AttackEvent · Test1-BA1</div><div class="frame-tag">t=90</div><div class="dur-tag">dur=30</div><span style="color:#f97583;font-size:11px;font-weight:700">← ค้างอยู่!</span></div>
+            <div class="ipq-row"><div class="event-chip ec-notif1" style="border-color:#f85149;background:#3d1010">🔔 NotifEvent · Test1-BA1-end</div><div class="frame-tag">t=120</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page">
+  <div class="section">
+    <div class="section-title">step() #2 — Test2-Burst fn execute ทับของที่ค้างอยู่ <span class="badge b-bad">CONFLICT</span></div>
+
+    <div class="step-row">
+      <div class="step-num" style="background:#3d0c0c;color:#f97583">4</div>
+      <div class="step-body">
+        <div class="step-title">Test2-Burst fn อ่าน currentFrame=90 แล้ว push 4 events</div>
+        <div class="ipq-wrap">
+          <div class="ipq-label">IPQ รวมของเก่า + ของใหม่ (currentFrame=90)</div>
+          <div class="ipq-items">
+            <div class="ipq-row">
+              <div class="event-chip ec-conflict">⚔ AttackEvent · Test1-BA1</div>
+              <div class="frame-tag" style="border-color:#f85149;color:#f97583">t=90</div>
+              <span style="color:#f97583;font-size:11px">← ค้างจาก Test1</span>
+            </div>
+            <div class="ipq-row">
+              <div class="event-chip ec-conflict">⚔ AttackEvent · Test2-Ult</div>
+              <div class="frame-tag" style="border-color:#f85149;color:#f97583">t=90</div>
+              <span style="color:#f97583;font-size:11px">← เพิ่งมาจาก Test2</span>
+            </div>
+            <div class="ipq-row"><div class="event-chip ec-notif1">🔔 NotifEvent · Test1-BA1-end</div><div class="frame-tag">t=120</div></div>
+            <div class="ipq-row"><div class="event-chip ec-notif2">🔔 NotifEvent · Test2-Ult-end</div><div class="frame-tag">t=180</div></div>
+            <div class="ipq-row"><div class="event-chip ec-atk2">⚔ AttackEvent · Test2-BA1</div><div class="frame-tag">t=180</div></div>
+            <div class="ipq-row"><div class="event-chip ec-notif2">🔔 NotifEvent · Test2-BA1-end</div><div class="frame-tag">t=210</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="problem-box">
+      <div class="problem-title">❌ ปัญหาที่ 1 — 2 AttackEvent อยู่ที่ t=90 พร้อมกัน</div>
+      <div class="problem-body">
+        IPQ มี <code>Test1-BA1</code> และ <code>Test2-Ult</code> ที่ <code>t=90</code> ทั้งคู่<br>
+        ลำดับออกขึ้นกับ heap internals — <b>ไม่แน่นอน</b><br>
+        ไม่มีทางควบคุมได้ว่า action ไหนจะรันก่อน
+      </div>
+    </div>
+
+    <div class="problem-box">
+      <div class="problem-title">❌ ปัญหาที่ 2 — setBusy() ผิด unit</div>
+      <div class="problem-body">
+        สมมติ <code>Test2-Ult</code> ออกก่อน → <code>test2.setBusy()</code> → <code>isGlobalLocked=true</code><br>
+        แต่ใน IPQ ยังมี <code>Test1-BA1</code> ค้างอยู่ ซึ่ง <code>test1</code> ยังไม่ได้ <code>setBusy()</code><br>
+        ทั้ง 2 unit อยู่ใน state ที่ขัดแย้งกัน
+      </div>
+    </div>
+
+    <div class="problem-box">
+      <div class="problem-title">❌ ปัญหาที่ 3 — EndAction ลำดับผิด</div>
+      <div class="problem-body">
+        <code>Test1-BA1-end</code> อยู่ที่ <code>t=120</code> แต่ <code>Test2-Ult</code> กินเวลาถึง <code>t=180</code><br>
+        EndAction ของ Test1 จะยิงก่อน Test2-Ult จบ → <code>setFree()</code> ผิดลำดับ<br>
+        <code>isGlobalLocked</code> จะถูก reset กลางอากาศ
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 3 -->
+<div class="page">
+  <div class="section">
+    <div class="section-title">ทำไมแบบปัจจุบัน (Queue) ไม่มีปัญหานี้ <span class="badge b-ok">แบบปัจจุบัน</span></div>
+
+    <div class="step-row">
+      <div class="step-num" style="background:#0f2419;color:#56d364">1</div>
+      <div class="step-body">
+        <div class="step-title">setupQueue มี 4 RotationAction แยก ไม่ใช่ 2</div>
+<pre class="block"><span class="cmt">// แต่ละ action = 1 move ของ 1 ตัวละคร</span>
+setupQueue: [Test1-Ult] → [Test1-BA1] → [Test2-Ult] → [Test2-BA1]</pre>
+        <div class="step-desc">RotationDirector ดึงออก <b>ทีละตัว</b> — ไม่เคย execute 2 action พร้อมกัน</div>
+      </div>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num" style="background:#0f2419;color:#56d364">2</div>
+      <div class="step-body">
+        <div class="step-title">step() — action.execute() push แค่ 2 events (1 action = 1 attack + 1 end)</div>
+        <div class="ipq-wrap">
+          <div class="ipq-label">IPQ หลัง Test1-Ult execute</div>
+          <div class="ipq-items">
+            <div class="ipq-row"><div class="event-chip ec-atk1">⚔ AttackEvent · Test1-Ult</div><div class="frame-tag">t=0</div><div class="dur-tag">dur=90</div></div>
+            <div class="ipq-row"><div class="event-chip ec-notif1">🔔 NotifEvent · Test1-Ult-end</div><div class="frame-tag">t=90</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num" style="background:#0f2419;color:#56d364">3</div>
+      <div class="step-body">
+        <div class="step-title">do-while drain จนหมด → IPQ ว่างสนิท → step ถัดไป</div>
+        <div class="lock-row">
+          <div class="lock-chip lock-neutral">tick #1 → AttackEvent(Ult, t=0)</div>
+          <div class="lock-chip lock-on">🔒 locked</div>
+        </div>
+        <div class="lock-row">
+          <div class="lock-chip lock-neutral">tick #2 → NotifEvent(Ult-end, t=90)</div>
+          <div class="lock-chip lock-off">🔓 unlocked</div>
+        </div>
+        <div class="ipq-wrap">
+          <div class="ipq-label">IPQ หลัง do-while</div>
+          <div class="ipq-items">
+            <div class="ec-empty">— ว่างสนิท —</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#56d364;background:#050f0a;border:1px solid #2ea043;border-radius:6px;padding:8px 10px;margin-top:6px">
+          ✓ IPQ ว่างพอดี ก่อนที่ Test1-BA1 จะ execute<br>
+          ✓ Test1-BA1 อ่าน <code>currentFrame=90</code> แล้วเริ่ม schedule ได้สะอาด
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 4 -->
+<div class="page">
+  <div class="section">
+    <div class="section-title">สรุปปัญหาทั้งหมด</div>
+
+    <table class="cmp">
+      <thead>
+        <tr><th>หัวข้อ</th><th>แบบเสนอ (void fn)</th><th>แบบปัจจุบัน (Queue)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>ขนาด setupQueue</td>
+          <td><span class="bad">2 actions (Burst ของ T1, Burst ของ T2)</span></td>
+          <td><span class="ok">4 actions (Ult-T1, BA1-T1, Ult-T2, BA1-T2)</span></td>
+        </tr>
+        <tr>
+          <td>events ที่ push ต่อครั้ง</td>
+          <td><span class="bad">4 events ทีเดียว (ทั้ง rotation)</span></td>
+          <td><span class="ok">2 events ต่อ action (attack + end)</span></td>
+        </tr>
+        <tr>
+          <td>IPQ หลัง do-while</td>
+          <td><span class="bad">ยังมี event ค้าง (BA1 ที่ยังไม่รัน)</span></td>
+          <td><span class="ok">ว่างสนิท พร้อม action ถัดไป</span></td>
+        </tr>
+        <tr>
+          <td>Event collision</td>
+          <td><span class="bad">T1-BA1 และ T2-Ult อยู่ที่ t=90 พร้อมกัน</span></td>
+          <td><span class="ok">ไม่มี — แต่ละ action จัดการ IPQ ตัวเอง</span></td>
+        </tr>
+        <tr>
+          <td>ลำดับ action</td>
+          <td><span class="bad">ขึ้นกับ heap internals — ไม่แน่นอน</span></td>
+          <td><span class="ok">ควบคุมได้จาก Queue order</span></td>
+        </tr>
+        <tr>
+          <td>Loop rotation</td>
+          <td><span class="bad">ต้องคิด mechanism ใหม่ทั้งหมด</span></td>
+          <td><span class="ok">rotate() ใน Queue จัดการได้ทันที</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="problem-box" style="margin-top:14px">
+      <div class="problem-title">🔑 ต้นตอปัญหาหลัก</div>
+      <div class="problem-body">
+        void fn schedule <b>ทั้ง rotation พร้อมกัน</b> ก่อนที่ action แรกจะจบ<br>
+        ระบบ lock ของ <code>RotationDirector</code> ออกแบบมาให้ทำงาน <b>ทีละ action</b><br>
+        สองสิ่งนี้ขัดกันโดยพื้นฐาน — แก้ไม่ได้โดยไม่เปลี่ยน architecture
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const pages = document.querySelectorAll('.page');
+const btns  = document.querySelectorAll('.nav-btn');
+function show(i){
+  pages.forEach((p,j)=>p.classList.toggle('active',j===i));
+  btns.forEach((b,j)=>b.classList.toggle('active',j===i));
+}
+</script>
+</body>
+</html>
