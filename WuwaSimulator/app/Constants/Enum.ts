@@ -79,7 +79,15 @@ export enum EnemyPosition{
     OutOfRange = "3"
 }
 
+export enum MultiplierType {
+    Atk   = "atk",
+    Hp    = "hp",
+    Def   = "def",
+    Const = "const"
+}
+
 export enum SkillRange {
+    None = "0",      
     Contact = "1",      
     Midrange = "2",   
     Ranged = "3",    

@@ -1,5 +1,6 @@
 import { NotificationType } from "../Constants/Enum";
 import { AllyUnit } from "../Models/AllyUnit";
+import { EnemyUnit } from "../Models/EnemyUnit";
 import { CombatEvent } from "../Models/Combat/CombatEvent/CombatEvent";
 import { ActionEvent } from "../Models/Combat/CombatEvent/ActionEvent";
 import { NotificationEvent } from "../Models/Combat/CombatEvent/NotificationEvent";
@@ -18,6 +19,12 @@ export class CombatTimeline {
 
     /** pointer ตัวละครที่ยืนบนสนามอยู่ */
     public onFieldChar: AllyUnit | null = null;
+
+    /** รายชื่อตัวละครฝ่ายผู้เล่นทั้งหมดในการต่อสู้ */
+    public allies: AllyUnit[] = [];
+
+    /** รายชื่อศัตรูทั้งหมดในการต่อสู้ */
+    public enemies: EnemyUnit[] = [];
 
     /** block manual action ใหม่จาก RotationBuilder */
     public isGlobalLocked: boolean = false;
