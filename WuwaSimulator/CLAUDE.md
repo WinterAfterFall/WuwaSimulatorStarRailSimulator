@@ -8,7 +8,7 @@
 
 ---
 
-## คำสั่งหลัก (`package.json`)
+## คำสั่งหลัก (`package.json` + `jest.config.js`)
 
 | คำสั่ง | ทำอะไร |
 |---|---|
@@ -18,7 +18,9 @@
 | `npm run test:coverage` | Jest พร้อม coverage report |
 
 - **tsconfig**: `strict: true`, `noEmit: true`, `moduleResolution: "bundler"`, `allowImportingTsExtensions: true`, `types: ["jest", "bun"]`
-- มี `bun.lock` (committed) — ใช้ bun หรือ npm ก็ได้ devDeps: `jest`, `ts-jest`, `tsx`, `@types/bun`, `@types/jest`
+- **jest.config.js**: ใช้ `ts-jest` preset, `testMatch: **/Test/automated/**/*.test.ts` (ไม่รัน legacy `Test/Utils/`)
+- devDeps: `jest@^29`, `ts-jest@^29`, `tsx`, `@types/bun`, `@types/jest`
+  - **หมายเหตุ**: ts-jest รองรับแค่ jest 29.x — ถ้า upgrade jest ต้องรอ ts-jest 30.x
 - ไฟล์ `.js`, `.d.ts`, `dist/`, `node_modules/`, `coverage/` ถูก gitignore — มีแต่ source `.ts` เท่านั้นที่ commit
 
 ---
@@ -33,11 +35,12 @@ app/
 ├── Models/
 │   ├── Unit.ts                      # Base class ของทุก unit — stat system (Map-based, 3 overloads)
 │   ├── AllyUnit.ts                  # ตัวละครฝ่ายผู้เล่น extends Unit — combat state, rotations, buff/dmg tracking
+│   ├── EnemyUnit.ts                 # ศัตรู extends Unit — position, debuff tracking, dmgRecord
 │   ├── Characters/
 │   │   ├── Test1.ts                 # setupTest1(unit) — กำหนด stats + rotations ของตัวละครทดสอบ
 │   │   └── Test2.ts                 # setupTest2(unit) — อีกตัวละครทดสอบ
 │   └── Combat/
-│       ├── Damage.ts                # Data object สำหรับคำนวณ damage (multipliers, element, ฯลฯ)
+│       ├── Damage.ts                # Data object + constructor 2 overloads + setMultipliers/addMultipliers/multiplyMultipliers/addGauges
 │       ├── RotationAction.ts        # action ที่ถูก queue ไว้ก่อน schedule (name + execute callback, ยังไม่มี time)
 │       └── CombatEvent/
 │           ├── CombatEvent.ts       # abstract base ของทุก event ใน timeline (name/time/duration/priority)
@@ -65,10 +68,14 @@ app/
 │   └── IndexedPriorityQueue.ts      # PQ + positionMap → update/delete/has ด้วยชื่อ O(log n)
 │
 ├── Test/
-│   ├── automated/Utils/             # ✅ Jest tests ที่ใช้งานได้ (import path ถูกต้อง)
-│   │   ├── Queue.test.ts
-│   │   ├── PriorityQueue.test.ts
-│   │   └── IndexedPriorityQueue.test.ts
+│   ├── automated/                   # ✅ Jest tests ที่ใช้งานได้ (ครอบคลุมโดย jest.config.js)
+│   │   ├── Utils/
+│   │   │   ├── Queue.test.ts
+│   │   │   ├── PriorityQueue.test.ts
+│   │   │   └── IndexedPriorityQueue.test.ts
+│   │   └── Models/
+│   │       ├── EnemyUnit.test.ts
+│   │       └── Damage.test.ts
 │   ├── Utils/                       # ⚠️ legacy duplicate — import path ผิด (`../Utils/...`) ใช้ไม่ได้
 │   ├── manual/                      # รันด้วยมือ (tsx) — scratch tests
 │   │   ├── 1-unit.ts / 2-hello.ts / 3-advanced-ipq.ts / 4-queue.ts
@@ -92,6 +99,9 @@ app/
 | `ActionType` | `None`, `BA`, `HA`, `Skill`, `Ult`, `Echo`, `Intro`, `Outro`, `TB` |
 | `ElementType` | `None`, `Glacio`, `Fusion`, `Electro`, `Aero`, `Spectro`, `Havoc` |
 | `WeaponType` | `None`, `Broadblade`, `Sword`, `Pistols`, `Gauntlets`, `Rectifier` |
+| `EnemyPosition` | `Vanguard="0"`, `Midrange="1"`, `Rearguard="2"`, `OutOfRange="3"` |
+| `MultiplierType` | `Atk="atk"`, `Hp="hp"`, `Def="def"`, `Const="const"` |
+| `SkillRange` | `None="0"`, `Contact="1"`, `Midrange="2"`, `Ranged="3"`, `Global="999"` |
 
 ---
 
