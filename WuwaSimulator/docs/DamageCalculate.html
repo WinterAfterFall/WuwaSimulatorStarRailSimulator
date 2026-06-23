@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DamageCalculate.ts — คู่มืออธิบายโค้ด</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0f1117;
+    --bg2:       #181c27;
+    --bg3:       #1e2333;
+    --border:    #2a3045;
+    --text:      #e2e8f0;
+    --muted:     #7b8ba6;
+    --accent:    #7c6af5;
+    --accent2:   #5ee7b7;
+    --accent3:   #f7a94b;
+    --accent4:   #ef6b6b;
+    --accent5:   #60a8fb;
+    --code-bg:   #11141d;
+    --tag-bg:    #1e2a40;
+    --kw:        #c792ea;
+    --fn:        #82aaff;
+    --str:       #c3e88d;
+    --num:       #f78c6c;
+    --type:      #ffcb6b;
+    --cmt:       #546e7a;
+    --op:        #89ddff;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ── Layout ── */
+  .layout { display: flex; min-height: 100vh; }
+
+  nav {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 1rem;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  nav .logo {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: .05em;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  nav ul { list-style: none; }
+  nav li { margin-bottom: 2px; }
+  nav a {
+    display: block;
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    transition: background .15s, color .15s;
+  }
+  nav a:hover, nav a.active { background: var(--bg3); color: var(--text); }
+  nav .section-label {
+    font-size: 11px;
+    letter-spacing: .08em;
+    color: var(--muted);
+    padding: 1rem 10px 4px;
+    text-transform: uppercase;
+  }
+
+  main { flex: 1; max-width: 860px; padding: 3rem 3rem 6rem; }
+
+  /* ── Typography ── */
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: .5rem; }
+  h2 { font-size: 20px; font-weight: 600; margin: 3rem 0 1rem; padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 16px; font-weight: 600; margin: 2rem 0 .75rem; color: var(--accent2); }
+  p { margin-bottom: 1rem; color: #c5cfe0; }
+
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 2rem; }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .badge-fn  { background: #1a2d4a; color: var(--fn); }
+  .badge-type{ background: #2a2210; color: var(--type); }
+  .badge-new { background: #1a3020; color: var(--accent2); }
+  .badge-del { background: #3a1515; color: var(--accent4); }
+
+  /* ── Code blocks ── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+    margin: 1rem 0 1.5rem;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+  code { font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace; }
+  pre code { color: var(--text); }
+
+  .kw  { color: var(--kw); }
+  .fn  { color: var(--fn); }
+  .str { color: var(--str); }
+  .num { color: var(--num); }
+  .tp  { color: var(--type); }
+  .cmt { color: var(--cmt); font-style: italic; }
+  .op  { color: var(--op); }
+  .prop{ color: #f07178; }
+
+  /* ── Call-out boxes ── */
+  .callout {
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0 1.5rem;
+    font-size: 14px;
+    border-left: 3px solid;
+  }
+  .callout-info  { background: #0d1e35; border-color: var(--accent5); color: #a8c8f0; }
+  .callout-warn  { background: #2a1e08; border-color: var(--accent3); color: #f0d090; }
+  .callout-note  { background: #1a1d2a; border-color: var(--accent);  color: #c0b8f8; }
+  .callout strong{ display: block; margin-bottom: .25rem; font-size: 13px; letter-spacing: .04em; }
+
+  /* ── Formula box ── */
+  .formula {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    font-family: 'Cascadia Code', monospace;
+    font-size: 13px;
+    margin: 1rem 0 1.5rem;
+    line-height: 2;
+  }
+  .formula .eq-line { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .formula .lhs { color: var(--accent2); font-weight: 600; min-width: 160px; }
+  .formula .rhs { color: var(--text); }
+  .formula .note { color: var(--muted); font-size: 12px; margin-left: 8px; }
+  .formula hr { border: none; border-top: 1px solid var(--border); margin: .5rem 0; }
+
+  /* ── Stat table ── */
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem; font-size: 13.5px; }
+  th { background: var(--bg3); color: var(--muted); font-weight: 600; font-size: 12px;
+       letter-spacing: .05em; text-transform: uppercase; padding: 8px 12px; text-align: left;
+       border-bottom: 1px solid var(--border); }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--bg3); color: #c5cfe0; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg2); }
+  td code { background: var(--tag-bg); padding: 1px 5px; border-radius: 3px; font-size: 12px; color: var(--fn); }
+
+  /* ── Flow diagram ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 1.5rem 0;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .6rem 1rem;
+    font-size: 13px;
+    text-align: center;
+    min-width: 130px;
+  }
+  .flow-box .label { font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 2px; }
+  .flow-box .name  { font-weight: 600; color: var(--accent2); }
+  .flow-arrow { color: var(--border); font-size: 18px; padding: 0 6px; }
+
+  .flow-box.hi  { border-color: var(--accent);  background: #1a1830; }
+  .flow-box.hi .name { color: var(--accent); }
+  .flow-box.out { border-color: var(--accent3); background: #281d08; }
+  .flow-box.out .name { color: var(--accent3); }
+
+  /* ── Inline code ── */
+  p code, li code { background: var(--tag-bg); padding: 1px 6px; border-radius: 4px;
+                    font-family: 'Cascadia Code', monospace; font-size: 13px; color: var(--fn); }
+  li { margin-bottom: 6px; color: #c5cfe0; padding-left: 4px; }
+  ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+
+  /* ── Section divider ── */
+  .section-id { font-size: 11px; color: var(--accent); font-weight: 600;
+                letter-spacing: .08em; text-transform: uppercase; margin-bottom: .25rem; }
+
+  /* ── Dim-table (ตาราง dimension) ── */
+  .dim-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 1rem 0 1.5rem;
+  }
+  .dim-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    font-size: 13px;
+  }
+  .dim-card h4 { font-size: 13px; font-weight: 600; color: var(--accent3); margin-bottom: 8px; }
+  .dim-card li { list-style: none; padding: 2px 0; }
+  .dim-card li::before { content: '+ '; color: var(--accent2); }
+
+  /* ── Multiplier breakdown ── */
+  .mult-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: .75rem 0;
+    border-bottom: 1px solid var(--bg3);
+  }
+  .mult-row:last-child { border-bottom: none; }
+  .mult-icon { font-size: 20px; width: 32px; flex-shrink: 0; text-align: center; }
+  .mult-body h4 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .mult-body p  { font-size: 13px; color: var(--muted); margin: 0; }
+  .mult-body code { font-size: 12px; background: var(--tag-bg); padding: 1px 5px; border-radius: 3px; color: var(--fn); }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+<!-- ─── Sidebar ─── -->
+<nav>
+  <div class="logo">📄 DamageCalculate.ts</div>
+  <div class="section-label">ภาพรวม</div>
+  <ul>
+    <li><a href="#overview">ภาพรวมระบบ</a></li>
+    <li><a href="#flow">ลำดับการทำงาน</a></li>
+    <li><a href="#changes">สิ่งที่เปลี่ยนจากเดิม</a></li>
+  </ul>
+  <div class="section-label">Functions</div>
+  <ul>
+    <li><a href="#sumstat">sumStat()</a></li>
+    <li><a href="#attacker">computeAttackerStats()</a></li>
+    <li><a href="#target">computeTargetStats()</a></li>
+    <li><a href="#formula">applyDamageFormula()</a></li>
+    <li><a href="#main">calculateDamage()</a></li>
+  </ul>
+  <div class="section-label">อ้างอิง</div>
+  <ul>
+    <li><a href="#types">Types & Interfaces</a></li>
+    <li><a href="#keysystem">Key System</a></li>
+    <li><a href="#formula-full">สูตรรวม</a></li>
+  </ul>
+</nav>
+
+<!-- ─── Main ─── -->
+<main>
+
+  <!-- HEADER -->
+  <div class="section-id">Services / Damage</div>
+  <h1>DamageCalculate.ts</h1>
+  <p class="subtitle">ระบบคำนวณ damage สำหรับ Wuthering Waves Simulator — อธิบายทุก function ทุก formula</p>
+
+  <!-- ── OVERVIEW ── -->
+  <h2 id="overview">ภาพรวมระบบ</h2>
+  <p>
+    ไฟล์นี้เป็น service หลักสำหรับคำนวณ damage ในการ simulate การต่อสู้
+    รับ <code>Damage</code> object เป็น input ซึ่งประกอบด้วย attacker, target list, element, skill multipliers
+    แล้วคำนวณ damage ออกมาต่อ target แต่ละตัว
+  </p>
+
+  <p>หลักการทำงานหลักแบ่งเป็น 3 ขั้น:</p>
+  <ol>
+    <li><strong>Aggregate stats</strong> — รวม stat จากทุก dimension (base, per-action, per-element)</li>
+    <li><strong>Compute sides</strong> — คำนวณค่า derived stats ของ attacker และ target แยกกัน</li>
+    <li><strong>Apply formula</strong> — คูณ multiplier ทุกตัวเข้าด้วยกัน แล้ว print ผลลัพธ์</li>
+  </ol>
+
+  <!-- FLOW -->
+  <h2 id="flow">ลำดับการทำงาน</h2>
+  <div class="flow">
+    <div class="flow-box hi">
+      <div class="label">input</div>
+      <div class="name">Damage</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="label">1x</div>
+      <div class="name">computeAttacker<br>Stats()</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="label">per target</div>
+      <div class="name">computeTarget<br>Stats()</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="label">per target</div>
+      <div class="name">applyDamage<br>Formula()</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box out">
+      <div class="label">output</div>
+      <div class="name">console.log</div>
+    </div>
+  </div>
+  <p>
+    <code>computeAttackerStats()</code> ถูกเรียก <strong>ครั้งเดียว</strong> ก่อน loop
+    เพราะ stat ของ attacker ไม่เปลี่ยนแปลงตาม target แต่ละตัว
+    ส่วน <code>computeTargetStats()</code> และ <code>applyDamageFormula()</code>
+    ถูกเรียก <strong>ทุก iteration</strong> ใน <code>damage.targets[]</code>
+  </p>
+
+  <!-- CHANGES -->
+  <h2 id="changes">สิ่งที่เปลี่ยนจากเดิม</h2>
+  <table>
+    <thead><tr><th>ด้าน</th><th>เดิม</th><th>ใหม่</th></tr></thead>
+    <tbody>
+      <tr><td>Signature</td><td><code>calculateDamage(damage, target)</code></td><td><code>calculateDamage(damage)</code> — target อยู่ใน <code>damage.targets[]</code></td></tr>
+      <tr><td>Stat aggregation</td><td>อ่าน stat ทีละ call แบบ hardcode</td><td><code>sumStat()</code> วนทุก actionType + element dimension อัตโนมัติ</td></tr>
+      <tr><td>Target type</td><td><code>AllyUnit</code> (ผิด)</td><td><code>EnemyUnit</code> (ถูก)</td></tr>
+      <tr><td>Multi-target</td><td>ไม่รองรับ — คำนวณ 1 ตัวต่อ call</td><td>วน <code>damage.targets[]</code> ทุกตัวใน call เดียว</td></tr>
+      <tr><td>Output</td><td>return number</td><td>return void + print ทุก target</td></tr>
+      <tr><td>DefRed scope</td><td>อ่านแค่ base stat</td><td>sum ทุก actionType dimension</td></tr>
+      <tr><td>Respen scope</td><td>อ่านแค่ base stat</td><td>sum ทุก actionType + element dimension</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── sumStat ── -->
+  <h2 id="sumstat">
+    <span class="badge badge-fn">function</span>
+    sumStat()
+    <span class="badge badge-new">helper</span>
+  </h2>
+
+  <p>
+    เป็นหัวใจหลักของระบบ — รวมค่า stat จาก <strong>ทุก dimension</strong> ที่เกี่ยวข้องกับ skill นั้น
+    ก่อนหน้านี้ code เดิมอ่าน stat แบบ hardcode ทำให้พลาด buff ที่ผูกกับ action type หรือ element
+    function นี้แก้ปัญหานั้นโดยการวน loop อัตโนมัติ
+  </p>
+
+<pre><code><span class="kw">function</span> <span class="fn">sumStat</span>(unit: <span class="tp">Unit</span>, st: <span class="tp">StatsType</span>, damage: <span class="tp">Damage</span>): <span class="tp">number</span> {
+    <span class="kw">const</span> { attackTypeList, element } = damage;
+
+    <span class="cmt">// Phase 1 — base + per-action dimension</span>
+    <span class="kw">let</span> total = unit.<span class="fn">getStats</span>(st);               <span class="cmt">// key: "Dmg Bonus"</span>
+    <span class="kw">for</span> (<span class="kw">const</span> at <span class="op">of</span> attackTypeList) {
+        total += unit.<span class="fn">getStats</span>(st, at);           <span class="cmt">// key: "Dmg Bonus-Skill"</span>
+    }
+
+    <span class="cmt">// Phase 2 — element dimension (เฉพาะ Dmg, Amp, Respen, ElemRed)</span>
+    <span class="kw">if</span> (ELEMENT_DIMENSION_STATS.<span class="fn">has</span>(st) <span class="op">&amp;&amp;</span> element !== <span class="tp">ElementType</span>.None) {
+        total += unit.<span class="fn">getStats</span>(st, element, <span class="tp">ActionType</span>.None); <span class="cmt">// "Dmg Bonus-Spectro-None"</span>
+        <span class="kw">for</span> (<span class="kw">const</span> at <span class="op">of</span> attackTypeList) {
+            total += unit.<span class="fn">getStats</span>(st, element, at);           <span class="cmt">// "Dmg Bonus-Spectro-Skill"</span>
+        }
+    }
+
+    <span class="kw">return</span> total;
+}</code></pre>
+
+  <h3>Phase 1 — Base + Per-action dimension</h3>
+  <p>
+    ทุก stat ผ่าน phase นี้เสมอ สูตรคือ:
+  </p>
+  <div class="formula">
+    <div class="eq-line">
+      <span class="lhs">total</span>
+      <span class="rhs">= get(stat)</span>
+      <span class="note">← global buff (ไม่ขึ้นกับ action)</span>
+    </div>
+    <div class="eq-line">
+      <span class="lhs"></span>
+      <span class="rhs">+ get(stat, BA)</span>
+      <span class="note">← buff เฉพาะตอนใช้ Basic Attack</span>
+    </div>
+    <div class="eq-line">
+      <span class="lhs"></span>
+      <span class="rhs">+ get(stat, Skill)</span>
+      <span class="note">← buff เฉพาะตอนใช้ Resonance Skill</span>
+    </div>
+    <div class="eq-line">
+      <span class="lhs"></span>
+      <span class="rhs">+ get(stat, ...)</span>
+      <span class="note">← วน loop ทุก actionType ใน attackTypeList</span>
+    </div>
+  </div>
+
+  <h3>Phase 2 — Element dimension (เฉพาะบาง stat)</h3>
+  <p>
+    stats ที่อยู่ใน <code>ELEMENT_DIMENSION_STATS</code> จะได้รับการวน dimension element เพิ่มเติม
+    เหตุผลคือ buff เหล่านี้ใน WuWa สามารถผูกกับ element ได้ เช่น
+    Spectro DMG Bonus +15%, Spectro Skill DMG +10%
+  </p>
+  <div class="formula">
+    <div class="eq-line">
+      <span class="lhs">total +=</span>
+      <span class="rhs">get(stat, Spectro, None)</span>
+      <span class="note">← "Dmg Bonus-Spectro-None" (element-only buff)</span>
+    </div>
+    <div class="eq-line">
+      <span class="lhs"></span>
+      <span class="rhs">+ get(stat, Spectro, BA)</span>
+      <span class="note">← "Dmg Bonus-Spectro-BA"</span>
+    </div>
+    <div class="eq-line">
+      <span class="lhs"></span>
+      <span class="rhs">+ get(stat, Spectro, Skill)</span>
+      <span class="note">← "Dmg Bonus-Spectro-Skill"</span>
+    </div>
+  </div>
+
+  <div class="dim-grid">
+    <div class="dim-card">
+      <h4>✅ stats ที่ใช้ element dimension</h4>
+      <ul>
+        <li><code>StatsType.Dmg</code> — DMG Bonus</li>
+        <li><code>StatsType.Amp</code> — Amplify</li>
+        <li><code>StatsType.Respen</code> — RES Penetration</li>
+        <li><code>StatsType.ElemRed</code> — Elemental Reduction</li>
+      </ul>
+    </div>
+    <div class="dim-card">
+      <h4>❌ stats ที่ไม่ใช้ element dimension</h4>
+      <ul>
+        <li><code>StatsType.AtkP / FlatAtk</code></li>
+        <li><code>StatsType.CR / CD</code></li>
+        <li><code>StatsType.DefRed</code></li>
+        <li><code>StatsType.DmgRed</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout callout-note">
+    <strong>ทำไม ElemRed ต้องอยู่ใน ELEMENT_DIMENSION_STATS?</strong>
+    ใน key system ของโปรเจกต์นี้ enemy resistance เก็บเป็น key <code>"Elemental Reduction-Glacio-None"</code>
+    ซึ่งเป็น 3-argument form — ถ้าไม่รวม element dimension ใน sumStat จะอ่านค่าไม่เจอ
+    เพราะ <code>getStats(ElemRed)</code> (1-arg) จะได้ 0 เสมอ
+  </div>
+
+  <!-- ── computeAttackerStats ── -->
+  <h2 id="attacker">
+    <span class="badge badge-fn">function</span>
+    computeAttackerStats()
+  </h2>
+
+  <p>
+    รับ <code>AllyUnit</code> และ <code>Damage</code> แล้วคำนวณ stat ที่จำเป็นทั้งหมดของฝั่ง attacker
+    เรียก <code>sumStat()</code> สำหรับแต่ละ stat type เพื่อให้ได้ค่าที่รวม buff ทุก dimension แล้ว
+  </p>
+
+<pre><code><span class="kw">function</span> <span class="fn">computeAttackerStats</span>(attacker: <span class="tp">AllyUnit</span>, damage: <span class="tp">Damage</span>): <span class="tp">AttackerStats</span> {
+    <span class="kw">const</span> atkP    = <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.AtkP,    damage);
+    <span class="kw">const</span> flatAtk = <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.FlatAtk, damage);
+    <span class="cmt">// ... (hp, def เหมือนกัน)</span>
+
+    <span class="kw">return</span> {
+        atk     : attacker.baseAtk <span class="op">*</span> (<span class="num">1</span> <span class="op">+</span> atkP) <span class="op">+</span> flatAtk,
+        hp      : attacker.baseHp  <span class="op">*</span> (<span class="num">1</span> <span class="op">+</span> hpP)  <span class="op">+</span> flatHp,
+        def     : attacker.baseDef <span class="op">*</span> (<span class="num">1</span> <span class="op">+</span> defP) <span class="op">+</span> flatDef,
+        cr      : Math.<span class="fn">min</span>(<span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.CR,     damage), <span class="num">1</span>),
+        cd      : <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.CD,     damage),
+        dmgBonus: <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.Dmg,    damage),
+        amp     : <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.Amp,    damage),
+        defRed  : <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.DefRed, damage),
+        respen  : <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.Respen, damage),
+    };
+}</code></pre>
+
+  <table>
+    <thead><tr><th>Field</th><th>สูตร</th><th>หมายเหตุ</th></tr></thead>
+    <tbody>
+      <tr><td><code>atk</code></td><td><code>baseAtk × (1 + AtkP) + FlatAtk</code></td><td>ATK รวม % และ flat</td></tr>
+      <tr><td><code>hp</code></td><td><code>baseHp × (1 + HpP) + FlatHp</code></td><td>HP รวม % และ flat</td></tr>
+      <tr><td><code>def</code></td><td><code>baseDef × (1 + DefP) + FlatDef</code></td><td>DEF รวม % และ flat</td></tr>
+      <tr><td><code>cr</code></td><td><code>min(sumStat(CR), 1)</code></td><td>cap ที่ 100% เสมอ</td></tr>
+      <tr><td><code>cd</code></td><td><code>sumStat(CD)</code></td><td>ตัวคูณเมื่อ crit</td></tr>
+      <tr><td><code>dmgBonus</code></td><td><code>sumStat(Dmg)</code></td><td>รวม element+action dimensions</td></tr>
+      <tr><td><code>amp</code></td><td><code>sumStat(Amp)</code></td><td>รวม element+action dimensions</td></tr>
+      <tr><td><code>defRed</code></td><td><code>sumStat(DefRed)</code></td><td>DEF shred ลด DEF ของ enemy</td></tr>
+      <tr><td><code>respen</code></td><td><code>sumStat(Respen)</code></td><td>RES Pen ลด resistance ของ enemy</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── computeTargetStats ── -->
+  <h2 id="target">
+    <span class="badge badge-fn">function</span>
+    computeTargetStats()
+  </h2>
+
+  <p>
+    รับ <code>EnemyUnit</code> และ <code>Damage</code> แล้วคำนวณ stat ฝั่ง enemy ที่กระทบต่อ damage ที่รับ
+    เรียก <code>sumStat()</code> เหมือนกัน ทำให้รองรับกรณีที่ enemy มี buff หรือ debuff ที่ผูกกับ action type ได้
+  </p>
+
+<pre><code><span class="kw">function</span> <span class="fn">computeTargetStats</span>(target: <span class="tp">EnemyUnit</span>, damage: <span class="tp">Damage</span>): <span class="tp">TargetStats</span> {
+    <span class="kw">return</span> {
+        def     : <span class="fn">sumStat</span>(target, <span class="tp">StatsType</span>.FlatDef, damage), <span class="cmt">// DEF ทั้งหมดของ enemy</span>
+        dmgBonus: <span class="fn">sumStat</span>(target, <span class="tp">StatsType</span>.Dmg,     damage), <span class="cmt">// ไว้รองรับ self-buff อนาคต</span>
+        dmgRed  : <span class="fn">sumStat</span>(target, <span class="tp">StatsType</span>.DmgRed,  damage), <span class="cmt">// Damage Reduction</span>
+        elemRed : <span class="fn">sumStat</span>(target, <span class="tp">StatsType</span>.ElemRed,  damage), <span class="cmt">// Elemental Resistance</span>
+    };
+}</code></pre>
+
+  <table>
+    <thead><tr><th>Field</th><th>Key ที่อ่าน (ตัวอย่าง)</th><th>อธิบาย</th></tr></thead>
+    <tbody>
+      <tr><td><code>def</code></td><td><code>"FlatDef"</code>, <code>"FlatDef-BA"</code></td><td>DEF ของ enemy (ตั้งโดย <code>setStat(FlatDef, 800)</code>)</td></tr>
+      <tr><td><code>dmgBonus</code></td><td><code>"Dmg Bonus"</code></td><td>สำหรับ enemy ที่มี self-buff (มักเป็น 0)</td></tr>
+      <tr><td><code>dmgRed</code></td><td><code>"Damage Reduction"</code></td><td>ลด damage ขาเข้าเป็น %</td></tr>
+      <tr><td><code>elemRed</code></td><td><code>"Elemental Reduction-Spectro-None"</code></td><td>resistance ต่อ element ของ skill นั้น</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-info">
+    <strong>EnemyUnit ไม่มี baseAtk/baseHp/baseDef</strong>
+    เพราะ <code>EnemyUnit</code> extends <code>Unit</code> ไม่ใช่ <code>AllyUnit</code> ดังนั้น DEF ของ enemy
+    ถูกเก็บเป็น <code>FlatDef</code> โดยตรง เช่น <code>enemy.setStat(StatsType.FlatDef, 800)</code>
+    ไม่มีการคูณ base × %
+  </div>
+
+  <!-- ── applyDamageFormula ── -->
+  <h2 id="formula">
+    <span class="badge badge-fn">function</span>
+    applyDamageFormula()
+  </h2>
+
+  <p>
+    รับ computed stats ของทั้ง 2 ฝั่ง แล้วคำนวณ damage ตาม WuWa formula
+    ผลลัพธ์เป็น expected damage (crit ใช้ค่าเฉลี่ย CR × CD ไม่ใช่ RNG)
+  </p>
+
+<pre><code><span class="kw">const</span> base = attackerStats.atk <span class="op">*</span> m[<span class="tp">MultiplierType</span>.Atk]
+           <span class="op">+</span> attackerStats.hp  <span class="op">*</span> m[<span class="tp">MultiplierType</span>.Hp]
+           <span class="op">+</span> attackerStats.def <span class="op">*</span> m[<span class="tp">MultiplierType</span>.Def]
+           <span class="op">+</span> m[<span class="tp">MultiplierType</span>.Const];
+
+<span class="kw">const</span> dmgBonusMulti  = <span class="num">1</span> <span class="op">+</span> attackerStats.dmgBonus;
+<span class="kw">const</span> critMulti      = damage.isCritable <span class="op">?</span> <span class="num">1</span> <span class="op">+</span> attackerStats.cr <span class="op">*</span> attackerStats.cd : <span class="num">1</span>;
+<span class="kw">const</span> ampMulti       = <span class="num">1</span> <span class="op">+</span> attackerStats.amp;
+<span class="kw">const</span> effectiveDef   = targetStats.def <span class="op">*</span> Math.<span class="fn">max</span>(<span class="num">0</span>, <span class="num">1</span> <span class="op">-</span> attackerStats.defRed);
+<span class="kw">const</span> defMulti       = <span class="num">800</span> / (<span class="num">800</span> <span class="op">+</span> effectiveDef);
+<span class="kw">const</span> effectiveRes   = Math.<span class="fn">max</span>(<span class="num">0</span>, targetStats.elemRed <span class="op">-</span> attackerStats.respen);
+<span class="kw">const</span> resMulti       = <span class="num">1</span> <span class="op">-</span> effectiveRes;
+<span class="kw">const</span> reductionMulti = Math.<span class="fn">max</span>(<span class="num">0</span>, <span class="num">1</span> <span class="op">-</span> targetStats.dmgRed);
+
+<span class="kw">return</span> base <span class="op">*</span> dmgBonusMulti <span class="op">*</span> critMulti <span class="op">*</span> ampMulti <span class="op">*</span> defMulti <span class="op">*</span> resMulti <span class="op">*</span> reductionMulti;</code></pre>
+
+  <h3>อธิบายแต่ละ multiplier</h3>
+  <div>
+    <div class="mult-row">
+      <div class="mult-icon">⚔️</div>
+      <div class="mult-body">
+        <h4>Base DMG</h4>
+        <p>คำนวณจาก <code>Damage.multipliers</code> (SkillScaling) × stat แต่ละตัว
+        สูตร: <code>ATK×m.atk + HP×m.hp + DEF×m.def + m.const</code>
+        skill ที่ scale จาก ATK 100% จะมี m.atk = 1.0, ส่วน m.hp / m.def / m.const = 0</p>
+      </div>
+    </div>
+    <div class="mult-row">
+      <div class="mult-icon">📈</div>
+      <div class="mult-body">
+        <h4>DMG Bonus Multiplier <code>= 1 + dmgBonus</code></h4>
+        <p>รวม DMG Bonus ทุก dimension — general + element-specific + action-specific + element+action
+        ตัวอย่าง: Spectro DMG +15% จะถูกรวมเข้ามา ถ้า damage.element = Spectro</p>
+      </div>
+    </div>
+    <div class="mult-row">
+      <div class="mult-icon">🎯</div>
+      <div class="mult-body">
+        <h4>Crit Multiplier <code>= 1 + CR × CD</code></h4>
+        <p>ใช้ค่าเฉลี่ย (expected value) ไม่ใช่ RNG
+        CR ถูก cap ที่ 100% ใน <code>computeAttackerStats()</code>
+        ถ้า <code>damage.isCritable = false</code> → multiplier = 1 เสมอ</p>
+      </div>
+    </div>
+    <div class="mult-row">
+      <div class="mult-icon">⚡</div>
+      <div class="mult-body">
+        <h4>Amplify Multiplier <code>= 1 + amp</code></h4>
+        <p>Amplify (Attribute Amplification ในเกม) รวม element+action dimension
+        ตัวอย่างใช้งาน: Resonance Skill ที่มี Amplify buff จะเพิ่ม damage อีกชั้น</p>
+      </div>
+    </div>
+    <div class="mult-row">
+      <div class="mult-icon">🛡️</div>
+      <div class="mult-body">
+        <h4>DEF Multiplier <code>= 800 / (800 + effectiveDef)</code></h4>
+        <p>WuWa DEF formula — enemy DEF ถูกลดด้วย <code>defRed</code> จาก attacker ก่อน
+        <code>effectiveDef = targetDef × max(0, 1 − defRed)</code>
+        ค่า 800 เป็น level constant ของ attacker level 90</p>
+      </div>
+    </div>
+    <div class="mult-row">
+      <div class="mult-icon">🔮</div>
+      <div class="mult-body">
+        <h4>RES Multiplier <code>= 1 − max(0, elemRed − respen)</code></h4>
+        <p><code>elemRed</code> คือ element resistance ของ enemy ต่อ element ของ skill
+        <code>respen</code> คือ RES Pen จาก attacker ที่ลด resistance ลง
+        ค่า <code>max(0, ...)</code> กันไม่ให้ penetration เกิน resistance (ไม่ให้ multiplier > 1)</p>
+      </div>
+    </div>
+    <div class="mult-row">
+      <div class="mult-icon">🪨</div>
+      <div class="mult-body">
+        <h4>Damage Reduction <code>= max(0, 1 − dmgRed)</code></h4>
+        <p>ลด damage ขาเข้าของ enemy เป็น % สุดท้าย
+        <code>max(0, ...)</code> กัน dmgRed > 100% ทำให้ damage ติดลบ</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── calculateDamage ── -->
+  <h2 id="main">
+    <span class="badge badge-fn">export</span>
+    calculateDamage()
+    <span class="badge badge-new">public API</span>
+  </h2>
+
+  <p>
+    เป็น function เดียวที่ export ออกไป — entry point ของทั้งระบบ
+    รับแค่ <code>Damage</code> ตัวเดียว แล้วจัดการทุกอย่างภายใน
+  </p>
+
+<pre><code><span class="kw">export function</span> <span class="fn">calculateDamage</span>(damage: <span class="tp">Damage</span>): <span class="tp">void</span> {
+    <span class="kw">const</span> attacker      = damage.attacker;
+    <span class="kw">const</span> attackerStats = <span class="fn">computeAttackerStats</span>(attacker, damage); <span class="cmt">// คำนวณครั้งเดียว</span>
+
+    <span class="kw">for</span> (<span class="kw">const</span> target <span class="op">of</span> damage.targets) {               <span class="cmt">// วนทุก target</span>
+        <span class="kw">const</span> targetStats = <span class="fn">computeTargetStats</span>(target, damage);
+        <span class="kw">const</span> result      = <span class="fn">applyDamageFormula</span>(damage, attackerStats, targetStats);
+
+        console.<span class="fn">log</span>(<span class="str">`[Damage] <span class="op">${</span>attacker.name<span class="op">}</span> ตี <span class="op">${</span>target.name<span class="op">}</span>: <span class="op">${</span>result.<span class="fn">toFixed</span>(<span class="num">2</span>)<span class="op">}</span>`</span>);
+    }
+}</code></pre>
+
+  <p>ตัวอย่าง output:</p>
+<pre><code><span class="str">[Damage] Rover ตี Nightmare Dreamless: 12483.50
+[Damage] Rover ตี Impermanence Heron: 8921.33</span></code></pre>
+
+  <div class="callout callout-warn">
+    <strong>⚠️ การใช้งาน</strong>
+    ต้อง set <code>damage.attacker</code>, <code>damage.targets[]</code>, <code>damage.element</code>,
+    และ <code>damage.multipliers</code> ให้ครบก่อนเรียก
+    ถ้า <code>damage.targets</code> ว่างเปล่า function จะไม่ print อะไรเลย (loop ไม่ทำงาน)
+  </div>
+
+  <!-- ── TYPES ── -->
+  <h2 id="types">Types &amp; Interfaces</h2>
+
+  <h3>AttackerStats (internal)</h3>
+  <table>
+    <thead><tr><th>Field</th><th>Type</th><th>มาจาก</th></tr></thead>
+    <tbody>
+      <tr><td><code>atk</code></td><td>number</td><td>baseAtk × (1+AtkP) + FlatAtk</td></tr>
+      <tr><td><code>hp</code></td><td>number</td><td>baseHp × (1+HpP) + FlatHp</td></tr>
+      <tr><td><code>def</code></td><td>number</td><td>baseDef × (1+DefP) + FlatDef</td></tr>
+      <tr><td><code>cr</code></td><td>number [0–1]</td><td>sumStat(CR) capped at 1</td></tr>
+      <tr><td><code>cd</code></td><td>number</td><td>sumStat(CD)</td></tr>
+      <tr><td><code>dmgBonus</code></td><td>number</td><td>sumStat(Dmg) + element dims</td></tr>
+      <tr><td><code>amp</code></td><td>number</td><td>sumStat(Amp) + element dims</td></tr>
+      <tr><td><code>defRed</code></td><td>number</td><td>sumStat(DefRed)</td></tr>
+      <tr><td><code>respen</code></td><td>number</td><td>sumStat(Respen) + element dims</td></tr>
+    </tbody>
+  </table>
+
+  <h3>TargetStats (internal)</h3>
+  <table>
+    <thead><tr><th>Field</th><th>Type</th><th>มาจาก</th></tr></thead>
+    <tbody>
+      <tr><td><code>def</code></td><td>number</td><td>sumStat(FlatDef)</td></tr>
+      <tr><td><code>dmgBonus</code></td><td>number</td><td>sumStat(Dmg) — มักเป็น 0</td></tr>
+      <tr><td><code>dmgRed</code></td><td>number</td><td>sumStat(DmgRed)</td></tr>
+      <tr><td><code>elemRed</code></td><td>number</td><td>sumStat(ElemRed) + element dims</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── KEY SYSTEM ── -->
+  <h2 id="keysystem">Key System</h2>
+  <p>
+    ระบบ stat ใช้ <code>Map&lt;string, number&gt;</code> โดย key สร้างจาก enum values:
+  </p>
+  <table>
+    <thead><tr><th>Overload</th><th>Key ที่ได้</th><th>ตัวอย่าง</th></tr></thead>
+    <tbody>
+      <tr><td><code>getStats(st)</code></td><td><code>"Dmg Bonus"</code></td><td>global DMG Bonus</td></tr>
+      <tr><td><code>getStats(st, at)</code></td><td><code>"Dmg Bonus-Skill"</code></td><td>Skill DMG Bonus</td></tr>
+      <tr><td><code>getStats(st, et, at)</code></td><td><code>"Dmg Bonus-Spectro-Skill"</code></td><td>Spectro Skill DMG Bonus</td></tr>
+      <tr><td><code>getStats(st, et, None)</code></td><td><code>"Dmg Bonus-Spectro-None"</code></td><td>Spectro DMG Bonus (ทุก action)</td></tr>
+      <tr><td><code>getStats(ElemRed, Glacio, None)</code></td><td><code>"Elemental Reduction-Glacio-None"</code></td><td>Glacio resistance ของ enemy</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── FULL FORMULA ── -->
+  <h2 id="formula-full">สูตรรวม (Wuthering Waves Damage Formula)</h2>
+
+  <div class="formula">
+    <div class="eq-line">
+      <span class="lhs">Damage</span>
+      <span class="rhs">= Base × DMGBonus × Crit × Amp × DEF × RES × Reduction</span>
+    </div>
+    <hr>
+    <div class="eq-line">
+      <span class="lhs">Base</span>
+      <span class="rhs">= ATK × m.atk + HP × m.hp + DEF × m.def + m.const</span>
+    </div>
+    <div class="eq-line">
+      <span class="lhs">ATK</span>
+      <span class="rhs">= baseAtk × (1 + AtkP_sum) + FlatAtk_sum</span>
+    </div>
+    <hr>
+    <div class="eq-line">
+      <span class="lhs">DMGBonus</span>
+      <span class="rhs">= 1 + Σ(Dmg bonus ทุก dimension)</span>
+    </div>
+    <div class="eq-line">
+      <span class="lhs">Crit</span>
+      <span class="rhs">= 1 + min(CR, 1) × CD</span>
+      <span class="note">← expected value</span>
+    </div>
+    <div class="eq-line">
+      <span class="lhs">Amp</span>
+      <span class="rhs">= 1 + Σ(Amplify ทุก dimension)</span>
+    </div>
+    <hr>
+    <div class="eq-line">
+      <span class="lhs">effectiveDEF</span>
+      <span class="rhs">= targetDEF × max(0, 1 − defRed)</span>
+    </div>
+    <div class="eq-line">
+      <span class="lhs">DEF</span>
+      <span class="rhs">= 800 / (800 + effectiveDEF)</span>
+    </div>
+    <hr>
+    <div class="eq-line">
+      <span class="lhs">effectiveRES</span>
+      <span class="rhs">= max(0, elemRed − respen)</span>
+    </div>
+    <div class="eq-line">
+      <span class="lhs">RES</span>
+      <span class="rhs">= 1 − effectiveRES</span>
+    </div>
+    <hr>
+    <div class="eq-line">
+      <span class="lhs">Reduction</span>
+      <span class="rhs">= max(0, 1 − dmgRed)</span>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+  const links = document.querySelectorAll('nav a');
+  const sections = document.querySelectorAll('h2[id]');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`nav a[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

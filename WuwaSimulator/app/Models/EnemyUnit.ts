@@ -3,6 +3,8 @@ import { EnemyPosition } from "../Constants/Enum";
 
 export class EnemyUnit extends Unit {
 
+    public baseDef : number = 0;
+
     // --- Position ---
     public position: EnemyPosition = EnemyPosition.Vanguard;
 
