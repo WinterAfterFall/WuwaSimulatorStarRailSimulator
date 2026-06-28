@@ -10,6 +10,7 @@ import { MultiplierType } from "../../Constants/Enum";
 // ─────────────────────────────────────────────────────────────
 
 interface AttackerStats {
+    level   : number;
     atk     : number;
     hp      : number;
     def     : number;
@@ -17,7 +18,7 @@ interface AttackerStats {
     cd      : number;
     dmgBonus: number;
     amp     : number;
-    defRed  : number;
+    defShred: number;
     respen  : number;
 }
 
@@ -73,15 +74,16 @@ function computeAttackerStats(attacker: AllyUnit, damage: Damage): AttackerStats
     const flatDef = sumStat(attacker, StatsType.FlatDef, damage);
 
     return {
+        level   : attacker.level,
         atk     : attacker.baseAtk * (1 + atkP)  + flatAtk,
         hp      : attacker.baseHp  * (1 + hpP)   + flatHp,
         def     : attacker.baseDef * (1 + defP)  + flatDef,
-        cr      : Math.min(sumStat(attacker, StatsType.CR,     damage), 1),
-        cd      : sumStat(attacker, StatsType.CD,     damage),
-        dmgBonus: sumStat(attacker, StatsType.Dmg,    damage),
-        amp     : sumStat(attacker, StatsType.Amp,    damage),
-        defRed  : sumStat(attacker, StatsType.DefRed, damage),
-        respen  : sumStat(attacker, StatsType.Respen, damage),
+        cr      : Math.min(sumStat(attacker, StatsType.CR,       damage), 1),
+        cd      : sumStat(attacker, StatsType.CD,       damage),
+        dmgBonus: sumStat(attacker, StatsType.Dmg,      damage),
+        amp     : sumStat(attacker, StatsType.Amp,      damage),
+        defShred: sumStat(attacker, StatsType.DefShred, damage),
+        respen  : sumStat(attacker, StatsType.Respen,   damage),
     };
 }
 
@@ -90,11 +92,18 @@ function computeAttackerStats(attacker: AllyUnit, damage: Damage): AttackerStats
 // ─────────────────────────────────────────────────────────────
 
 function computeTargetStats(target: EnemyUnit, damage: Damage): TargetStats {
+    const defRed  = sumStat(target, StatsType.DefRed,  damage);
+    const flatDef = sumStat(target, StatsType.FlatDef, damage);
+
+    // baseDef คำนวณจาก level, DefRed เป็น debuff บน enemy — ลด DEF ก่อนเข้าสูตร %DEF
+    const baseDef = 8 * target.level + 792;
+    const def     = baseDef * Math.max(0, 1 - defRed) + flatDef;
+
     return {
-        def     : sumStat(target, StatsType.FlatDef, damage),
-        dmgBonus: sumStat(target, StatsType.Dmg,     damage),
-        dmgRed  : sumStat(target, StatsType.DmgRed,  damage),
-        elemRed : sumStat(target, StatsType.ElemRed,  damage),
+        def,
+        dmgBonus: sumStat(target, StatsType.Dmg,    damage),
+        dmgRed  : sumStat(target, StatsType.DmgRed, damage),
+        elemRed : target.baseElemRed + sumStat(target, StatsType.ElemRed, damage),
     };
 }
 
@@ -126,13 +135,15 @@ function applyDamageFormula(
     // Amplify
     const ampMulti = 1 + attackerStats.amp;
 
-    // DEF — 800 / (800 + effectiveDef), effectiveDef ลด defRed จากฝั่ง attacker
-    const effectiveDef = targetStats.def * Math.max(0, 1 - attackerStats.defRed);
-    const defMulti     = 800 / (800 + effectiveDef);
+    // %DEF = (800 + 8×LVL) / (800 + 8×LVL + DEF_Target × (1 − DEF Ignore))
+    const lvlFactor  = 800 + 8 * attackerStats.level;
+    const defMulti   = lvlFactor / (lvlFactor + targetStats.def * Math.max(0, 1 - attackerStats.defShred));
 
-    // RES — elemRed ลด respen จากฝั่ง attacker (floor 0, ไม่ให้ติดลบ)
-    const effectiveRes = Math.max(0, targetStats.elemRed - attackerStats.respen);
-    const resMulti     = 1 - effectiveRes;
+    // RES_total = elemRed − resPen (ติดลบได้)
+    const resTotal = targetStats.elemRed - attackerStats.respen;
+    const resMulti = resTotal < 0   ? 1 - resTotal / 2
+                   : resTotal < 0.8 ? 1 - resTotal
+                   :                  1 / (1 + 5 * resTotal);
 
     // Damage Reduction ฝั่ง target
     const reductionMulti = Math.max(0, 1 - targetStats.dmgRed);

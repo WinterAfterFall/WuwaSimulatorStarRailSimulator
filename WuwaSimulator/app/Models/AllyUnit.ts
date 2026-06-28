@@ -17,6 +17,7 @@ export class AllyUnit extends Unit {
     public actionState: ActionState = ActionState.Free  // ว่าง หรือ กำลัง action
 
     // --- Base Stats ---
+    public level   : number = 90;
     public baseAtk : number = 0;
     public baseHp  : number = 0;
     public baseDef : number = 0;
