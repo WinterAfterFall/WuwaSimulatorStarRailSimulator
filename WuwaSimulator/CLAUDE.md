@@ -35,7 +35,7 @@ app/
 ├── Models/
 │   ├── Unit.ts                      # Base class ของทุก unit — stat system (Map-based, 3 overloads)
 │   ├── AllyUnit.ts                  # ตัวละครฝ่ายผู้เล่น extends Unit — combat state, rotations, buff/dmg tracking
-│   ├── EnemyUnit.ts                 # ศัตรู extends Unit — position, debuff tracking, dmgRecord
+│   ├── EnemyUnit.ts                 # ศัตรู extends Unit — level, baseElemRed, position, debuff tracking, dmgRecord
 │   ├── Characters/
 │   │   ├── Test1.ts                 # setupTest1(unit) — กำหนด stats + rotations ของตัวละครทดสอบ
 │   │   └── Test2.ts                 # setupTest2(unit) — อีกตัวละครทดสอบ
@@ -55,7 +55,7 @@ app/
 │
 ├── Services/
 │   └── Damage/
-│       └── DamageCalculate.ts       # สูตรคำนวณ damage (WuWa formula) — calculateDamage(damage, target)
+│       └── DamageCalculate.ts       # สูตรคำนวณ damage (WuWa formula) — calculateDamage(damage)
 │
 ├── Simulator/
 │   ├── CombatTimeline.ts            # จัดการ event ด้วย IPQ, currentFrame, lock state
@@ -95,7 +95,7 @@ app/
 | `Side` | `None`, `Ally`, `Enemy` |
 | `ActionState` | `Free`, `Busy` |
 | `NotificationType` | `ChangeToAuto`, `EndAction`, `BuffExpired`, `DebuffExpired` |
-| `StatsType` | `AtkP`, `FlatAtk`, `Hp`, `FlatHp`, `DefP`, `FlatDef`, `CR`, `CD`, `Dmg`, `Amp`, `Sp`, `DefRed`, `Respen`, `DmgRed`, `ElemRed` |
+| `StatsType` | `AtkP`, `FlatAtk`, `Hp`, `FlatHp`, `DefP`, `FlatDef`, `CR`, `CD`, `Dmg`, `Amp`, `Sp`, `DefShred`, `DefRed`, `Res`, `Respen`, `DmgRed`, `ElemRed` |
 | `ActionType` | `None`, `BA`, `HA`, `Skill`, `Ult`, `Echo`, `Intro`, `Outro`, `TB` |
 | `ElementType` | `None`, `Glacio`, `Fusion`, `Electro`, `Aero`, `Spectro`, `Havoc` |
 | `WeaponType` | `None`, `Broadblade`, `Sword`, `Pistols`, `Gauntlets`, `Rectifier` |
@@ -122,12 +122,18 @@ getStats(Dmg, Glacio, BA)         → key: "Dmg Bonus-Glacio-BA"
 ### AllyUnit (extends Unit)
 เพิ่ม combat-specific state:
 - **state**: `isOnField`, `actionState` (+ helper `isFree()`/`setBusy()`/`setFree()`)
-- **base stats**: `baseAtk`, `baseHp`, `baseDef`
+- **base stats**: `level` (default 90), `baseAtk`, `baseHp`, `baseDef`
 - **info**: `elementType`, `weaponType`, `resonanceChain`
 - **energy / hp**: `energy`, `maxEnergy`, `currentHP`, `currentShield`
 - **rotations**: `Map<string, (timeline) => Queue<RotationAction>>` — แต่ละ rotation เป็น factory ที่รับ timeline แล้วคืน queue
 - **tracking**: `stacks`, `buffNote`, `buffCheck`, `dmgRecord`, `maxDmgRecord` (ทั้งหมด `Map`)
 - `TimelineRef` = structural type (`schedule()` + `currentFrame`) ใช้เลี่ยง circular import กับ `CombatTimeline`
+
+### EnemyUnit (extends Unit)
+- **level** (default 90) — ใช้คำนวณ DEF: `8×level + 792`
+- **baseElemRed** (default 0) — resistance ตั้งต้นของมอน, บวกเพิ่มจาก stat system ได้
+- **position**: `EnemyPosition`
+- **tracking**: `debuffStacks`, `debuffNote`, `debuffCheck`, `dmgRecord`, `maxDmgRecord`
 
 ---
 
@@ -203,16 +209,15 @@ damage = base × dmgBonus × crit × amp × def × res × reduction
 | dmgBonus | `1 + Σ(Dmg bonus ตาม element/action)` |
 | crit | `1 + min(CR,1)·CD` (ถ้า `isCritable`) |
 | amp | `1 + Amplify` |
-| def | `800 / (800 + effectiveDef)` (WuWa def formula) |
-| res | `1 - max(0, elemRed - resPen)` |
-| reduction | `max(0, 1 - DmgRed)` |
+| enemy DEF | `8×LVL_enemy + 792` แล้วลด `× (1−DefRed)` (DefRed = debuff บน enemy ลด DEF ก่อนสูตร) |
+| def | `(800+8×LVL_attacker) / (800+8×LVL_attacker + DEF_enemy×(1−DefShred))` |
+| res | piecewise โดย `RES = elemRed − resPen`: `RES<0 → 1−RES/2` / `0≤RES<0.8 → 1−RES` / `RES≥0.8 → 1/(1+5×RES)` |
+| reduction | `max(0, 1 − DmgRed)` |
 
 ---
 
 ## ข้อควรระวัง / Known issues
-- **field mismatch**: `Damage.ts` ประกาศ field ชื่อ `attackTypeList` แต่ `DamageCalculate.ts` อ่าน `damage.actionTypeList` → ต้อง rename ให้ตรงกันก่อน damage calc จะทำงาน
 - `DamageEvent.execute()` ยังเป็น TODO (ยังไม่เรียก `calculateDamage` / ไม่บันทึกลง `dmgRecord`)
 - `BuffStartEvent` / `BuffEndEvent` execute() ยังว่าง
 - `Test/Utils/` เป็น duplicate เก่าที่ import path ผิด — ใช้ `Test/automated/Utils/` แทน
 - ยังไม่มีตัวละครจริง (Rover, Jiyan ฯลฯ) — มีแค่ `Test1`/`Test2` เป็น scaffolding
-```

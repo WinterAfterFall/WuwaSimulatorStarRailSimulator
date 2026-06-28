@@ -344,6 +344,11 @@
       <tr><td>Output</td><td>return number</td><td>return void + print ทุก target</td></tr>
       <tr><td>DefRed scope</td><td>อ่านแค่ base stat</td><td>sum ทุก actionType dimension</td></tr>
       <tr><td>Respen scope</td><td>อ่านแค่ base stat</td><td>sum ทุก actionType + element dimension</td></tr>
+      <tr><td>DEF formula</td><td><code>800 / (800 + DEF × (1−defRed))</code></td><td><code>(800+8×LVL) / (800+8×LVL + DEF × (1−defShred))</code> — level-based + DefShred ฝั่ง attacker</td></tr>
+      <tr><td>Enemy DEF</td><td><code>setStat(FlatDef, x)</code></td><td>คำนวณจาก level: <code>8×LVL+792</code>, DefRed เป็น debuff บน enemy ลดก่อนสูตร</td></tr>
+      <tr><td>RES formula</td><td><code>1 − max(0, elemRed − respen)</code></td><td>piecewise 3 กรณี ตาม RES_total = elemRed − respen (รองรับค่าติดลบ)</td></tr>
+      <tr><td>EnemyUnit fields</td><td><code>baseDef</code></td><td><code>level</code> (default 90), <code>baseElemRed</code> (default 0)</td></tr>
+      <tr><td>AllyUnit fields</td><td>ไม่มี level</td><td>เพิ่ม <code>level</code> (default 90) ใช้ใน DEF formula</td></tr>
     </tbody>
   </table>
 
@@ -476,15 +481,16 @@
     <span class="cmt">// ... (hp, def เหมือนกัน)</span>
 
     <span class="kw">return</span> {
+        level   : attacker.level,
         atk     : attacker.baseAtk <span class="op">*</span> (<span class="num">1</span> <span class="op">+</span> atkP) <span class="op">+</span> flatAtk,
         hp      : attacker.baseHp  <span class="op">*</span> (<span class="num">1</span> <span class="op">+</span> hpP)  <span class="op">+</span> flatHp,
         def     : attacker.baseDef <span class="op">*</span> (<span class="num">1</span> <span class="op">+</span> defP) <span class="op">+</span> flatDef,
-        cr      : Math.<span class="fn">min</span>(<span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.CR,     damage), <span class="num">1</span>),
-        cd      : <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.CD,     damage),
-        dmgBonus: <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.Dmg,    damage),
-        amp     : <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.Amp,    damage),
-        defRed  : <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.DefRed, damage),
-        respen  : <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.Respen, damage),
+        cr      : Math.<span class="fn">min</span>(<span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.CR,       damage), <span class="num">1</span>),
+        cd      : <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.CD,       damage),
+        dmgBonus: <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.Dmg,      damage),
+        amp     : <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.Amp,      damage),
+        defShred: <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.DefShred, damage),
+        respen  : <span class="fn">sumStat</span>(attacker, <span class="tp">StatsType</span>.Respen,   damage),
     };
 }</code></pre>
 
@@ -498,7 +504,8 @@
       <tr><td><code>cd</code></td><td><code>sumStat(CD)</code></td><td>ตัวคูณเมื่อ crit</td></tr>
       <tr><td><code>dmgBonus</code></td><td><code>sumStat(Dmg)</code></td><td>รวม element+action dimensions</td></tr>
       <tr><td><code>amp</code></td><td><code>sumStat(Amp)</code></td><td>รวม element+action dimensions</td></tr>
-      <tr><td><code>defRed</code></td><td><code>sumStat(DefRed)</code></td><td>DEF shred ลด DEF ของ enemy</td></tr>
+      <tr><td><code>level</code></td><td><code>attacker.level</code></td><td>ใช้คำนวณ lvlFactor = 800+8×LVL ในสูตร DEF</td></tr>
+      <tr><td><code>defShred</code></td><td><code>sumStat(DefShred)</code></td><td>DEF Ignore — ลด DEF ฝั่ง enemy ในสูตร (ไม่ใช่ debuff บน enemy)</td></tr>
       <tr><td><code>respen</code></td><td><code>sumStat(Respen)</code></td><td>RES Pen ลด resistance ของ enemy</td></tr>
     </tbody>
   </table>
@@ -515,29 +522,36 @@
   </p>
 
 <pre><code><span class="kw">function</span> <span class="fn">computeTargetStats</span>(target: <span class="tp">EnemyUnit</span>, damage: <span class="tp">Damage</span>): <span class="tp">TargetStats</span> {
+    <span class="kw">const</span> defRed  = <span class="fn">sumStat</span>(target, <span class="tp">StatsType</span>.DefRed,  damage);
+    <span class="kw">const</span> flatDef = <span class="fn">sumStat</span>(target, <span class="tp">StatsType</span>.FlatDef, damage);
+
+    <span class="cmt">// baseDef จาก level, DefRed เป็น debuff บน enemy — ลด DEF ก่อนเข้าสูตร %DEF</span>
+    <span class="kw">const</span> baseDef = <span class="num">8</span> <span class="op">*</span> target.level <span class="op">+</span> <span class="num">792</span>;
+    <span class="kw">const</span> def     = baseDef <span class="op">*</span> Math.<span class="fn">max</span>(<span class="num">0</span>, <span class="num">1</span> <span class="op">-</span> defRed) <span class="op">+</span> flatDef;
+
     <span class="kw">return</span> {
-        def     : <span class="fn">sumStat</span>(target, <span class="tp">StatsType</span>.FlatDef, damage), <span class="cmt">// DEF ทั้งหมดของ enemy</span>
-        dmgBonus: <span class="fn">sumStat</span>(target, <span class="tp">StatsType</span>.Dmg,     damage), <span class="cmt">// ไว้รองรับ self-buff อนาคต</span>
-        dmgRed  : <span class="fn">sumStat</span>(target, <span class="tp">StatsType</span>.DmgRed,  damage), <span class="cmt">// Damage Reduction</span>
-        elemRed : <span class="fn">sumStat</span>(target, <span class="tp">StatsType</span>.ElemRed,  damage), <span class="cmt">// Elemental Resistance</span>
+        def,
+        dmgBonus: <span class="fn">sumStat</span>(target, <span class="tp">StatsType</span>.Dmg,    damage),
+        dmgRed  : <span class="fn">sumStat</span>(target, <span class="tp">StatsType</span>.DmgRed, damage),
+        elemRed : target.baseElemRed <span class="op">+</span> <span class="fn">sumStat</span>(target, <span class="tp">StatsType</span>.ElemRed, damage),
     };
 }</code></pre>
 
   <table>
-    <thead><tr><th>Field</th><th>Key ที่อ่าน (ตัวอย่าง)</th><th>อธิบาย</th></tr></thead>
+    <thead><tr><th>Field</th><th>สูตร</th><th>อธิบาย</th></tr></thead>
     <tbody>
-      <tr><td><code>def</code></td><td><code>"FlatDef"</code>, <code>"FlatDef-BA"</code></td><td>DEF ของ enemy (ตั้งโดย <code>setStat(FlatDef, 800)</code>)</td></tr>
-      <tr><td><code>dmgBonus</code></td><td><code>"Dmg Bonus"</code></td><td>สำหรับ enemy ที่มี self-buff (มักเป็น 0)</td></tr>
-      <tr><td><code>dmgRed</code></td><td><code>"Damage Reduction"</code></td><td>ลด damage ขาเข้าเป็น %</td></tr>
-      <tr><td><code>elemRed</code></td><td><code>"Elemental Reduction-Spectro-None"</code></td><td>resistance ต่อ element ของ skill นั้น</td></tr>
+      <tr><td><code>def</code></td><td><code>(8×level+792) × max(0, 1−DefRed) + FlatDef</code></td><td>DEF คำนวณจาก level, ลดด้วย DefRed debuff ก่อนเข้าสูตร</td></tr>
+      <tr><td><code>dmgBonus</code></td><td><code>sumStat(Dmg)</code></td><td>สำหรับ enemy ที่มี self-buff (มักเป็น 0)</td></tr>
+      <tr><td><code>dmgRed</code></td><td><code>sumStat(DmgRed)</code></td><td>ลด damage ขาเข้าเป็น %</td></tr>
+      <tr><td><code>elemRed</code></td><td><code>baseElemRed + sumStat(ElemRed)</code></td><td>resistance รวม base ของมอน + debuff/buff จาก stat system</td></tr>
     </tbody>
   </table>
 
   <div class="callout callout-info">
-    <strong>EnemyUnit ไม่มี baseAtk/baseHp/baseDef</strong>
-    เพราะ <code>EnemyUnit</code> extends <code>Unit</code> ไม่ใช่ <code>AllyUnit</code> ดังนั้น DEF ของ enemy
-    ถูกเก็บเป็น <code>FlatDef</code> โดยตรง เช่น <code>enemy.setStat(StatsType.FlatDef, 800)</code>
-    ไม่มีการคูณ base × %
+    <strong>EnemyUnit: level-based DEF + baseElemRed</strong>
+    DEF ของ enemy ไม่ต้องตั้งด้วย <code>setStat</code> — คำนวณอัตโนมัติจาก <code>target.level</code> (<code>8×LVL+792</code>)
+    ส่วน <code>baseElemRed</code> คือ resistance ตั้งต้นของมอนแต่ละตัว (ตั้งด้วย <code>enemy.baseElemRed = 0.1</code>)
+    Debuff ที่ลด DEF หรือ resistance ใช้ <code>setStat(DefRed / ElemRed, value)</code> ตามปกติ
   </div>
 
   <!-- ── applyDamageFormula ── -->
@@ -559,10 +573,12 @@
 <span class="kw">const</span> dmgBonusMulti  = <span class="num">1</span> <span class="op">+</span> attackerStats.dmgBonus;
 <span class="kw">const</span> critMulti      = damage.isCritable <span class="op">?</span> <span class="num">1</span> <span class="op">+</span> attackerStats.cr <span class="op">*</span> attackerStats.cd : <span class="num">1</span>;
 <span class="kw">const</span> ampMulti       = <span class="num">1</span> <span class="op">+</span> attackerStats.amp;
-<span class="kw">const</span> effectiveDef   = targetStats.def <span class="op">*</span> Math.<span class="fn">max</span>(<span class="num">0</span>, <span class="num">1</span> <span class="op">-</span> attackerStats.defRed);
-<span class="kw">const</span> defMulti       = <span class="num">800</span> / (<span class="num">800</span> <span class="op">+</span> effectiveDef);
-<span class="kw">const</span> effectiveRes   = Math.<span class="fn">max</span>(<span class="num">0</span>, targetStats.elemRed <span class="op">-</span> attackerStats.respen);
-<span class="kw">const</span> resMulti       = <span class="num">1</span> <span class="op">-</span> effectiveRes;
+<span class="kw">const</span> lvlFactor  = <span class="num">800</span> <span class="op">+</span> <span class="num">8</span> <span class="op">*</span> attackerStats.level;
+<span class="kw">const</span> defMulti   = lvlFactor / (lvlFactor <span class="op">+</span> targetStats.def <span class="op">*</span> Math.<span class="fn">max</span>(<span class="num">0</span>, <span class="num">1</span> <span class="op">-</span> attackerStats.defShred));
+<span class="kw">const</span> resTotal   = targetStats.elemRed <span class="op">-</span> attackerStats.respen;
+<span class="kw">const</span> resMulti   = resTotal <span class="op">&lt;</span> <span class="num">0</span>   <span class="op">?</span> <span class="num">1</span> <span class="op">-</span> resTotal / <span class="num">2</span>
+                 : resTotal <span class="op">&lt;</span> <span class="num">0.8</span> <span class="op">?</span> <span class="num">1</span> <span class="op">-</span> resTotal
+                 :                  <span class="num">1</span> / (<span class="num">1</span> <span class="op">+</span> <span class="num">5</span> <span class="op">*</span> resTotal);
 <span class="kw">const</span> reductionMulti = Math.<span class="fn">max</span>(<span class="num">0</span>, <span class="num">1</span> <span class="op">-</span> targetStats.dmgRed);
 
 <span class="kw">return</span> base <span class="op">*</span> dmgBonusMulti <span class="op">*</span> critMulti <span class="op">*</span> ampMulti <span class="op">*</span> defMulti <span class="op">*</span> resMulti <span class="op">*</span> reductionMulti;</code></pre>
@@ -606,19 +622,23 @@
     <div class="mult-row">
       <div class="mult-icon">🛡️</div>
       <div class="mult-body">
-        <h4>DEF Multiplier <code>= 800 / (800 + effectiveDef)</code></h4>
-        <p>WuWa DEF formula — enemy DEF ถูกลดด้วย <code>defRed</code> จาก attacker ก่อน
-        <code>effectiveDef = targetDef × max(0, 1 − defRed)</code>
-        ค่า 800 เป็น level constant ของ attacker level 90</p>
+        <h4>DEF Multiplier <code>= (800+8×LVL) / (800+8×LVL + DEF × (1−defShred))</code></h4>
+        <p>WuWa DEF formula ตาม level จริงของ attacker — <code>lvlFactor = 800 + 8 × attacker.level</code>
+        enemy DEF มาจาก <code>8×enemy.level+792</code> หลังจากลด DefRed (debuff บน enemy) แล้ว
+        <code>defShred</code> คือ DEF Ignore ฝั่ง attacker ที่ใช้ใน formula (ไม่ใช่ debuff)</p>
       </div>
     </div>
     <div class="mult-row">
       <div class="mult-icon">🔮</div>
       <div class="mult-body">
-        <h4>RES Multiplier <code>= 1 − max(0, elemRed − respen)</code></h4>
-        <p><code>elemRed</code> คือ element resistance ของ enemy ต่อ element ของ skill
-        <code>respen</code> คือ RES Pen จาก attacker ที่ลด resistance ลง
-        ค่า <code>max(0, ...)</code> กันไม่ให้ penetration เกิน resistance (ไม่ให้ multiplier > 1)</p>
+        <h4>RES Multiplier — piecewise ตาม RES_total = elemRed − respen</h4>
+        <p><code>elemRed = enemy.baseElemRed + sumStat(ElemRed)</code> / <code>respen</code> = RES Pen จาก attacker
+        RES_total ติดลบได้ (เมื่อ respen > elemRed) ทำให้ damage เพิ่มขึ้นได้:</p>
+        <ul style="margin:.5rem 0 0 1.5rem;font-size:13px">
+          <li><code>RES &lt; 0</code> → <code>1 − RES/2</code> &nbsp;(damage bonus แต่ diminishing)</li>
+          <li><code>0 ≤ RES &lt; 0.8</code> → <code>1 − RES</code> &nbsp;(linear reduction)</li>
+          <li><code>RES ≥ 0.8</code> → <code>1/(1+5×RES)</code> &nbsp;(hard cap zone)</li>
+        </ul>
       </div>
     </div>
     <div class="mult-row">
@@ -673,6 +693,7 @@
   <table>
     <thead><tr><th>Field</th><th>Type</th><th>มาจาก</th></tr></thead>
     <tbody>
+      <tr><td><code>level</code></td><td>number</td><td>attacker.level (default 90)</td></tr>
       <tr><td><code>atk</code></td><td>number</td><td>baseAtk × (1+AtkP) + FlatAtk</td></tr>
       <tr><td><code>hp</code></td><td>number</td><td>baseHp × (1+HpP) + FlatHp</td></tr>
       <tr><td><code>def</code></td><td>number</td><td>baseDef × (1+DefP) + FlatDef</td></tr>
@@ -680,7 +701,7 @@
       <tr><td><code>cd</code></td><td>number</td><td>sumStat(CD)</td></tr>
       <tr><td><code>dmgBonus</code></td><td>number</td><td>sumStat(Dmg) + element dims</td></tr>
       <tr><td><code>amp</code></td><td>number</td><td>sumStat(Amp) + element dims</td></tr>
-      <tr><td><code>defRed</code></td><td>number</td><td>sumStat(DefRed)</td></tr>
+      <tr><td><code>defShred</code></td><td>number</td><td>sumStat(DefShred) — DEF Ignore ใช้ใน formula</td></tr>
       <tr><td><code>respen</code></td><td>number</td><td>sumStat(Respen) + element dims</td></tr>
     </tbody>
   </table>
@@ -689,10 +710,10 @@
   <table>
     <thead><tr><th>Field</th><th>Type</th><th>มาจาก</th></tr></thead>
     <tbody>
-      <tr><td><code>def</code></td><td>number</td><td>sumStat(FlatDef)</td></tr>
+      <tr><td><code>def</code></td><td>number</td><td>(8×level+792) × max(0,1−DefRed) + FlatDef</td></tr>
       <tr><td><code>dmgBonus</code></td><td>number</td><td>sumStat(Dmg) — มักเป็น 0</td></tr>
       <tr><td><code>dmgRed</code></td><td>number</td><td>sumStat(DmgRed)</td></tr>
-      <tr><td><code>elemRed</code></td><td>number</td><td>sumStat(ElemRed) + element dims</td></tr>
+      <tr><td><code>elemRed</code></td><td>number</td><td>baseElemRed + sumStat(ElemRed) + element dims</td></tr>
     </tbody>
   </table>
 
@@ -745,21 +766,36 @@
     </div>
     <hr>
     <div class="eq-line">
-      <span class="lhs">effectiveDEF</span>
-      <span class="rhs">= targetDEF × max(0, 1 − defRed)</span>
+      <span class="lhs">Enemy DEF</span>
+      <span class="rhs">= (8×LVL_enemy + 792) × max(0, 1 − DefRed)</span>
+      <span class="note">← DefRed = debuff บน enemy</span>
+    </div>
+    <div class="eq-line">
+      <span class="lhs">lvlFactor</span>
+      <span class="rhs">= 800 + 8 × LVL_attacker</span>
     </div>
     <div class="eq-line">
       <span class="lhs">DEF</span>
-      <span class="rhs">= 800 / (800 + effectiveDEF)</span>
+      <span class="rhs">= lvlFactor / (lvlFactor + Enemy DEF × max(0, 1 − defShred))</span>
+      <span class="note">← defShred = DEF Ignore ฝั่ง attacker</span>
     </div>
     <hr>
     <div class="eq-line">
-      <span class="lhs">effectiveRES</span>
-      <span class="rhs">= max(0, elemRed − respen)</span>
+      <span class="lhs">RES_total</span>
+      <span class="rhs">= elemRed − respen</span>
+      <span class="note">← ติดลบได้</span>
     </div>
     <div class="eq-line">
       <span class="lhs">RES</span>
-      <span class="rhs">= 1 − effectiveRES</span>
+      <span class="rhs">= 1 − RES/2 &nbsp;&nbsp;(RES &lt; 0)</span>
+    </div>
+    <div class="eq-line">
+      <span class="lhs"></span>
+      <span class="rhs">= 1 − RES &nbsp;&nbsp;&nbsp;&nbsp;(0 ≤ RES &lt; 0.8)</span>
+    </div>
+    <div class="eq-line">
+      <span class="lhs"></span>
+      <span class="rhs">= 1/(1+5×RES) &nbsp;(RES ≥ 0.8)</span>
     </div>
     <hr>
     <div class="eq-line">
