@@ -4,7 +4,6 @@ import { EnemyPosition } from "../Constants/Enum";
 export class EnemyUnit extends Unit {
 
     public level      : number = 90;
-    public baseElemRed: number = 0;
 
     // --- Position ---
     public position: EnemyPosition = EnemyPosition.Vanguard;

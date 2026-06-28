@@ -25,8 +25,8 @@ export enum StatsType {
     Sp = "Special",
     DefShred = "Def Ignore",
     DefRed = "Def Reduction",
-    Res = "Res",
-    Respen = "Res Penetration",
+    ResRed = "Res Reduction",
+    ResPen = "Res Penetration",
     DmgRed = "Damage Reduction",
     ElemRed = "Elemental Reduction",
 }
