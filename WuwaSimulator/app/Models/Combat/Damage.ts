@@ -79,6 +79,24 @@ export class Damage {
         return this;
     }
 
+    public setEnergyGain(value: number): this {
+        this.energyGain = value;
+        return this;
+    }
+
+    public setConcentoEnergyGain(value: number): this {
+        this.concentoEnergyGain = value;
+        return this;
+    }
+
+    public getEnergyGain(): number | undefined {
+        return this.energyGain;
+    }
+
+    public getConcentoEnergyGain(): number | undefined {
+        return this.concentoEnergyGain;
+    }
+
     public addGauges(...pairs: [string, number][]): this {
         for (const pair of pairs) {
             this.gauges.push(pair);

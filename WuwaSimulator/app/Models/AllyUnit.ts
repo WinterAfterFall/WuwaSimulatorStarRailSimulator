@@ -25,7 +25,7 @@ export class AllyUnit extends Unit {
     // --- Character Info ---
     public elementType    : ElementType = ElementType.None;
     public weaponType     : WeaponType  = WeaponType.None;
-    public resonanceChain : number = 0;
+    public resonanceChain : number = 0; // C ตัวละครอ่ะ
 
     // --- Rotation Definitions ---
     /** key = ชื่อ rotation, value = factory รับ timeline แล้วคืน Queue<RotationAction> */
@@ -35,6 +35,10 @@ export class AllyUnit extends Unit {
     public energy    : number = 0;
     public maxEnergy : number = 0;
 
+    // --- Concerto Energy ---
+    public concentoEnergy    : number = 0;
+    public maxConcentoEnergy : number = 0;
+
     // --- HP / Shield ---
     public currentHP     : number = 0;
     public currentShield : number = 0;
@@ -42,6 +46,7 @@ export class AllyUnit extends Unit {
     // --- Buff Tracking ---
     public stacks    : Map<string, number>  = new Map();//ใช้สำหรับนับ stack ของบัพในแต่ละชื่อ
     public buffNote  : Map<string, number>  = new Map();
+    public gauges    : Map<string, number>  = new Map();
     public buffCheck : Map<string, boolean> = new Map();
 
     // --- Damage Record ---

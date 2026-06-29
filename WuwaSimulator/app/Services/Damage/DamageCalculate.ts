@@ -187,4 +187,15 @@ export function calculateDamage(damage: Damage): void {
 
         console.log(`[Damage] ${attacker.name} ตี ${target.name}: ${result.toFixed(2)}`);
     }
+
+    // Apply resource gains to attacker
+    if (damage.energyGain !== undefined) {
+        attacker.energy += damage.energyGain;
+    }
+    if (damage.concentoEnergyGain !== undefined) {
+        attacker.concentoEnergy += damage.concentoEnergyGain;
+    }
+    for (const [name, value] of damage.gauges) {
+        attacker.gauges.set(name, (attacker.gauges.get(name) ?? 0) + value);
+    }
 }
