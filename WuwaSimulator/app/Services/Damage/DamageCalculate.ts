@@ -92,7 +92,7 @@ function computeAttackerStats(attacker: AllyUnit, damage: Damage): AttackerStats
         atk     : attacker.baseAtk * (1 + atkP)  + flatAtk,
         hp      : attacker.baseHp  * (1 + hpP)   + flatHp,
         def     : attacker.baseDef * (1 + defP)  + flatDef,
-        cr      : Math.min(sumStat(attacker, StatsType.CR,       damage), 1),
+        cr      : Math.min(sumStat(attacker, StatsType.CR,damage), 1),
         cd      : sumStat(attacker, StatsType.CD,       damage),
         dmgBonus: sumStat(attacker, StatsType.Dmg,      damage),
         amp     : sumStat(attacker, StatsType.Amp,      damage),
@@ -140,8 +140,8 @@ function applyDamageFormula(
                + attackerStats.def * m[MultiplierType.Def]
                + m[MultiplierType.Const];
 
-    // DMG Bonus
-    const dmgBonusMulti = 1 + attackerStats.dmgBonus;
+    // DMG Bonus — รวม attacker (buff เพิ่ม dmg ที่ตีออก) + enemy (debuff เพิ่ม dmg ที่โดนรับ) แบบ additive เหมือน Amp
+    const dmgBonusMulti = 1 + attackerStats.dmgBonus + targetStats.dmgBonus;
 
     // Crit (expected value: 1 + CR × CD)
     const critMulti = damage.isCritable
@@ -176,7 +176,7 @@ function applyDamageFormula(
 }
 
 // ─────────────────────────────────────────────────────────────
-// calculateDamage (public API)ไ
+// calculateDamage (public API)
 // ─────────────────────────────────────────────────────────────
 
 export function calculateDamage(damage: Damage, triggerBus: TriggerBus): void {

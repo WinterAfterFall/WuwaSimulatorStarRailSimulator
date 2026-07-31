@@ -11,25 +11,54 @@ export enum Side {
     Enemy = "Enemy"
 }
 
+// ฝั่งที่ใช้จริงอ้างอิงจาก DamageCalculate.ts — computeAttackerStats() อ่านจาก AllyUnit (attacker),
+// computeTargetStats() อ่านจาก EnemyUnit (target) เท่านั้น ตอนนี้ยังไม่มี path ที่ ally โดนดาเมจ
 export enum StatsType {
-    AtkP = "Atk%",       // พลังโจมตี %
-    FlatAtk = "FlatAtk", // พลังโจมตี Raw
-    Hp = "Hp%",   
-    FlatHp = "FlatHp", 
-    DefP = "Def%",       
-    FlatDef = "FlatDef", 
-    CR = "Crit rate",           // อัตราคริ   
-    CD = "Crit Dmg",            // ความแรงคริ
-    Dmg = "Dmg Bonus",
-    Amp = "Amplify",
-    Sp = "Special",
-    DefShred = "Def Ignore",
-    DefRed = "Def Reduction",
-    ResRed = "Res Reduction",
-    ResPen = "Res Penetration",
-    DmgRed = "Damage Reduction",
-    ElemRed = "Elemental Reduction",
+    AtkP = "Atk%",       // พลังโจมตี % — Ally เท่านั้น
+    FlatAtk = "FlatAtk", // พลังโจมตี Raw — Ally เท่านั้น
+    Hp = "Hp%",          // Ally เท่านั้น
+    FlatHp = "FlatHp",   // Ally เท่านั้น
+    DefP = "Def%",       // Ally เท่านั้น (DEF ของ enemy คำนวณจาก level แทน ไม่ผ่าน stat นี้)
+    FlatDef = "FlatDef", // Ally เท่านั้น
+    CR = "Crit rate",    // อัตราคริ — Ally เท่านั้น
+    CD = "Crit Dmg",     // ความแรงคริ — Ally เท่านั้น
+    Dmg = "Dmg Bonus",   // ทั้ง 2 ฝั่ง — dmgBonusMulti = 1 + attacker.dmgBonus + target.dmgBonus (รวมกันจริง เหมือน Amp)
+    Amp = "Amplify",     // ทั้ง 2 ฝั่ง — ampMulti = 1 + attacker.amp + target.amp (รวมกันจริง)
+    Sp = "Special",      // Ally เท่านั้น
+    DefShred = "Def Ignore",        // Ally เท่านั้น — attacker ใช้ลด DEF ของ enemy
+    DefRed = "Def Reduction",       // Enemy เท่านั้น — debuff บน enemy ลด DEF ตัวเองก่อนเข้าสูตร %DEF
+    ResRed = "Res Reduction",       // Enemy เท่านั้น — natural resistance − debuff ของ enemy
+    ResPen = "Res Penetration",     // Ally เท่านั้น — หักลบกับ ResRed ของ enemy
+    DmgRed = "Damage Reduction",    // Enemy เท่านั้น
+    ElemRed = "Elemental Reduction",// Enemy เท่านั้น
 }
+
+// รายชื่อ StatsType ที่แต่ละฝั่งใช้จริง (Ally เท่านั้น / Both) — ใช้ตอน initDefaultStats() ใน constructor ของ AllyUnit
+export const ALLY_STATS: StatsType[] = [
+    StatsType.AtkP,
+    StatsType.FlatAtk,
+    StatsType.Hp,
+    StatsType.FlatHp,
+    StatsType.DefP,
+    StatsType.FlatDef,
+    StatsType.CR,
+    StatsType.CD,
+    StatsType.Sp,
+    StatsType.DefShred,
+    StatsType.ResPen,
+    StatsType.Dmg,
+    StatsType.Amp,
+];
+
+// รายชื่อ StatsType ที่แต่ละฝั่งใช้จริง (Enemy เท่านั้น / Both) — ใช้ตอน initDefaultStats() ใน constructor ของ EnemyUnit
+export const ENEMY_STATS: StatsType[] = [
+    StatsType.DefRed,
+    StatsType.ResRed,
+    StatsType.DmgRed,
+    StatsType.ElemRed,
+    StatsType.Dmg,
+    StatsType.Amp,
+];
 
 export enum ActionType {
     None = "None",
