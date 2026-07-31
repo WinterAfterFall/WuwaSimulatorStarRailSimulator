@@ -4,6 +4,8 @@ import { EnemyUnit } from "../../Models/EnemyUnit";
 import { Unit } from "../../Models/Unit";
 import { StatsType, ActionType, ElementType } from "../../Constants/Enum";
 import { MultiplierType } from "../../Constants/Enum";
+import { TriggerBus } from "../../Simulator/TriggerBus";
+import { increaseEnergy } from "../Combat/EnergyService";
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -177,7 +179,7 @@ function applyDamageFormula(
 // calculateDamage (public API)ไ
 // ─────────────────────────────────────────────────────────────
 
-export function calculateDamage(damage: Damage): void {
+export function calculateDamage(damage: Damage, triggerBus: TriggerBus): void {
     const attacker      = damage.attacker;
     const attackerStats = computeAttackerStats(attacker, damage);
 
@@ -190,7 +192,7 @@ export function calculateDamage(damage: Damage): void {
 
     // Apply resource gains to attacker
     if (damage.energyGain !== undefined) {
-        attacker.energy += damage.energyGain;
+        increaseEnergy(attacker, damage.energyGain, triggerBus, damage.attackTypeList[0]);
     }
     if (damage.concentoEnergyGain !== undefined) {
         attacker.concentoEnergy += damage.concentoEnergyGain;

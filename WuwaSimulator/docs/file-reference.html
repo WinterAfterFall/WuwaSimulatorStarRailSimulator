@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>WuwaSimulator — File Reference</title>
+<style>
+:root{
+  --bg:#0d1117; --bg2:#161b22; --bg3:#010409; --border:#21262d; --border2:#30363d;
+  --text:#c9d1d9; --muted:#8b949e; --dim:#6a737d;
+  --blue:#58a6ff; --blue2:#79c0ff; --purple:#d2a8ff; --green:#56d364; --orange:#ffa657;
+  --yellow:#e3b341; --red:#f97583; --pink:#ff7b72;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
+
+/* LAYOUT */
+.layout{display:flex;min-height:100vh}
+.sidebar{
+  width:280px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);
+  padding:20px 0;position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.main{flex:1;min-width:0;padding:32px 40px;max-width:920px}
+
+/* SIDEBAR */
+.side-title{font-size:15px;font-weight:700;color:var(--blue2);padding:0 20px 16px;border-bottom:1px solid var(--border);margin-bottom:12px}
+.side-title small{display:block;font-size:11px;font-weight:400;color:var(--dim);margin-top:4px}
+.tree{padding:0 8px}
+.tree-folder{margin-bottom:2px}
+.tree-folder-label{
+  font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;
+  padding:8px 12px 4px;
+}
+.tree-sub{padding-left:12px;border-left:1px solid var(--border);margin-left:16px}
+.tree a{
+  display:block;padding:5px 12px;border-radius:6px;color:var(--muted);text-decoration:none;font-size:12.5px;
+  font-family:'Consolas',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.tree a:hover{background:#1c2128;color:var(--blue2)}
+.tree a.active{background:#1f3a6e;color:var(--blue2);font-weight:600}
+
+/* SECTION */
+.file-section{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:18px;scroll-margin-top:20px}
+.file-path{
+  font-family:'Consolas',monospace;font-size:12px;color:var(--dim);margin-bottom:6px;
+}
+.file-title{font-size:17px;font-weight:700;color:var(--blue2);margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.02em}
+.b-todo{background:#2e2005;color:var(--yellow);border:1px solid #4d3800}
+.b-stub{background:#3d0c0c;color:var(--red);border:1px solid #5a1010}
+.b-core{background:#0c2d6b;color:var(--blue2);border:1px solid #1f3a6e}
+.b-empty{background:#1a1a1a;color:var(--dim);border:1px solid var(--border2)}
+.b-test{background:#0f2419;color:var(--green);border:1px solid #1a4229}
+
+.purpose{color:var(--text);font-size:13.5px;margin-bottom:12px;line-height:1.65}
+.exports{margin-top:10px}
+.export-item{margin-bottom:10px;padding-left:14px;border-left:2px solid var(--border2)}
+.export-name{font-family:'Consolas',monospace;font-size:13px;color:var(--orange);font-weight:700}
+.export-kind{font-size:10px;color:var(--dim);margin-left:6px;text-transform:uppercase}
+.export-desc{font-size:12.5px;color:var(--muted);margin-top:3px}
+.methods{margin-top:6px;padding-left:4px}
+.method-row{display:flex;gap:8px;font-size:12px;margin-bottom:3px;align-items:baseline}
+.method-name{font-family:'Consolas',monospace;color:var(--blue2);flex-shrink:0}
+.method-desc{color:var(--muted)}
+code{font-family:'Consolas',monospace;font-size:11.5px;background:var(--bg3);padding:1px 5px;border-radius:3px;color:var(--yellow)}
+
+.group-title{font-size:22px;font-weight:800;color:var(--text);margin:38px 0 16px;padding-bottom:8px;border-bottom:2px solid var(--border);scroll-margin-top:20px}
+.group-title:first-child{margin-top:0}
+.group-desc{color:var(--muted);font-size:13px;margin-bottom:16px}
+
+.top-banner{background:linear-gradient(135deg,#0c2d6b22,#16192622);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:24px}
+.top-banner h1{font-size:24px;color:var(--blue2);margin-bottom:8px}
+.top-banner p{color:var(--muted);font-size:13.5px}
+
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="sidebar">
+  <div class="side-title">WuwaSimulator<small>File &amp; Function Reference</small></div>
+  <div class="tree">
+
+    <div class="tree-folder"><a href="#overview">📄 Overview</a></div>
+
+    <div class="tree-folder">
+      <div class="tree-folder-label">Constants</div>
+      <div class="tree-sub"><a href="#enum">Enum.ts</a></div>
+    </div>
+
+    <div class="tree-folder">
+      <div class="tree-folder-label">Models</div>
+      <div class="tree-sub">
+        <a href="#unit">Unit.ts</a>
+        <a href="#allyunit">AllyUnit.ts</a>
+        <a href="#enemyunit">EnemyUnit.ts</a>
+        <div class="tree-folder-label" style="padding-left:0">Characters/</div>
+        <a href="#test1">Test1.ts</a>
+        <a href="#test2">Test2.ts</a>
+        <div class="tree-folder-label" style="padding-left:0">Combat/</div>
+        <a href="#damage">Damage.ts</a>
+        <a href="#rotationaction">RotationAction.ts</a>
+        <div class="tree-folder-label" style="padding-left:0">Combat/CombatEvent/</div>
+        <a href="#combatevent">CombatEvent.ts</a>
+        <a href="#actionevent">ActionEvent.ts</a>
+        <a href="#attackactionevent">AttackActionEvent.ts</a>
+        <a href="#buffactionevent">BuffActionEvent.ts</a>
+        <a href="#buffevent">BuffEvent.ts</a>
+        <a href="#buffstartevent">BuffStartEvent.ts</a>
+        <a href="#buffendevent">BuffEndEvent.ts</a>
+        <a href="#damageevent">DamageEvent.ts</a>
+        <a href="#notificationevent">NotificationEvent.ts</a>
+      </div>
+    </div>
+
+    <div class="tree-folder">
+      <div class="tree-folder-label">Services</div>
+      <div class="tree-sub">
+        <div class="tree-folder-label" style="padding-left:0">Combat/</div>
+        <a href="#energyservice">EnergyService.ts</a>
+        <div class="tree-folder-label" style="padding-left:0">Damage/</div>
+        <a href="#damagecalculate">DamageCalculate.ts</a>
+      </div>
+    </div>
+
+    <div class="tree-folder">
+      <div class="tree-folder-label">Simulator</div>
+      <div class="tree-sub">
+        <a href="#combattimeline">CombatTimeline.ts</a>
+        <a href="#rotationbuilder">RotationBuilder.ts</a>
+        <a href="#rotationdirector">RotationDirector.ts</a>
+        <a href="#triggerbus">TriggerBus.ts</a>
+      </div>
+    </div>
+
+    <div class="tree-folder">
+      <div class="tree-folder-label">Utils</div>
+      <div class="tree-sub">
+        <a href="#queue">queue.ts</a>
+        <a href="#priorityqueue">priorityQueue.ts</a>
+        <a href="#ipq">indexedPriorityQueue.ts</a>
+      </div>
+    </div>
+
+    <div class="tree-folder">
+      <div class="tree-folder-label">Entry Points</div>
+      <div class="tree-sub">
+        <a href="#manualbuilder">manualBuilder.ts</a>
+        <a href="#application">application.ts</a>
+      </div>
+    </div>
+
+    <div class="tree-folder">
+      <div class="tree-folder-label">Test</div>
+      <div class="tree-sub">
+        <a href="#test-automated">Test/automated/**</a>
+        <a href="#test-manual">Test/manual/**</a>
+        <a href="#test-legacy">Test/Utils/** (legacy)</a>
+      </div>
+    </div>
+
+  </div>
+</nav>
+
+<main class="main">
+
+  <div class="top-banner" id="overview">
+    <h1>WuwaSimulator — File &amp; Function Reference</h1>
+    <p>สรุปจุดประสงค์และฟังก์ชัน/export หลักของทุกไฟล์ในโปรเจกต์ จัดกลุ่มตามโครงสร้างโฟลเดอร์จริง
+    ใช้ sidebar ด้านซ้ายเพื่อกระโดดไปยังไฟล์ที่ต้องการ</p>
+  </div>
+
+  <!-- ═══════════════ CONSTANTS ═══════════════ -->
+  <h2 class="group-title" id="constants-group">Constants/</h2>
+
+  <section class="file-section" id="enum">
+    <div class="file-path">app/Constants/Enum.ts</div>
+    <div class="file-title">Enum.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">รวม string enum ทั้งหมดที่ใช้ทั่วโปรเจกต์ ทุกตัวเป็น <code>string enum</code> (value เป็น string ไม่ใช่ตัวเลข)
+    เพื่อให้ debug/log อ่านง่าย และใช้เป็น key component ของระบบ stat แบบ Map-based</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">UnitStatus</span><span class="export-kind">enum</span>
+        <div class="export-desc">Alive / Death — สถานะการมีชีวิตของ unit</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">Side</span><span class="export-kind">enum</span>
+        <div class="export-desc">None / Ally / Enemy — ฝ่ายของ unit</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">StatsType</span><span class="export-kind">enum</span>
+        <div class="export-desc">ประเภทค่าสถานะทั้งหมด (AtkP, FlatAtk, Hp, DefP, CR, CD, Dmg, Amp, Sp, DefShred, DefRed, ResRed, ResPen, DmgRed, ElemRed ฯลฯ) — ใช้เป็น dimension แรกของ stat key</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">ActionType</span><span class="export-kind">enum</span>
+        <div class="export-desc">None, BA, HA, Skill, Ult, Echo, Intro, Outro, TB — ประเภท action ที่ตัวละครทำได้</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">ElementType</span><span class="export-kind">enum</span>
+        <div class="export-desc">None, Glacio, Fusion, Electro, Aero, Spectro, Havoc — ธาตุของสกิล/ตัวละคร</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">WeaponType</span><span class="export-kind">enum</span>
+        <div class="export-desc">None, Broadblade, Sword, Pistols, Gauntlets, Rectifier — ประเภทอาวุธ</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">ActionState</span><span class="export-kind">enum</span>
+        <div class="export-desc">Free / Busy — สถานะว่างของ unit สำหรับ lock system</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">NotificationType</span><span class="export-kind">enum</span>
+        <div class="export-desc">ChangeToAuto, EndAction, BuffExpired, DebuffExpired — ประเภท signal event ใน timeline</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">TriggerEvent</span><span class="export-kind">enum</span>
+        <div class="export-desc">EnergyIncrease — event ที่ TriggerBus emit ได้ (เพิ่มใหม่ต้องคู่กับ TriggerEventMap ใน TriggerBus.ts)</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">EnemyPosition</span><span class="export-kind">enum</span>
+        <div class="export-desc">Vanguard="0", Midrange="1", Rearguard="2", OutOfRange="3" — ตำแหน่งยืนของศัตรู ใช้กรอง target ตาม SkillRange</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">MultiplierType</span><span class="export-kind">enum</span>
+        <div class="export-desc">Atk="atk", Hp="hp", Def="def", Const="const" — key ของ scaling multiplier ใน Damage</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">SkillRange</span><span class="export-kind">enum</span>
+        <div class="export-desc">None, Contact, Midrange, Ranged, Global — ระยะของสกิล ใช้เทียบกับ EnemyPosition เพื่อกรอง target</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ MODELS ═══════════════ -->
+  <h2 class="group-title" id="models-group">Models/</h2>
+
+  <section class="file-section" id="unit">
+    <div class="file-path">app/Models/Unit.ts</div>
+    <div class="file-title">Unit.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">Base class ของทุก unit (ทั้ง Ally และ Enemy) เก็บระบบ stat แบบ <code>Map&lt;string, number&gt;</code>
+    โดยสร้าง key จากการรวม enum value เข้าด้วยกัน (1–3 dimension: Stat / Stat-Action / Stat-Element-Action)</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class Unit</span><span class="export-kind">class</span>
+        <div class="methods">
+          <div class="method-row"><span class="method-name">generateKey()</span><span class="method-desc">private — ประกอบ key string จาก 1-3 args ตามจำนวน dimension ที่ส่งมา</span></div>
+          <div class="method-row"><span class="method-name">isAlive() / setDead()</span><span class="method-desc">lifecycle helper ตรวจ/ตั้งสถานะตาย</span></div>
+          <div class="method-row"><span class="method-name">getStats()</span><span class="method-desc">3 overloads — อ่านค่า stat ตาม dimension ที่ระบุ, default 0 ถ้าไม่มี</span></div>
+          <div class="method-row"><span class="method-name">setStat()</span><span class="method-desc">3 overloads — ตั้งค่า stat ทับของเดิม</span></div>
+          <div class="method-row"><span class="method-name">addStat()</span><span class="method-desc">3 overloads — บวกเพิ่มจากค่าเดิม (เรียก getStats+setStat ภายใน)</span></div>
+          <div class="method-row"><span class="method-name">hasStat()</span><span class="method-desc">3 overloads — เช็คว่ามี key นี้ถูกตั้งไว้หรือยัง</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="allyunit">
+    <div class="file-path">app/Models/AllyUnit.ts</div>
+    <div class="file-title">AllyUnit.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">extends <code>Unit</code> — เพิ่ม combat state เฉพาะฝั่งผู้เล่น: energy, HP/shield, rotation definitions,
+    และ tracking maps (buff/stack/dmgRecord) พร้อม type <code>TimelineRef</code> แบบ structural เพื่อเลี่ยง circular import กับ CombatTimeline</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">type TimelineRef</span><span class="export-kind">type</span>
+        <div class="export-desc">structural type <code>{ schedule(event), currentFrame, triggerBus }</code> — CombatTimeline satisfy type นี้โดยอัตโนมัติ ไม่ต้อง import ตรง</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">class AllyUnit extends Unit</span><span class="export-kind">class</span>
+        <div class="export-desc">state: isOnField, actionState, level/baseAtk/baseHp/baseDef, elementType/weaponType/resonanceChain,
+        rotations (Map ชื่อ → factory), energy/maxEnergy, concentoEnergy, currentHP/currentShield,
+        stacks/buffNote/gauges/buffCheck, dmgRecord/maxDmgRecord</div>
+        <div class="methods">
+          <div class="method-row"><span class="method-name">isFree()</span><span class="method-desc">true ถ้า actionState === Free</span></div>
+          <div class="method-row"><span class="method-name">setBusy() / setFree()</span><span class="method-desc">เปลี่ยน actionState — เรียกจาก event execute() และ CombatTimeline.tick()</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="enemyunit">
+    <div class="file-path">app/Models/EnemyUnit.ts</div>
+    <div class="file-title">EnemyUnit.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">extends <code>Unit</code> — เพิ่ม level (คำนวณ DEF), position (สำหรับกรอง target ตาม SkillRange),
+    debuff tracking และ dmgRecord ฝั่งศัตรู</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class EnemyUnit extends Unit</span><span class="export-kind">class</span>
+        <div class="export-desc">level (default 90, ใช้สูตร <code>8×level+792</code> หา base DEF), position (default Vanguard),
+        debuffStacks/debuffNote/debuffCheck, dmgRecord/maxDmgRecord</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="test1">
+    <div class="file-path">app/Models/Characters/Test1.ts</div>
+    <div class="file-title">Test1.ts <span class="badge b-test">Scaffolding</span></div>
+    <div class="purpose">Setup function ของตัวละครทดสอบ 1 — กำหนด base stats + ธาตุ/อาวุธ แล้วลงทะเบียน rotation 2 แบบ
+    (Standard, Burst) ลง <code>unit.rotations</code> แต่ละ action ใน rotation จะ schedule <code>AttackActionEvent</code> +
+    <code>NotificationEvent(EndAction)</code> จริงลง timeline ตอน execute</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">setupTest1(unit: AllyUnit)</span><span class="export-kind">function</span>
+        <div class="export-desc">baseAtk=100, baseHp=1000, baseDef=100, element=Spectro, weapon=Sword, maxEnergy=100, CR=5%, CD=150%<br>
+        rotation "Standard": BA1 → BA2 → Skill (durations 30/30/60 frame)<br>
+        rotation "Burst": Ult → BA1 (durations 90/30 frame)</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="test2">
+    <div class="file-path">app/Models/Characters/Test2.ts</div>
+    <div class="file-title">Test2.ts <span class="badge b-test">Scaffolding</span></div>
+    <div class="purpose">เหมือน Test1.ts แต่เป็นตัวละครที่ 2 — มี rotation เพิ่มอีก 1 แบบ (Echo Focus) เพื่อทดสอบ merge หลาย rotation</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">setupTest2(unit: AllyUnit)</span><span class="export-kind">function</span>
+        <div class="export-desc">baseAtk=80, baseHp=1200, baseDef=120, element=Havoc, weapon=Gauntlets, maxEnergy=150, CR=5%, CD=150%<br>
+        rotation "Standard": BA1 → Skill → BA2<br>
+        rotation "Burst": Ult → BA1<br>
+        rotation "Echo Focus": Echo → Skill</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="damage">
+    <div class="file-path">app/Models/Combat/Damage.ts</div>
+    <div class="file-title">Damage.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">Data object แทนความเสียหาย 1 ครั้ง — เก็บ attacker, element, action type(s), target(s), scaling multiplier
+    (atk/hp/def/const), gauge ที่จะติด, และ energy gain ที่จะได้ ทุก method ปรับค่า multiplier return <code>this</code> (chainable)</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class Damage</span><span class="export-kind">class</span>
+        <div class="methods">
+          <div class="method-row"><span class="method-name">constructor()</span><span class="method-desc">2 overloads — target ตรง (EnemyUnit | EnemyUnit[]) หรือ SkillRange+enemies (กรอง target ที่ position < range อัตโนมัติ)</span></div>
+          <div class="method-row"><span class="method-name">setMultipliers()</span><span class="method-desc">2 overloads — ตั้งค่าใหม่ทับของเดิม (4 ตัวเลขเรียง หรือ [key,value] pairs)</span></div>
+          <div class="method-row"><span class="method-name">addMultipliers()</span><span class="method-desc">2 overloads — บวกเพิ่มจากของเดิม</span></div>
+          <div class="method-row"><span class="method-name">multiplyMultipliers()</span><span class="method-desc">3 overloads — คูณของเดิม (scalar เดียวคูณทุก key, 4 ค่าเรียง, หรือ pairs)</span></div>
+          <div class="method-row"><span class="method-name">addGauges()</span><span class="method-desc">เพิ่ม [ชื่อ gauge, ค่า] เข้า list</span></div>
+          <div class="method-row"><span class="method-name">set/getEnergyGain()</span><span class="method-desc">ตั้ง/อ่านค่า energy ที่จะได้จาก skill นี้</span></div>
+          <div class="method-row"><span class="method-name">set/getConcentoEnergyGain()</span><span class="method-desc">ตั้ง/อ่านค่า concerto energy</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="rotationaction">
+    <div class="file-path">app/Models/Combat/RotationAction.ts</div>
+    <div class="file-title">RotationAction.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">Data class แทน action 1 ตัวที่ถูก queue ไว้ก่อน schedule จริง — เก็บแค่ชื่อ + closure execute
+    ยังไม่มี frame/time (จะถูกกำหนดตอน execute() อ่าน <code>timeline.currentFrame</code> เอง)</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class RotationAction</span><span class="export-kind">class</span>
+        <div class="export-desc">fields: <code>name: string</code>, <code>execute: () =&gt; void</code></div>
+      </div>
+    </div>
+  </section>
+
+  <h3 style="color:var(--muted);font-size:15px;margin:20px 0 12px;padding-left:2px">Combat/CombatEvent/ — Event Class Hierarchy</h3>
+
+  <section class="file-section" id="combatevent">
+    <div class="file-path">app/Models/Combat/CombatEvent/CombatEvent.ts</div>
+    <div class="file-title">CombatEvent.ts <span class="badge b-core">Abstract Base</span></div>
+    <div class="purpose">Abstract base class ของทุก event ที่ push ลง IPQ ใน CombatTimeline — เก็บ name, time, duration, priority</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">abstract class CombatEvent</span><span class="export-kind">class</span>
+        <div class="export-desc">abstract <code>execute(): void</code> — subclass ต้อง implement เอง เรียกโดย CombatTimeline ตอน tick</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="actionevent">
+    <div class="file-path">app/Models/Combat/CombatEvent/ActionEvent.ts</div>
+    <div class="file-title">ActionEvent.ts <span class="badge b-core">Abstract Base</span></div>
+    <div class="purpose">extends CombatEvent — abstract base ของ action ที่ตัวละครทำจริง (ใช้ <code>instanceof ActionEvent</code> เช็คว่า "มีการ action" เกิดขึ้น)</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">abstract class ActionEvent extends CombatEvent</span><span class="export-kind">class</span>
+        <div class="export-desc">เพิ่ม unit, actionType, isManual (true = GlobalLock ON เมื่อ execute, false = UnitLock เท่านั้น)</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="attackactionevent">
+    <div class="file-path">app/Models/Combat/CombatEvent/AttackActionEvent.ts</div>
+    <div class="file-title">AttackActionEvent.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">extends ActionEvent — action โจมตี มี callback เสริม <code>onExecute</code> ให้ผู้เรียกใส่ logic ตอน event นี้ execute จริง</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class AttackActionEvent extends ActionEvent</span><span class="export-kind">class</span>
+        <div class="methods">
+          <div class="method-row"><span class="method-name">execute()</span><span class="method-desc"><code>unit.setBusy()</code> แล้วเรียก <code>onExecute?.()</code> ถ้ามี</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="buffactionevent">
+    <div class="file-path">app/Models/Combat/CombatEvent/BuffActionEvent.ts</div>
+    <div class="file-title">BuffActionEvent.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">extends ActionEvent — action ประเภท buff skill (ไม่ใช่โจมตี)</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class BuffActionEvent extends ActionEvent</span><span class="export-kind">class</span>
+        <div class="methods">
+          <div class="method-row"><span class="method-name">execute()</span><span class="method-desc"><code>unit.setBusy()</code> เท่านั้น</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="buffevent">
+    <div class="file-path">app/Models/Combat/CombatEvent/BuffEvent.ts</div>
+    <div class="file-title">BuffEvent.ts <span class="badge b-core">Abstract Base</span></div>
+    <div class="purpose">extends CombatEvent — abstract base ของ event ที่เกี่ยวกับบัพ/ดีบัพ (เช็คด้วย <code>instanceof BuffEvent</code>)</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">abstract class BuffEvent extends CombatEvent</span><span class="export-kind">class</span>
+        <div class="export-desc">เพิ่ม <code>target: AllyUnit</code></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="buffstartevent">
+    <div class="file-path">app/Models/Combat/CombatEvent/BuffStartEvent.ts</div>
+    <div class="file-title">BuffStartEvent.ts <span class="badge b-stub">Stub — ยังไม่ implement</span></div>
+    <div class="purpose">extends BuffEvent — บัพเริ่มมีผลกับ target</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class BuffStartEvent extends BuffEvent</span><span class="export-kind">class</span>
+        <div class="export-desc"><code>execute()</code> ยังว่างเปล่า — logic ยังไม่ถูกเขียน</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="buffendevent">
+    <div class="file-path">app/Models/Combat/CombatEvent/BuffEndEvent.ts</div>
+    <div class="file-title">BuffEndEvent.ts <span class="badge b-stub">Stub — ยังไม่ implement</span></div>
+    <div class="purpose">extends BuffEvent — บัพหมดผลกับ target</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class BuffEndEvent extends BuffEvent</span><span class="export-kind">class</span>
+        <div class="export-desc"><code>execute()</code> ยังว่างเปล่า — logic ยังไม่ถูกเขียน</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="damageevent">
+    <div class="file-path">app/Models/Combat/CombatEvent/DamageEvent.ts</div>
+    <div class="file-title">DamageEvent.ts <span class="badge b-todo">TODO — ยังไม่ต่อสาย</span></div>
+    <div class="purpose">extends CombatEvent — ความเสียหาย ณ frame หนึ่ง ตั้งใจให้ execute() เรียก <code>calculateDamage</code>
+    แต่ยังไม่ implement (ต้องหาทางส่ง triggerBus จาก CombatTimeline เข้ามาด้วย เพราะเป็น required param แล้ว)</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class DamageEvent extends CombatEvent</span><span class="export-kind">class</span>
+        <div class="export-desc">fields: damage (Damage), target (AllyUnit) — <code>execute()</code> มีแค่ comment TODO ข้างใน</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="notificationevent">
+    <div class="file-path">app/Models/Combat/CombatEvent/NotificationEvent.ts</div>
+    <div class="file-title">NotificationEvent.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">extends CombatEvent — event สัญญาณล้วนๆ (ไม่รัน logic เอง) ใช้บอก ChangeToAuto / EndAction / BuffExpired / DebuffExpired
+    ให้ <code>CombatTimeline.tick()</code> อ่าน <code>notifyType</code> แล้วจัดการ lock เอง</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class NotificationEvent extends CombatEvent</span><span class="export-kind">class</span>
+        <div class="export-desc">fields: notifyType (NotificationType), unit (AllyUnit | null) — <code>execute()</code> เป็น no-op โดยตั้งใจ</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ SERVICES ═══════════════ -->
+  <h2 class="group-title" id="services-group">Services/</h2>
+
+  <section class="file-section" id="energyservice">
+    <div class="file-path">app/Services/Combat/EnergyService.ts</div>
+    <div class="file-title">EnergyService.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">จุดเดียวที่ mutate <code>unit.energy</code> ได้ — บังคับให้ energy gain ทุกทาง (rotation, DamageCalculate)
+    ต้องผ่านฟังก์ชันนี้ เพื่อให้ TriggerBus เห็น event ก่อน clamp กับ maxEnergy</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">increaseEnergy(unit, amount, triggerBus, actionType?)</span><span class="export-kind">function</span>
+        <div class="export-desc">1) <code>triggerBus.emit(EnergyIncrease, {unit, amount, actionType})</code> — listener เห็นค่าดิบก่อนโดนตัด (ตรวจ overflow ได้)<br>
+        2) <code>unit.energy = Math.min(maxEnergy, energy + amount)</code> — clamp จริง</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="damagecalculate">
+    <div class="file-path">app/Services/Damage/DamageCalculate.ts</div>
+    <div class="file-title">DamageCalculate.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">สูตรคำนวณ damage หลักของเกม (WuWa formula) — รวม stat จากหลาย dimension (base/action/element) แล้วคูณ
+    ผ่าน pipeline: dmgBonus × crit × amp × sp × def × res × elemRed × reduction</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">sumStat(unit, statType, damage)</span><span class="export-kind">function (internal)</span>
+        <div class="export-desc">รวมค่า stat จาก base + ทุก action ใน attackTypeList + (ถ้าเป็น element-dimension stat) ธาตุของ skill แล้วหาร 100 อัตโนมัติถ้าไม่ใช่ flat stat</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">computeAttackerStats(attacker, damage)</span><span class="export-kind">function (internal)</span>
+        <div class="export-desc">รวม atk/hp/def (% + flat), cr (cap ที่ 100%), cd, dmgBonus, amp, sp, defShred, respen ของฝั่งโจมตี</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">computeTargetStats(target, damage)</span><span class="export-kind">function (internal)</span>
+        <div class="export-desc">คำนวณ DEF ศัตรูจาก level (<code>8×lvl+792</code>) ลดด้วย DefRed debuff, รวม dmgBonus/dmgRed/amp/resred/elemRed ฝั่งเป้า</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">applyDamageFormula(damage, attackerStats, targetStats)</span><span class="export-kind">function (internal)</span>
+        <div class="export-desc">base (atk·m.atk + hp·m.hp + def·m.def + const) × dmgBonus × crit × amp × sp × defMulti(cap 200%) × resMulti(piecewise) × elemRedMulti × reductionMulti</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">calculateDamage(damage, triggerBus)</span><span class="export-kind">function (public API)</span>
+        <div class="export-desc">loop ทุก target → คำนวณ+log ผลลัพธ์ แล้วเรียก <code>increaseEnergy</code> (ถ้ามี energyGain), บวก concentoEnergy ตรง, และบวกค่าเข้า attacker.gauges</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ SIMULATOR ═══════════════ -->
+  <h2 class="group-title" id="simulator-group">Simulator/</h2>
+
+  <section class="file-section" id="combattimeline">
+    <div class="file-path">app/Simulator/CombatTimeline.ts</div>
+    <div class="file-title">CombatTimeline.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">หัวใจของระบบ — ถือ IndexedPriorityQueue ของ event ทั้งหมด, currentFrame, lock state (isGlobalLocked),
+    และ TriggerBus กลาง 1 instance ต่อ 1 battle</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class CombatTimeline</span><span class="export-kind">class</span>
+        <div class="export-desc">fields: currentFrame (default 0), onFieldChar, isGlobalLocked, triggerBus</div>
+        <div class="methods">
+          <div class="method-row"><span class="method-name">schedule(event)</span><span class="method-desc">push CombatEvent เข้า IPQ (key = event.name)</span></div>
+          <div class="method-row"><span class="method-name">tick()</span><span class="method-desc">pop event ที่ frame น้อยสุด → currentFrame=event.time → execute() → จัดการ lock ตามชนิด event (isManual→lock ON, EndAction→lock OFF+setFree, ChangeToAuto→lock OFF)</span></div>
+          <div class="method-row"><span class="method-name">runAll()</span><span class="method-desc">tick() วนจน IPQ ว่าง</span></div>
+          <div class="method-row"><span class="method-name">peek() / isEmpty / size</span><span class="method-desc">inspect IPQ โดยไม่ mutate</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="rotationbuilder">
+    <div class="file-path">app/Simulator/RotationBuilder.ts</div>
+    <div class="file-title">RotationBuilder.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">Fluent builder สร้าง <code>Queue&lt;RotationAction&gt;</code> — ใช้ตอน setup rotation ของตัวละครแต่ละตัว</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class RotationBuilder</span><span class="export-kind">class</span>
+        <div class="methods">
+          <div class="method-row"><span class="method-name">add(name, execute)</span><span class="method-desc">enqueue RotationAction ใหม่ แล้ว return this (chain ได้)</span></div>
+          <div class="method-row"><span class="method-name">build()</span><span class="method-desc">คืน Queue&lt;RotationAction&gt; ที่สร้างไว้</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="rotationdirector">
+    <div class="file-path">app/Simulator/RotationDirector.ts</div>
+    <div class="file-title">RotationDirector.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">ตัวกลางหลักที่ดึง RotationAction มา execute ทีละตัวแล้วขับ CombatTimeline — setupQueue ใช้ครั้งเดียวก่อน
+    แล้วค่อยวน loopQueue จนครบ maxLoops</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class RotationDirector</span><span class="export-kind">class</span>
+        <div class="export-desc">fields: setupQueue, loopQueue, timeline, maxLoops, loopStepCount (private), currentLoopCount (public)</div>
+        <div class="methods">
+          <div class="method-row"><span class="method-name">run()</span><span class="method-desc"><code>while(step()){}</code> แล้ว <code>timeline.runAll()</code> drain event ที่เหลือ</span></div>
+          <div class="method-row"><span class="method-name">step()</span><span class="method-desc">private — เช็ค lock → nextAction() → execute() → do-while tick() จนกว่า lock จะปลดหรือ IPQ ว่าง</span></div>
+          <div class="method-row"><span class="method-name">nextAction()</span><span class="method-desc">private — drain setupQueue ก่อน แล้ว rotate() loopQueue จนกว่า currentLoopCount ครบ maxLoops</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="triggerbus">
+    <div class="file-path">app/Simulator/TriggerBus.ts</div>
+    <div class="file-title">TriggerBus.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">pub/sub กลางของ battle — ตัวละครลงทะเบียน callback ต่อ TriggerEvent แล้ว engine emit ตอน action จริง trigger
+    เพื่อเลี่ยงการ hardcode passive logic ตรงจุดเกิด event (ปรับจาก trigger-list ของ StarRailSimulator)</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">interface EnergyIncreaseContext</span><span class="export-kind">interface</span>
+        <div class="export-desc">{ unit, amount, actionType? } — payload ของ event EnergyIncrease</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">interface TriggerEventMap</span><span class="export-kind">interface</span>
+        <div class="export-desc">map แต่ละ TriggerEvent → payload type ของมัน — เพิ่ม event ใหม่ต้องเพิ่ม entry ที่นี่คู่กับ enum ใน Enum.ts</div>
+      </div>
+      <div class="export-item">
+        <span class="export-name">class TriggerBus</span><span class="export-kind">class</span>
+        <div class="methods">
+          <div class="method-row"><span class="method-name">on(event, callback, priority=0)</span><span class="method-desc">ลงทะเบียน listener — priority มากไปน้อยออกก่อน, เท่ากันเรียงตามลำดับ register</span></div>
+          <div class="method-row"><span class="method-name">emit(event, ctx)</span><span class="method-desc">เรียก listener ทุกตัวที่ลงทะเบียนไว้กับ event นี้ ตามลำดับ priority</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ UTILS ═══════════════ -->
+  <h2 class="group-title" id="utils-group">Utils/</h2>
+
+  <section class="file-section" id="queue">
+    <div class="file-path">app/Utils/queue.ts</div>
+    <div class="file-title">queue.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">Generic FIFO queue backed ด้วย object-map (ไม่ใช้ array.shift() ที่เป็น O(n)) — ทุก op เป็น O(1)</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class Queue&lt;T&gt;</span><span class="export-kind">class</span>
+        <div class="methods">
+          <div class="method-row"><span class="method-name">enqueue(item)</span><span class="method-desc">เพิ่มท้าย queue</span></div>
+          <div class="method-row"><span class="method-name">dequeue()</span><span class="method-desc">เอาหน้าออก, reset index เมื่อ queue ว่างสนิท</span></div>
+          <div class="method-row"><span class="method-name">rotate()</span><span class="method-desc">dequeue แล้ว enqueue กลับทันที — ใช้วน loop rotation</span></div>
+          <div class="method-row"><span class="method-name">peek() / get(i) / isEmpty() / clear() / toArray() / length</span><span class="method-desc">helper อ่าน/ตรวจสอบโดยไม่ mutate (ยกเว้น clear)</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="priorityqueue">
+    <div class="file-path">app/Utils/priorityQueue.ts</div>
+    <div class="file-title">priorityQueue.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">Generic binary min/max-heap — ลำดับควบคุมเต็มที่ด้วย comparator function ที่ส่งเข้า constructor</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class PQ&lt;T&gt;</span><span class="export-kind">class</span>
+        <div class="methods">
+          <div class="method-row"><span class="method-name">push(item)</span><span class="method-desc">O(log n) — เพิ่ม แล้ว bubbleUp</span></div>
+          <div class="method-row"><span class="method-name">pop()</span><span class="method-desc">O(log n) — เอา root ออก แล้ว bubbleDown</span></div>
+          <div class="method-row"><span class="method-name">peek()</span><span class="method-desc">O(1) — ดู root โดยไม่เอาออก</span></div>
+          <div class="method-row"><span class="method-name">delete(predicate)</span><span class="method-desc">O(n) หาตำแหน่ง + O(log n) fix heap — ลบตัวแรกที่ match</span></div>
+          <div class="method-row"><span class="method-name">toSortedArray() / size / isEmpty / clear</span><span class="method-desc">helper เสริม</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="ipq">
+    <div class="file-path">app/Utils/indexedPriorityQueue.ts</div>
+    <div class="file-title">indexedPriorityQueue.ts <span class="badge b-core">Core</span></div>
+    <div class="purpose">PQ + positionMap (name → index) — เพิ่ม update/delete/has ด้วยชื่อได้ใน O(log n) แทนที่จะต้อง scan หา (ใช้เป็น backing store ของ CombatTimeline)</div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">class IndexedPriorityQueue&lt;T&gt;</span><span class="export-kind">class</span>
+        <div class="methods">
+          <div class="method-row"><span class="method-name">push(data, name)</span><span class="method-desc">throw ถ้าชื่อซ้ำ — ต่างจาก PQ ธรรมดา</span></div>
+          <div class="method-row"><span class="method-name">pop() / peek()</span><span class="method-desc">เหมือน PQ แต่ sync positionMap ไปด้วย</span></div>
+          <div class="method-row"><span class="method-name">update(name, newData)</span><span class="method-desc">แก้ data ของ node ที่มีอยู่ แล้ว re-bubble ตามทิศที่จำเป็น (skip ถ้า priority ไม่เปลี่ยน)</span></div>
+          <div class="method-row"><span class="method-name">delete(name)</span><span class="method-desc">ลบ node ตามชื่อจากตำแหน่งไหนก็ได้ในฮีป</span></div>
+          <div class="method-row"><span class="method-name">getByName(name) / has(name) / size / isEmpty</span><span class="method-desc">query helper</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ ENTRY POINTS ═══════════════ -->
+  <h2 class="group-title" id="entry-group">Entry Points</h2>
+
+  <section class="file-section" id="manualbuilder">
+    <div class="file-path">app/manualBuilder.ts</div>
+    <div class="file-title">manualBuilder.ts <span class="badge b-core">Entry Point</span></div>
+    <div class="purpose">ตัวอย่างการประกอบทุกชิ้นส่วนเข้าด้วยกัน — setup 2 unit, merge rotation ของทั้งคู่, สร้าง RotationDirector
+    แล้วรัน simulation จริง (รันด้วย <code>npm start</code> → <code>tsx app/manualBuilder.ts</code>)
+    ดูรายละเอียด step-by-step ที่ <a href="execution-flow.html" style="color:var(--blue2)">execution-flow.html</a></div>
+    <div class="exports">
+      <div class="export-item">
+        <span class="export-name">mergeQueues(...queues)</span><span class="export-kind">function (local)</span>
+        <div class="export-desc">รวมหลาย Queue&lt;RotationAction&gt; เป็น queue เดียว โดย dequeue จากแต่ละ queue มา enqueue ต่อกัน</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="file-section" id="application">
+    <div class="file-path">app/application.ts</div>
+    <div class="file-title">application.ts <span class="badge b-empty">ว่างเปล่า</span></div>
+    <div class="purpose">ไฟล์ว่าง — ยังไม่มีเนื้อหา (ปัจจุบันจุดเริ่มโปรแกรมจริงคือ manualBuilder.ts)</div>
+  </section>
+
+  <!-- ═══════════════ TEST ═══════════════ -->
+  <h2 class="group-title" id="test-group">Test/</h2>
+
+  <section class="file-section" id="test-automated">
+    <div class="file-path">app/Test/automated/**</div>
+    <div class="file-title">Test/automated/** <span class="badge b-test">Jest — ใช้งานได้</span></div>
+    <div class="purpose">Test suite หลักที่ jest.config.js เก็บ (testMatch: <code>**/Test/automated/**/*.test.ts</code>)</div>
+    <div class="exports">
+      <div class="export-item"><span class="export-name">Utils/Queue.test.ts</span><span class="export-kind">test</span><div class="export-desc">ครอบคลุม enqueue/dequeue/rotate/peek/clear/toArray ของ Queue&lt;T&gt;</div></div>
+      <div class="export-item"><span class="export-name">Utils/PriorityQueue.test.ts</span><span class="export-kind">test</span><div class="export-desc">ครอบคลุม push/pop/delete/heap ordering ของ PQ&lt;T&gt;</div></div>
+      <div class="export-item"><span class="export-name">Utils/IndexedPriorityQueue.test.ts</span><span class="export-kind">test</span><div class="export-desc">ครอบคลุม push/pop/update/delete + positionMap consistency ของ IPQ&lt;T&gt;</div></div>
+      <div class="export-item"><span class="export-name">Models/EnemyUnit.test.ts</span><span class="export-kind">test</span><div class="export-desc">constructor defaults (status, position Vanguard, tracking maps ว่าง)</div></div>
+      <div class="export-item"><span class="export-name">Models/Damage.test.ts</span><span class="export-kind">test</span><div class="export-desc">constructor overloads (target ตรง vs SkillRange filter), multiplier chain methods</div></div>
+      <div class="export-item"><span class="export-name">Services/EnergyService.test.ts</span><span class="export-kind">test</span><div class="export-desc">increaseEnergy clamp ที่ maxEnergy + emit TriggerEvent ถูกต้อง</div></div>
+      <div class="export-item"><span class="export-name">Services/DamageCalculate.test.ts</span><span class="export-kind">test</span><div class="export-desc">energy gain wiring ผ่าน calculateDamage → increaseEnergy → TriggerBus</div></div>
+      <div class="export-item"><span class="export-name">Simulator/TriggerBus.test.ts</span><span class="export-kind">test</span><div class="export-desc">on/emit, multiple listeners, priority ordering, no-op เมื่อไม่มี listener</div></div>
+    </div>
+  </section>
+
+  <section class="file-section" id="test-manual">
+    <div class="file-path">app/Test/manual/**</div>
+    <div class="file-title">Test/manual/** <span class="badge b-test">รันด้วยมือ (tsx)</span></div>
+    <div class="purpose">Scratch script ทดลองไอเดีย — ไม่ได้อยู่ใน jest testMatch รันตรงด้วย <code>tsx</code> เพื่อดู console output</div>
+    <div class="exports">
+      <div class="export-item"><span class="export-name">1-unit.ts / 2-hello.ts</span><span class="export-kind">script</span><div class="export-desc">ทดลอง Unit stat system เบื้องต้น</div></div>
+      <div class="export-item"><span class="export-name">3-advanced-ipq.ts</span><span class="export-kind">script</span><div class="export-desc">ทดลอง IndexedPriorityQueue</div></div>
+      <div class="export-item"><span class="export-name">4-queue.ts</span><span class="export-kind">script</span><div class="export-desc">ทดลอง Queue</div></div>
+    </div>
+  </section>
+
+  <section class="file-section" id="test-legacy">
+    <div class="file-path">app/Test/Utils/** &amp; app/Test/queue.ts</div>
+    <div class="file-title">Legacy / ไม่ได้ใช้ <span class="badge b-stub">Import path ผิด</span></div>
+    <div class="purpose">ไฟล์ duplicate เก่าของ Utils tests ที่ import path ผิด (<code>../Utils/...</code>) ใช้ไม่ได้แล้ว —
+    ให้ใช้ <code>Test/automated/Utils/</code> แทน</div>
+  </section>
+
+</main>
+</div>
+
+<script>
+const links = document.querySelectorAll('.tree a');
+const sections = Array.from(links).map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+
+function setActive(id){
+  links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#'+id));
+}
+
+links.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) setActive(entry.target.id);
+  });
+}, { rootMargin: '-10% 0px -80% 0px' });
+
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

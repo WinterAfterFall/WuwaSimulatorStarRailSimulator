@@ -3,11 +3,13 @@ import { StatsType, ElementType, WeaponType, ActionState } from "../Constants/En
 import { Queue } from "../Utils/queue";
 import { RotationAction } from "./Combat/RotationAction";
 import { CombatEvent } from "./Combat/CombatEvent/CombatEvent";
+import type { TriggerBus } from "../Simulator/TriggerBus";
 
 /** Structural type — หลีกเลี่ยง circular import กับ CombatTimeline */
 export type TimelineRef = {
     schedule(event: CombatEvent): void;
     readonly currentFrame: number;
+    readonly triggerBus: TriggerBus;
 };
 
 export class AllyUnit extends Unit {

@@ -74,6 +74,11 @@ export enum NotificationType {
     DebuffExpired = "DebuffExpired"   // debuff หมดอายุ
 }
 
+// เพิ่ม event ใหม่ที่นี่แล้วเพิ่ม payload คู่กันใน TriggerEventMap (Simulator/TriggerBus.ts)
+export enum TriggerEvent {
+    EnergyIncrease = "EnergyIncrease"   // มีการเพิ่ม energy ให้ ally คนใดคนหนึ่ง
+}
+
 export enum EnemyPosition{
     Vanguard = "0",      
     Midrange = "1",   

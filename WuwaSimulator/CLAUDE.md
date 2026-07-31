@@ -54,13 +54,16 @@ app/
 │           └── NotificationEvent.ts # signal event (ChangeToAuto / EndAction / Buff/DebuffExpired)
 │
 ├── Services/
-│   └── Damage/
-│       └── DamageCalculate.ts       # สูตรคำนวณ damage (WuWa formula) — calculateDamage(damage)
+│   ├── Damage/
+│   │   └── DamageCalculate.ts       # สูตรคำนวณ damage (WuWa formula) — calculateDamage(damage, triggerBus)
+│   └── Combat/
+│       └── EnergyService.ts         # increaseEnergy(unit, amount, triggerBus, actionType?) — จุดเดียวที่ mutate energy
 │
 ├── Simulator/
-│   ├── CombatTimeline.ts            # จัดการ event ด้วย IPQ, currentFrame, lock state
+│   ├── CombatTimeline.ts            # จัดการ event ด้วย IPQ, currentFrame, lock state, ถือ TriggerBus กลาง
 │   ├── RotationBuilder.ts           # fluent builder → สร้าง Queue<RotationAction>
-│   └── RotationDirector.ts          # ขับ setup/loop queue → execute action → tick timeline
+│   ├── RotationDirector.ts          # ขับ setup/loop queue → execute action → tick timeline
+│   └── TriggerBus.ts                # pub/sub กลาง — ตัวละคร register listener ต่อ TriggerEvent แล้ว engine emit ตอน trigger จริง
 │
 ├── Utils/
 │   ├── queue.ts                     # FIFO Queue (object-map backed) — O(1) ทุก op, มี rotate()
@@ -95,6 +98,7 @@ app/
 | `Side` | `None`, `Ally`, `Enemy` |
 | `ActionState` | `Free`, `Busy` |
 | `NotificationType` | `ChangeToAuto`, `EndAction`, `BuffExpired`, `DebuffExpired` |
+| `TriggerEvent` | `EnergyIncrease` (เพิ่ม event ใหม่ที่นี่ + payload คู่กันใน `TriggerEventMap`) |
 | `StatsType` | `AtkP`, `FlatAtk`, `Hp`, `FlatHp`, `DefP`, `FlatDef`, `CR`, `CD`, `Dmg`, `Amp`, `Sp`, `DefShred`, `DefRed`, `Res`, `Respen`, `DmgRed`, `ElemRed` |
 | `ActionType` | `None`, `BA`, `HA`, `Skill`, `Ult`, `Echo`, `Intro`, `Outro`, `TB` |
 | `ElementType` | `None`, `Glacio`, `Fusion`, `Electro`, `Aero`, `Spectro`, `Havoc` |
@@ -199,6 +203,31 @@ CombatTimeline.tick()
 
 ---
 
+## TriggerBus — Passive/Event Hook System (`Simulator/TriggerBus.ts`)
+
+รูปแบบ pub/sub กลาง ปรับมาจากแนวคิด trigger-list ของ StarRailSimulator (`When_Energy_Increase_List` +
+`allEventWhenEnergyIncrease`): ตัวละครแต่ละตัว **register callback ของตัวเอง** ลง list กลางตอน setup
+แล้วทุกครั้งที่ action จริงเกิด event นั้นขึ้น engine จะวน emit ให้ listener ทุกตัวที่ลงทะเบียนไว้ทำงาน
+— แทนที่จะ hardcode logic เฉพาะตัวไว้ตรงจุดเกิด event
+
+```
+CombatTimeline.triggerBus : TriggerBus                    ← instance เดียวต่อ 1 battle
+    .on(event, callback, priority?)                       ← ลงทะเบียน listener (มากไปน้อยออกก่อน, เท่ากัน = ตามลำดับ register)
+    .emit(event, ctx)                                      ← engine เรียกตอน action จริง trigger event นั้น
+```
+
+- `TriggerEventMap` (ใน `TriggerBus.ts`) map แต่ละ `TriggerEvent` ไปยัง payload/context ของมัน — เพิ่ม event ใหม่ต้อง
+  เพิ่มทั้ง `TriggerEvent` enum (`Constants/Enum.ts`) และ entry ใน `TriggerEventMap` คู่กัน
+- `AllyUnit.rotations` factory รับ `TimelineRef` ซึ่งมี `triggerBus` ติดมาด้วย (structural type, `import type` เลี่ยง
+  circular import กับ `AllyUnit` ↔ `TriggerBus`) — ตัวละคร register passive ได้จากใน rotation setup
+- **energy gain ทั้งหมดต้องผ่าน `EnergyService.increaseEnergy(unit, amount, triggerBus, actionType?)`** — ฟังก์ชันนี้
+  `emit(TriggerEvent.EnergyIncrease, { unit, amount, actionType })` **ก่อน** clamp กับ `maxEnergy` (listener เห็นค่า
+  ดิบที่ "จะ" เพิ่ม ก่อนโดนตัด จึงตรวจ overflow ได้ เช่น passive ที่แปลง energy ส่วนเกินเป็นบัพอื่น)
+- `DamageCalculate.calculateDamage(damage, triggerBus)` เรียก `increaseEnergy` แทนการ mutate `attacker.energy` ตรงๆ —
+  ต้องส่ง `triggerBus` (จาก `CombatTimeline.triggerBus`) เข้าไปเสมอ
+
+---
+
 ## DamageCalculate Formula (`Services/Damage/DamageCalculate.ts`)
 ```
 damage = base × dmgBonus × crit × amp × def × res × reduction
@@ -217,7 +246,8 @@ damage = base × dmgBonus × crit × amp × def × res × reduction
 ---
 
 ## ข้อควรระวัง / Known issues
-- `DamageEvent.execute()` ยังเป็น TODO (ยังไม่เรียก `calculateDamage` / ไม่บันทึกลง `dmgRecord`)
+- `DamageEvent.execute()` ยังเป็น TODO (ยังไม่เรียก `calculateDamage` / ไม่บันทึกลง `dmgRecord`) — ตอนต่อสาย ต้องหาทางส่ง
+  `triggerBus` (จาก `CombatTimeline.triggerBus`) เข้า `calculateDamage` ด้วย เพราะตอนนี้เป็น required param แล้ว
 - `BuffStartEvent` / `BuffEndEvent` execute() ยังว่าง
 - `Test/Utils/` เป็น duplicate เก่าที่ import path ผิด — ใช้ `Test/automated/Utils/` แทน
-- ยังไม่มีตัวละครจริง (Rover, Jiyan ฯลฯ) — มีแค่ `Test1`/`Test2` เป็น scaffolding
+- ยังไม่มีตัวละครจริง (Rover, Jiyan ฯลฯ) — มีแค่ `Test1`/`Test2` เป็น scaffolding ไม่มี passive ที่ register กับ `TriggerBus` จริง

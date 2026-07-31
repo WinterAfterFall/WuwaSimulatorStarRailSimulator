@@ -5,6 +5,7 @@ import { CombatEvent } from "../Models/Combat/CombatEvent/CombatEvent";
 import { ActionEvent } from "../Models/Combat/CombatEvent/ActionEvent";
 import { NotificationEvent } from "../Models/Combat/CombatEvent/NotificationEvent";
 import { IndexedPriorityQueue } from "../Utils/indexedPriorityQueue";
+import { TriggerBus } from "./TriggerBus";
 
 /**
  * CombatTimeline — จัดการ event ทั้งหมดในการต่อสู้
@@ -28,6 +29,9 @@ export class CombatTimeline {
 
     /** block manual action ใหม่จาก RotationBuilder */
     public isGlobalLocked: boolean = false;
+
+    /** รวม listener ของทุกตัวละคร — emit ตอน action ใดๆ trigger event กลาง (เช่น energy เพิ่ม) */
+    public triggerBus: TriggerBus = new TriggerBus();
 
     constructor() {
         // เรียง event ที่ frame น้อยกว่าออกก่อน — ใช้ priority เป็น tie-breaker

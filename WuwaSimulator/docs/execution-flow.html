@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>WuwaSimulator — Execution Flow</title>
+<style>
+:root{
+  --bg:#0d1117; --bg2:#161b22; --bg3:#010409; --border:#21262d; --border2:#30363d;
+  --text:#c9d1d9; --muted:#8b949e; --dim:#6a737d;
+  --blue:#58a6ff; --blue2:#79c0ff; --purple:#d2a8ff; --green:#56d364; --orange:#ffa657;
+  --yellow:#e3b341; --red:#f97583; --pink:#ff7b72;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
+
+.layout{display:flex;min-height:100vh}
+.sidebar{
+  width:250px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);
+  padding:20px 0;position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.main{flex:1;min-width:0;padding:32px 40px;max-width:900px}
+
+.side-title{font-size:15px;font-weight:700;color:var(--blue2);padding:0 20px 16px;border-bottom:1px solid var(--border);margin-bottom:12px}
+.side-title small{display:block;font-size:11px;font-weight:400;color:var(--dim);margin-top:4px}
+.tree{padding:0 8px}
+.tree a{
+  display:block;padding:6px 12px;border-radius:6px;color:var(--muted);text-decoration:none;font-size:12.5px;
+  font-family:'Consolas',monospace;
+}
+.tree a:hover{background:#1c2128;color:var(--blue2)}
+.tree a.active{background:#1f3a6e;color:var(--blue2);font-weight:600}
+.step-num-chip{display:inline-block;width:18px;text-align:right;color:var(--dim);margin-right:4px}
+
+.top-banner{background:linear-gradient(135deg,#0c2d6b22,#16192622);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:24px}
+.top-banner h1{font-size:24px;color:var(--blue2);margin-bottom:8px}
+.top-banner p{color:var(--muted);font-size:13.5px}
+
+.step-section{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:16px;scroll-margin-top:20px}
+.step-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.step-badge{
+  width:30px;height:30px;border-radius:50%;background:#0c2d6b;color:var(--blue2);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;
+}
+.step-title{font-size:16px;font-weight:700;color:var(--text)}
+.step-file{font-family:'Consolas',monospace;font-size:11px;color:var(--dim);margin-left:auto}
+.step-purpose{color:var(--muted);font-size:13px;margin-bottom:12px;line-height:1.6}
+
+pre.block{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-family:'Consolas','Courier New',monospace;font-size:12px;line-height:1.7;margin:8px 0;overflow-x:auto}
+.kw{color:var(--pink)}.fn{color:var(--purple)}.str{color:#a5d6ff}.cmt{color:var(--dim)}.num{color:var(--blue2)}.cls{color:var(--orange)}
+
+.note{font-size:12.5px;border-radius:6px;padding:8px 12px;margin-top:8px}
+.note-info{background:#0c2d6b22;border:1px solid #1f3a6e;color:var(--blue2)}
+.note-warn{background:#2e200522;border:1px solid #4d3800;color:var(--yellow)}
+
+.arrow-down{text-align:center;color:var(--border2);font-size:18px;margin:2px 0 2px}
+
+/* FRAME TABLE */
+.frame-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+.frame-table th{padding:6px 10px;background:#1c2030;color:var(--muted);font-weight:600;text-align:left;border-bottom:1px solid var(--border)}
+.frame-table td{padding:6px 10px;border-bottom:1px solid #1c2128;font-family:'Consolas',monospace}
+.frame-table tr:last-child td{border-bottom:none}
+.tag{font-size:10px;padding:1px 7px;border-radius:10px;font-weight:700}
+.tag-setup{background:#0c2d6b;color:var(--blue2)}
+.tag-loop1{background:#1a1500;color:var(--yellow)}
+.tag-loop2{background:#2d0c3a;color:var(--purple)}
+
+code{font-family:'Consolas',monospace;font-size:11.5px;background:var(--bg3);padding:1px 5px;border-radius:3px;color:var(--yellow)}
+
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="sidebar">
+  <div class="side-title">manualBuilder.ts<small>Execution Flow — เรียงตามลำดับจริง</small></div>
+  <div class="tree">
+    <a href="#s1"><span class="step-num-chip">1</span>สร้าง Test1 + setupTest1</a>
+    <a href="#s2"><span class="step-num-chip">2</span>ตั้ง isOnField</a>
+    <a href="#s3"><span class="step-num-chip">3</span>สร้าง Test2 + setupTest2</a>
+    <a href="#s4"><span class="step-num-chip">4</span>สร้าง CombatTimeline</a>
+    <a href="#s5"><span class="step-num-chip">5</span>mergeQueues helper</a>
+    <a href="#s6"><span class="step-num-chip">6</span>Factory → setupQueue/loopQueue</a>
+    <a href="#s7"><span class="step-num-chip">7</span>สร้าง RotationDirector</a>
+    <a href="#s8"><span class="step-num-chip">8</span>director.run()</a>
+    <a href="#s9"><span class="step-num-chip">9</span>step() — 1 รอบ</a>
+    <a href="#s10"><span class="step-num-chip">10</span>nextAction()</a>
+    <a href="#s11"><span class="step-num-chip">11</span>action.execute() closure</a>
+    <a href="#s12"><span class="step-num-chip">12</span>tick() + lock</a>
+    <a href="#s13"><span class="step-num-chip">13</span>runAll() + จบ</a>
+    <a href="#s14"><span class="step-num-chip">14</span>Frame Timeline เต็ม</a>
+  </div>
+</nav>
+
+<main class="main">
+
+  <div class="top-banner">
+    <h1>manualBuilder.ts — Execution Flow</h1>
+    <p>ไล่ลำดับการทำงานจริงตั้งแต่ import จนจบ simulation ทีละฟังก์ชัน พร้อม code block ของโค้ดจริงที่ถูกเรียก
+    ณ จุดนั้น และตาราง frame timeline สรุปผลรันทั้งหมดที่ท้ายหน้า</p>
+  </div>
+
+  <section class="step-section" id="s1">
+    <div class="step-head">
+      <div class="step-badge">1</div>
+      <div class="step-title">สร้าง Test1 + setupTest1(unit)</div>
+      <div class="step-file">Models/Characters/Test1.ts</div>
+    </div>
+    <div class="step-purpose">
+      <code>new AllyUnit("Test1")</code> เรียก constructor ของ <code>Unit</code> (base class) — init <code>stats: Map</code> ว่างเปล่า, status=Alive<br>
+      จากนั้น <code>setupTest1(test1)</code> ตั้ง base stats + ลงทะเบียน rotation 2 แบบเป็น <b>factory function</b> ลง <code>unit.rotations</code>
+      (ยังไม่ execute อะไร — แค่เก็บ closure ไว้)
+    </div>
+<pre class="block"><span class="kw">const</span> test1 = <span class="kw">new</span> <span class="cls">AllyUnit</span>(<span class="str">"Test1"</span>);
+<span class="fn">setupTest1</span>(test1);
+<span class="cmt">// ↓ ภายใน setupTest1 —</span>
+unit.baseAtk = <span class="num">100</span>; unit.baseHp = <span class="num">1000</span>; unit.baseDef = <span class="num">100</span>;
+unit.elementType = ElementType.Spectro; unit.weaponType = WeaponType.Sword; unit.maxEnergy = <span class="num">100</span>;
+unit.<span class="fn">setStat</span>(StatsType.CR, <span class="num">0.05</span>); unit.<span class="fn">setStat</span>(StatsType.CD, <span class="num">1.5</span>);
+
+unit.rotations.<span class="fn">set</span>(<span class="str">"Standard"</span>, (timeline) => <span class="kw">new</span> <span class="cls">RotationBuilder</span>()
+    .<span class="fn">add</span>(<span class="str">"Test1-BA1"</span>, () => { <span class="cmt">/* schedule Attack+Notif */</span> })
+    .<span class="fn">add</span>(<span class="str">"Test1-BA2"</span>, () => { <span class="cmt">/* ... */</span> })
+    .<span class="fn">add</span>(<span class="str">"Test1-Skill"</span>, () => { <span class="cmt">/* ... */</span> })
+    .<span class="fn">build</span>()
+);
+unit.rotations.<span class="fn">set</span>(<span class="str">"Burst"</span>, (timeline) => <span class="kw">new</span> <span class="cls">RotationBuilder</span>()
+    .<span class="fn">add</span>(<span class="str">"Test1-Ult"</span>,  () => { <span class="cmt">/* dur=90 */</span> })
+    .<span class="fn">add</span>(<span class="str">"Test1-BA1"</span>, () => { <span class="cmt">/* dur=30 */</span> })
+    .<span class="fn">build</span>()
+);</pre>
+    <div class="note note-info">💡 <code>rotations</code> เป็น <code>Map&lt;string, (timeline) =&gt; Queue&lt;RotationAction&gt;&gt;</code> — factory ยังไม่ถูกเรียกตอนนี้ จะถูกเรียกตอน step 6</div>
+  </section>
+
+  <section class="step-section" id="s2">
+    <div class="step-head">
+      <div class="step-badge">2</div>
+      <div class="step-title">ตั้ง test1.isOnField = true</div>
+      <div class="step-file">manualBuilder.ts</div>
+    </div>
+    <div class="step-purpose">บอกว่า Test1 เป็นตัวยืนสนาม (on-field character) ตอนเริ่มฉาก</div>
+<pre class="block">test1.isOnField = <span class="kw">true</span>;</pre>
+  </section>
+
+  <section class="step-section" id="s3">
+    <div class="step-head">
+      <div class="step-badge">3</div>
+      <div class="step-title">สร้าง Test2 + setupTest2(unit)</div>
+      <div class="step-file">Models/Characters/Test2.ts</div>
+    </div>
+    <div class="step-purpose">เหมือน step 1 แต่เป็นตัวละครที่สอง — stats ต่างกัน (Havoc/Gauntlets) และมี rotation ที่ 3 เพิ่ม ("Echo Focus")
+    ซึ่ง manualBuilder.ts รอบนี้ไม่ได้ใช้ (ใช้แค่ Standard + Burst)</div>
+<pre class="block"><span class="kw">const</span> test2 = <span class="kw">new</span> <span class="cls">AllyUnit</span>(<span class="str">"Test2"</span>);
+<span class="fn">setupTest2</span>(test2);
+<span class="cmt">// baseAtk=80, baseHp=1200, baseDef=120, element=Havoc, weapon=Gauntlets, maxEnergy=150</span>
+<span class="cmt">// rotations: "Standard" (BA1→Skill→BA2), "Burst" (Ult→BA1), "Echo Focus" (Echo→Skill)</span></pre>
+  </section>
+
+  <section class="step-section" id="s4">
+    <div class="step-head">
+      <div class="step-badge">4</div>
+      <div class="step-title">สร้าง CombatTimeline</div>
+      <div class="step-file">Simulator/CombatTimeline.ts</div>
+    </div>
+    <div class="step-purpose">constructor สร้าง IndexedPriorityQueue ภายใน พร้อม comparator: เรียงตาม <code>time</code> ก่อน ถ้าเท่ากันใช้ <code>priority</code>
+    เป็น tie-breaker — <code>currentFrame</code> เริ่มที่ 0, <code>isGlobalLocked</code> เริ่ม false, <code>triggerBus</code> สร้างใหม่ในตัว</div>
+<pre class="block"><span class="kw">const</span> timeline = <span class="kw">new</span> <span class="cls">CombatTimeline</span>();
+timeline.onFieldChar = test1;
+
+<span class="cmt">// ภายใน constructor —</span>
+<span class="kw">this</span>.ipq = <span class="kw">new</span> <span class="cls">IndexedPriorityQueue</span>&lt;CombatEvent&gt;((a, b) => {
+    <span class="kw">const</span> diff = a.time - b.time;
+    <span class="kw">return</span> diff !== <span class="num">0</span> ? diff : a.priority - b.priority;
+});</pre>
+  </section>
+
+  <section class="step-section" id="s5">
+    <div class="step-head">
+      <div class="step-badge">5</div>
+      <div class="step-title">ประกาศ mergeQueues helper</div>
+      <div class="step-file">manualBuilder.ts (local function)</div>
+    </div>
+    <div class="step-purpose">function ช่วยรวมหลาย <code>Queue&lt;RotationAction&gt;</code> เป็น queue เดียว โดย dequeue จากแต่ละ queue เข้าคิวใหม่เรียงกัน
+    (ยังไม่ถูกเรียกที่บรรทัดนี้ — แค่ประกาศไว้)</div>
+<pre class="block"><span class="kw">function</span> <span class="fn">mergeQueues</span>(...queues: Queue&lt;RotationAction&gt;[]): Queue&lt;RotationAction&gt; {
+    <span class="kw">const</span> merged = <span class="kw">new</span> <span class="cls">Queue</span>&lt;RotationAction&gt;();
+    <span class="kw">for</span> (<span class="kw">const</span> q <span class="kw">of</span> queues) {
+        <span class="kw">while</span> (!q.<span class="fn">isEmpty</span>()) merged.<span class="fn">enqueue</span>(q.<span class="fn">dequeue</span>()!);
+    }
+    <span class="kw">return</span> merged;
+}</pre>
+  </section>
+
+  <section class="step-section" id="s6">
+    <div class="step-head">
+      <div class="step-badge">6</div>
+      <div class="step-title">เรียก factory → สร้าง setupQueue / loopQueue</div>
+      <div class="step-file">manualBuilder.ts</div>
+    </div>
+    <div class="step-purpose">
+      นี่คือจุดที่ factory function ที่เก็บไว้ใน <code>unit.rotations</code> (step 1, 3) <b>ถูกเรียกจริง</b> — แต่ละ factory รับ <code>timeline</code>
+      แล้วสร้าง <code>RotationBuilder</code> ใหม่ คืน <code>Queue&lt;RotationAction&gt;</code> ที่มี closure รออยู่ (ยังไม่ execute ตัว action เอง)
+      จากนั้น <code>mergeQueues</code> รวม queue ของ Test1+Test2 เข้าด้วยกัน
+    </div>
+<pre class="block"><span class="kw">const</span> setupQueue = <span class="fn">mergeQueues</span>(
+    test1.rotations.<span class="fn">get</span>(<span class="str">"Burst"</span>)!(timeline),   <span class="cmt">// → Queue[Test1-Ult, Test1-BA1]</span>
+    test2.rotations.<span class="fn">get</span>(<span class="str">"Burst"</span>)!(timeline)    <span class="cmt">// → Queue[Test2-Ult, Test2-BA1]</span>
+);
+<span class="cmt">// setupQueue = [Test1-Ult, Test1-BA1, Test2-Ult, Test2-BA1]</span>
+
+<span class="kw">const</span> loopQueue = <span class="fn">mergeQueues</span>(
+    test1.rotations.<span class="fn">get</span>(<span class="str">"Standard"</span>)!(timeline), <span class="cmt">// → Queue[Test1-BA1, Test1-BA2, Test1-Skill]</span>
+    test2.rotations.<span class="fn">get</span>(<span class="str">"Standard"</span>)!(timeline)  <span class="cmt">// → Queue[Test2-BA1, Test2-Skill, Test2-BA2]</span>
+);
+<span class="cmt">// loopQueue = [Test1-BA1, Test1-BA2, Test1-Skill, Test2-BA1, Test2-Skill, Test2-BA2]</span></pre>
+    <div class="note note-info">💡 setupQueue มี 4 action (รันครั้งเดียว), loopQueue มี 6 action (จะวนซ้ำตาม maxLoops)</div>
+  </section>
+
+  <section class="step-section" id="s7">
+    <div class="step-head">
+      <div class="step-badge">7</div>
+      <div class="step-title">สร้าง RotationDirector</div>
+      <div class="step-file">Simulator/RotationDirector.ts</div>
+    </div>
+    <div class="step-purpose">ผูก timeline + ทั้งสอง queue + maxLoops เข้าด้วยกัน — ยังไม่รันอะไร แค่เตรียมพร้อม</div>
+<pre class="block"><span class="kw">const</span> maxLoops = <span class="num">2</span>;
+<span class="kw">const</span> director = <span class="kw">new</span> <span class="cls">RotationDirector</span>(timeline, setupQueue, loopQueue, maxLoops);</pre>
+  </section>
+
+  <section class="step-section" id="s8">
+    <div class="step-head">
+      <div class="step-badge">8</div>
+      <div class="step-title">director.run() — เริ่ม simulation จริง</div>
+      <div class="step-file">Simulator/RotationDirector.ts</div>
+    </div>
+    <div class="step-purpose">
+      <code>run()</code> คือ entry point ของการจำลองทั้งหมด วนเรียก <code>step()</code> จนกว่าจะคืน false (ทั้ง setupQueue และ loopQueue
+      หมด/ครบ maxLoops แล้ว) แล้ว drain event ที่เหลือด้วย <code>timeline.runAll()</code>
+    </div>
+<pre class="block"><span class="kw">public</span> <span class="fn">run</span>(): <span class="kw">void</span> {
+    <span class="kw">while</span> (<span class="kw">this</span>.<span class="fn">step</span>()) {}
+    <span class="kw">this</span>.timeline.<span class="fn">runAll</span>();
+}</pre>
+  </section>
+
+  <section class="step-section" id="s9">
+    <div class="step-head">
+      <div class="step-badge">9</div>
+      <div class="step-title">step() — ทำ 1 action ให้จบสมบูรณ์</div>
+      <div class="step-file">Simulator/RotationDirector.ts</div>
+    </div>
+    <div class="step-purpose">
+      ทุกครั้งที่เรียก <code>step()</code>: เช็ค lock ก่อน → ถ้าไม่ล็อค ดึง action ถัดไปมา execute → แล้ว tick timeline ต่อจนกว่า
+      lock จะปลด (หรือ IPQ ว่าง) — การออกแบบนี้รับประกันว่า <b>ทีละ action เท่านั้น</b> ที่ทำงานในแต่ละรอบ ไม่มีทางที่ 2 unit จะชน queue กันเอง
+    </div>
+<pre class="block"><span class="kw">private</span> <span class="fn">step</span>(): <span class="kw">boolean</span> {
+    <span class="kw">if</span> (<span class="kw">this</span>.timeline.isGlobalLocked) <span class="kw">return</span> <span class="kw">false</span>;
+
+    <span class="kw">const</span> action = <span class="kw">this</span>.<span class="fn">nextAction</span>();      <span class="cmt">// → step 10</span>
+    <span class="kw">if</span> (!action) <span class="kw">return</span> <span class="kw">false</span>;
+
+    action.<span class="fn">execute</span>();                       <span class="cmt">// → step 11 (schedule ลง timeline)</span>
+
+    <span class="kw">do</span> {
+        <span class="kw">this</span>.timeline.<span class="fn">tick</span>();               <span class="cmt">// → step 12</span>
+    } <span class="kw">while</span> (<span class="kw">this</span>.timeline.isGlobalLocked && !<span class="kw">this</span>.timeline.isEmpty);
+
+    <span class="kw">return</span> <span class="kw">true</span>;
+}</pre>
+  </section>
+
+  <section class="step-section" id="s10">
+    <div class="step-head">
+      <div class="step-badge">10</div>
+      <div class="step-title">nextAction() — เลือก action ถัดไปจาก queue ไหน</div>
+      <div class="step-file">Simulator/RotationDirector.ts</div>
+    </div>
+    <div class="step-purpose">
+      Priority: <b>setupQueue ก่อนเสมอ</b> (dequeue จนหมด 4 ตัว) แล้วค่อยสลับไปใช้ <b>loopQueue</b> — <code>rotate()</code>
+      (dequeue+enqueue กลับ) ทำให้วนซ้ำได้ไม่รู้จบ, <code>loopStepCount</code> นับว่าวนครบ 1 รอบ (เท่ากับ loopQueue.length) หรือยัง
+      เพื่อ increment <code>currentLoopCount</code> — เมื่อครบ maxLoops จะคืน undefined ทำให้ <code>run()</code> จบ
+    </div>
+<pre class="block"><span class="kw">private</span> <span class="fn">nextAction</span>(): RotationAction | undefined {
+    <span class="kw">if</span> (!<span class="kw">this</span>.setupQueue.<span class="fn">isEmpty</span>()) {
+        <span class="kw">return</span> <span class="kw">this</span>.setupQueue.<span class="fn">dequeue</span>();     <span class="cmt">// 4 ครั้งแรก</span>
+    }
+
+    <span class="kw">if</span> (<span class="kw">this</span>.loopQueue.<span class="fn">isEmpty</span>()) <span class="kw">return</span> undefined;
+    <span class="kw">if</span> (<span class="kw">this</span>.currentLoopCount >= <span class="kw">this</span>.maxLoops) <span class="kw">return</span> undefined;  <span class="cmt">// จบเมื่อครบ 2 รอบ</span>
+
+    <span class="kw">const</span> action = <span class="kw">this</span>.loopQueue.<span class="fn">rotate</span>();
+
+    <span class="kw">this</span>.loopStepCount++;
+    <span class="kw">if</span> (<span class="kw">this</span>.loopStepCount === <span class="kw">this</span>.loopQueue.length) {  <span class="cmt">// ครบ 6 ตัว = 1 รอบ</span>
+        <span class="kw">this</span>.loopStepCount = <span class="num">0</span>;
+        <span class="kw">this</span>.currentLoopCount++;
+    }
+
+    <span class="kw">return</span> action;
+}</pre>
+  </section>
+
+  <section class="step-section" id="s11">
+    <div class="step-head">
+      <div class="step-badge">11</div>
+      <div class="step-title">action.execute() — closure ยิง event ลง timeline จริง</div>
+      <div class="step-file">Models/Characters/Test1.ts / Test2.ts</div>
+    </div>
+    <div class="step-purpose">
+      ทุก <code>RotationAction</code> เก็บ closure ที่สร้างไว้ตอน step 1/3 — พอถูกเรียก <code>execute()</code> ตอนนี้ closure จะ
+      อ่าน <code>timeline.currentFrame</code> ปัจจุบัน (ไม่ใช่ frame ที่สร้างตอน setup) แล้ว schedule <code>AttackActionEvent</code>
+      + <code>NotificationEvent(EndAction)</code> ลง IPQ ทันที
+    </div>
+<pre class="block"><span class="cmt">// ตัวอย่าง: closure ของ "Test1-Ult"</span>
+() => {
+    <span class="kw">const</span> t = timeline.currentFrame;             <span class="cmt">// อ่านค่าปัจจุบัน ณ วินาทีที่ execute จริง</span>
+    timeline.<span class="fn">schedule</span>(<span class="kw">new</span> <span class="cls">AttackActionEvent</span>(
+        <span class="str">`Test1-Ult-f${t}`</span>, t, ULT_DURATION, unit, ActionType.Ult, <span class="kw">true</span>, <span class="num">0</span>,
+        () => console.<span class="fn">log</span>(<span class="str">`[f${t}] Test1-Ult`</span>)          <span class="cmt">// onExecute callback</span>
+    ));
+    timeline.<span class="fn">schedule</span>(<span class="kw">new</span> <span class="cls">NotificationEvent</span>(
+        <span class="str">`Test1-Ult-end-f${t}`</span>, t + ULT_DURATION, NotificationType.EndAction, unit
+    ));
+}</pre>
+    <div class="note note-warn">⚠ schedule แค่ 2 event ต่อ 1 action เท่านั้น (attack + end) — ต่างจาก void-fn approach ที่เคยพิจารณาไว้
+    ซึ่งจะ schedule event ของทั้ง rotation รวดเดียว (ดู <a href="void-fn-problem.html" style="color:var(--blue2)">void-fn-problem.html</a> ในโฟลเดอร์ Test/manual)</div>
+  </section>
+
+  <section class="step-section" id="s12">
+    <div class="step-head">
+      <div class="step-badge">12</div>
+      <div class="step-title">tick() — pop event, execute, จัดการ lock</div>
+      <div class="step-file">Simulator/CombatTimeline.ts</div>
+    </div>
+    <div class="step-purpose">
+      pop event ที่ frame น้อยสุดจาก IPQ → เลื่อน <code>currentFrame</code> ไปตาม event นั้น → execute event →
+      เช็คชนิด event เพื่อจัดการ <code>isGlobalLocked</code>: ActionEvent ที่ isManual=true จะ<b>ล็อค</b>ทันที,
+      NotificationEvent(EndAction) จะ<b>ปลดล็อค</b>พร้อม <code>unit.setFree()</code>
+    </div>
+<pre class="block"><span class="kw">public</span> <span class="fn">tick</span>(): CombatEvent | undefined {
+    <span class="kw">const</span> event = <span class="kw">this</span>.ipq.<span class="fn">pop</span>();
+    <span class="kw">if</span> (!event) <span class="kw">return</span> undefined;
+
+    <span class="kw">this</span>.currentFrame = event.time;
+    event.<span class="fn">execute</span>();   <span class="cmt">// AttackActionEvent → unit.setBusy() + onExecute?.()</span>
+
+    <span class="kw">if</span> (event <span class="kw">instanceof</span> ActionEvent && event.isManual) {
+        <span class="kw">this</span>.isGlobalLocked = <span class="kw">true</span>;                       <span class="cmt">// 🔒 ล็อค</span>
+    }
+    <span class="kw">if</span> (event <span class="kw">instanceof</span> NotificationEvent) {
+        <span class="kw">if</span> (event.notifyType === NotificationType.EndAction) {
+            <span class="kw">this</span>.isGlobalLocked = <span class="kw">false</span>;                  <span class="cmt">// 🔓 ปลดล็อค</span>
+            event.unit?.<span class="fn">setFree</span>();
+        }
+    }
+    <span class="kw">return</span> event;
+}</pre>
+    <div class="note note-info">💡 ย้อนกลับไป step 9 — do-while จะวน <code>tick()</code> ซ้ำจนกว่า isGlobalLocked จะกลับเป็น false
+    (ปกติคือ 2 tick ต่อ 1 action: Attack แล้ว Notification) แล้วจึงกลับไปหา action ถัดไป</div>
+  </section>
+
+  <section class="step-section" id="s13">
+    <div class="step-head">
+      <div class="step-badge">13</div>
+      <div class="step-title">วนซ้ำจนครบ maxLoops → runAll() → จบ</div>
+      <div class="step-file">manualBuilder.ts</div>
+    </div>
+    <div class="step-purpose">
+      step 9-12 วนซ้ำไปเรื่อยๆ ทีละ action (setupQueue 4 ตัวก่อน แล้ว loopQueue วน 2 รอบ × 6 ตัว = 12 ตัว รวม 16 action)
+      จนกว่า <code>nextAction()</code> จะคืน undefined → <code>run()</code> เรียก <code>timeline.runAll()</code> ครั้งสุดท้ายเพื่อ
+      drain event ที่อาจตกค้าง (ปกติไม่มีเพราะทุก action drain ตัวเองหมดแล้วใน do-while)
+    </div>
+<pre class="block">console.<span class="fn">log</span>(<span class="str">`=== Combat Start — setup=[...], loop=[...], maxLoops=${maxLoops} ===`</span>);
+director.<span class="fn">run</span>();
+console.<span class="fn">log</span>(<span class="str">`=== Combat End (frame=${timeline.currentFrame}, t=${(timeline.currentFrame/60).toFixed(2)}s, loops completed=${director.currentLoopCount}) ===`</span>);
+<span class="cmt">// → frame=720, t=12.00s, loops completed=2</span></pre>
+  </section>
+
+  <section class="step-section" id="s14">
+    <div class="step-head">
+      <div class="step-badge">14</div>
+      <div class="step-title">Frame Timeline เต็ม — ผลรันจริงทั้ง 16 action</div>
+      <div class="step-file">คำนวณจาก durations: BA=30, Skill=60, Ult=90 (frame)</div>
+    </div>
+    <table class="frame-table">
+      <thead><tr><th>#</th><th>Action</th><th>start</th><th>end</th><th>รอบ</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Test1-Ult</td><td>0</td><td>90</td><td><span class="tag tag-setup">setup</span></td></tr>
+        <tr><td>2</td><td>Test1-BA1</td><td>90</td><td>120</td><td><span class="tag tag-setup">setup</span></td></tr>
+        <tr><td>3</td><td>Test2-Ult</td><td>120</td><td>210</td><td><span class="tag tag-setup">setup</span></td></tr>
+        <tr><td>4</td><td>Test2-BA1</td><td>210</td><td>240</td><td><span class="tag tag-setup">setup</span></td></tr>
+        <tr><td>5</td><td>Test1-BA1</td><td>240</td><td>270</td><td><span class="tag tag-loop1">loop 1</span></td></tr>
+        <tr><td>6</td><td>Test1-BA2</td><td>270</td><td>300</td><td><span class="tag tag-loop1">loop 1</span></td></tr>
+        <tr><td>7</td><td>Test1-Skill</td><td>300</td><td>360</td><td><span class="tag tag-loop1">loop 1</span></td></tr>
+        <tr><td>8</td><td>Test2-BA1</td><td>360</td><td>390</td><td><span class="tag tag-loop1">loop 1</span></td></tr>
+        <tr><td>9</td><td>Test2-Skill</td><td>390</td><td>450</td><td><span class="tag tag-loop1">loop 1</span></td></tr>
+        <tr><td>10</td><td>Test2-BA2</td><td>450</td><td>480</td><td><span class="tag tag-loop1">loop 1</span></td></tr>
+        <tr><td>11</td><td>Test1-BA1</td><td>480</td><td>510</td><td><span class="tag tag-loop2">loop 2</span></td></tr>
+        <tr><td>12</td><td>Test1-BA2</td><td>510</td><td>540</td><td><span class="tag tag-loop2">loop 2</span></td></tr>
+        <tr><td>13</td><td>Test1-Skill</td><td>540</td><td>600</td><td><span class="tag tag-loop2">loop 2</span></td></tr>
+        <tr><td>14</td><td>Test2-BA1</td><td>600</td><td>630</td><td><span class="tag tag-loop2">loop 2</span></td></tr>
+        <tr><td>15</td><td>Test2-Skill</td><td>630</td><td>690</td><td><span class="tag tag-loop2">loop 2</span></td></tr>
+        <tr><td>16</td><td>Test2-BA2</td><td>690</td><td>720</td><td><span class="tag tag-loop2">loop 2</span></td></tr>
+      </tbody>
+    </table>
+    <div class="note note-info">💡 จบที่ <code>frame=720</code> → <code>t=12.00s</code> (720÷60) — <code>director.currentLoopCount=2</code>
+    ตรงกับ maxLoops ที่ตั้งไว้พอดี</div>
+  </section>
+
+</main>
+</div>
+
+<script>
+const links = document.querySelectorAll('.tree a');
+const sections = Array.from(links).map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+
+function setActive(id){
+  links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#'+id));
+}
+
+links.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) setActive(entry.target.id);
+  });
+}, { rootMargin: '-10% 0px -80% 0px' });
+
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
