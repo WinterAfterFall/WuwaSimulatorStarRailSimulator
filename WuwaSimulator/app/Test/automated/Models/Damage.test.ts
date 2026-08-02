@@ -2,6 +2,7 @@ import { Damage } from '../../../Models/Combat/Damage';
 import { AllyUnit } from '../../../Models/AllyUnit';
 import { EnemyUnit } from '../../../Models/EnemyUnit';
 import { ActionType, ElementType, EnemyPosition, MultiplierType, SkillRange } from '../../../Constants/Enum';
+import { battleField } from '../../../Simulator/BattleField';
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -113,43 +114,47 @@ describe('Damage', () => {
         let mid: EnemyUnit;
         let rear: EnemyUnit;
         let out: EnemyUnit;
-        let allEnemies: EnemyUnit[];
 
         beforeEach(() => {
             van  = makeEnemy('Van',  EnemyPosition.Vanguard);   // "0"
             mid  = makeEnemy('Mid',  EnemyPosition.Midrange);   // "1"
             rear = makeEnemy('Rear', EnemyPosition.Rearguard);  // "2"
             out  = makeEnemy('Out',  EnemyPosition.OutOfRange); // "3"
-            allEnemies = [van, mid, rear, out];
+            // SkillRange overload กรองจาก battleField.enemies (global) แทนที่จะรับ enemies list เข้ามาตรงๆ
+            battleField.enemies = [van, mid, rear, out];
+        });
+
+        afterEach(() => {
+            battleField.enemies = [];
         });
 
         it('Contact (1) should hit only Vanguard', () => {
-            const d = new Damage(attacker, 'BA', ActionType.BA, SkillRange.Contact, allEnemies);
+            const d = new Damage(attacker, 'BA', ActionType.BA, SkillRange.Contact);
             expect(d.targets).toEqual([van]);
         });
 
         it('Midrange (2) should hit Vanguard and Midrange', () => {
-            const d = new Damage(attacker, 'Skill', ActionType.Skill, SkillRange.Midrange, allEnemies);
+            const d = new Damage(attacker, 'Skill', ActionType.Skill, SkillRange.Midrange);
             expect(d.targets).toEqual([van, mid]);
         });
 
         it('Ranged (3) should hit Vanguard, Midrange, and Rearguard', () => {
-            const d = new Damage(attacker, 'Ult', ActionType.Ult, SkillRange.Ranged, allEnemies);
+            const d = new Damage(attacker, 'Ult', ActionType.Ult, SkillRange.Ranged);
             expect(d.targets).toEqual([van, mid, rear]);
         });
 
         it('Global (999) should hit all positions including OutOfRange', () => {
-            const d = new Damage(attacker, 'Echo', ActionType.Echo, SkillRange.Global, allEnemies);
+            const d = new Damage(attacker, 'Echo', ActionType.Echo, SkillRange.Global);
             expect(d.targets).toEqual([van, mid, rear, out]);
         });
 
         it('None (0) should hit no enemies', () => {
-            const d = new Damage(attacker, 'BA', ActionType.BA, SkillRange.None, allEnemies);
+            const d = new Damage(attacker, 'BA', ActionType.BA, SkillRange.None);
             expect(d.targets).toEqual([]);
         });
 
         it('should set energyGain when provided', () => {
-            const d = new Damage(attacker, 'Ult', ActionType.Ult, SkillRange.Global, allEnemies, 25, 12);
+            const d = new Damage(attacker, 'Ult', ActionType.Ult, SkillRange.Global, 25, 12);
             expect(d.energyGain).toBe(25);
             expect(d.concentoEnergyGain).toBe(12);
         });
