@@ -24,10 +24,8 @@ export class NotificationEvent extends CombatEvent {
         super(name, time, 0, priority);
         this.notifyType = notifyType;
         this.unit       = unit;
-    }
 
-    public execute(): void {
-        // logic จะถูกกำหนดโดย CombatTimeline ตอน tick
-        // NotificationEvent เป็นแค่ signal — ไม่รัน logic เอง
+        // NotificationEvent เป็นแค่ signal — ไม่รัน logic เอง (ใช้ default no-op execute จาก CombatEvent)
+        // logic จริงถูกกำหนดโดย CombatTimeline ตอน tick (เช็ค notifyType)
     }
 }

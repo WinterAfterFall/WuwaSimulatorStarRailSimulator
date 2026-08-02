@@ -12,16 +12,20 @@ export abstract class CombatEvent {
     /** tie-breaker เมื่อ time เท่ากัน (น้อย = ออกก่อน) */
     public priority: number;
 
-    /** กินเวลากี่ frame ตั้งแต่เริ่มจนจบ event */
-    public duration: number;
+    /** กินเวลากี่ frame ตั้งแต่เริ่มจนจบ event — "-" (undefined) = ไม่ระบุ/ไม่มี duration */
+    public duration?: number;
 
-    constructor(name: string, time: number, duration: number, priority: number = 0) {
+    /**
+     * โค้ดที่ CombatTimeline จะเรียกตอน tick — เป็นตัวแปร (field) ไม่ใช่ method ตายตัว
+     * เปลี่ยนค่าทีหลังได้เหมือนตัวแปรทั่วไป เช่น `event.execute = () => {...}`
+     * default เป็น no-op เผื่อ subclass ไม่ได้ตั้งค่าเอง
+     */
+    public execute: () => void = () => {};
+
+    constructor(name: string, time: number, duration?: number, priority: number = 0) {
         this.name     = name;
         this.time     = time;
         this.duration = duration;
         this.priority = priority;
     }
-
-    /** เรียกโดย CombatTimeline ตอน tick */
-    public abstract execute(): void;
 }
