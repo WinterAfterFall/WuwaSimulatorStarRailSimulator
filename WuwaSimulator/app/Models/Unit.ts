@@ -110,4 +110,61 @@ export class Unit {
             this.stats.set(key, this.defaultStats.get(key) ?? 0);
         }
     }
+
+    // --- Get Default Stat --- (อิงหลักการเดียวกับ getStats แต่อ่านจาก defaultStats)
+    public getDefaultStats(st: StatsType): number;
+    public getDefaultStats(st: StatsType, at: ActionType): number;
+    public getDefaultStats(st: StatsType, et: ElementType, at: ActionType): number;
+    public getDefaultStats(st: StatsType, arg2?: ActionType | ElementType, arg3?: ActionType): number {
+        const key = this.generateKey(st, arg2, arg3);
+        return this.defaultStats.get(key) ?? 0;
+    }
+
+    // --- Set Default Stat --- (อิงหลักการเดียวกับ setStat แต่เขียนลง defaultStats)
+    public setDefaultStat(st: StatsType, value: number): void;
+    public setDefaultStat(st: StatsType, at: ActionType, value: number): void;
+    public setDefaultStat(st: StatsType, et: ElementType, at: ActionType, value: number): void;
+    public setDefaultStat(st: StatsType, arg2: ActionType | ElementType | number, arg3?: ActionType | number, arg4?: number): void {
+        let key: string;
+        let val: number;
+
+        if (arg3 === undefined && arg4 === undefined) {
+            key = this.generateKey(st);
+            val = arg2 as number;
+        } else if (arg4 === undefined) {
+            key = this.generateKey(st, arg2 as ActionType | ElementType);
+            val = arg3 as number;
+        } else {
+            key = this.generateKey(st, arg2 as ElementType, arg3 as ActionType);
+            val = arg4;
+        }
+
+        if (val === undefined) throw new Error(`setDefaultStat: value is undefined for key "${key}"`);
+        this.defaultStats.set(key, val);
+    }
+
+    // --- Add Default Stat --- (อิงหลักการเดียวกับ addStat แต่บวกเข้า defaultStats)
+    public addDefaultStat(st: StatsType, value: number): void;
+    public addDefaultStat(st: StatsType, at: ActionType, value: number): void;
+    public addDefaultStat(st: StatsType, et: ElementType, at: ActionType, value: number): void;
+    public addDefaultStat(st: StatsType, arg2: ActionType | ElementType | number, arg3?: ActionType | number, arg4?: number): void {
+        if (arg3 === undefined) {
+            // แบบ 1: (st, value)
+            this.setDefaultStat(st, this.getDefaultStats(st) + (arg2 as number));
+        } else if (arg4 === undefined) {
+            // แบบ 2: (st, at, value)
+            this.setDefaultStat(st, arg2 as ActionType, this.getDefaultStats(st, arg2 as ActionType) + (arg3 as number));
+        } else {
+            // แบบ 3: (st, et, at, value)
+            this.setDefaultStat(st, arg2 as ElementType, arg3 as ActionType, this.getDefaultStats(st, arg2 as ElementType, arg3 as ActionType) + arg4);
+        }
+    }
+
+    // --- Has Default Stat --- (อิงหลักการเดียวกับ hasStat แต่เช็คใน defaultStats)
+    public hasDefaultStat(st: StatsType): boolean;
+    public hasDefaultStat(st: StatsType, at: ActionType): boolean;
+    public hasDefaultStat(st: StatsType, et: ElementType, at: ActionType): boolean;
+    public hasDefaultStat(st: StatsType, arg2?: ActionType | ElementType, arg3?: ActionType): boolean {
+        return this.defaultStats.has(this.generateKey(st, arg2, arg3));
+    }
 }
