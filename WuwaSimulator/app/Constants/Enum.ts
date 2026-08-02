@@ -31,6 +31,9 @@ export enum StatsType {
     ResPen = "Res Penetration",     // Ally เท่านั้น — หักลบกับ ResRed ของ enemy
     DmgRed = "Damage Reduction",    // Enemy เท่านั้น
     ElemRed = "Elemental Reduction",// Enemy เท่านั้น
+    TbBoost = "Tune Break Boost",   // ยังไม่ได้ต่อสายเข้า DamageCalculate.ts — เพิ่มไว้เฉยๆ
+    HealBonus = "Healing Bonus",           // ฮีลที่ส่งออกเพิ่มขึ้น — Ally เท่านั้น — ยังไม่มีสมการไหนใช้ เพิ่มไว้เฉยๆ
+    IncHealBonus = "Incoming Healing Bonus",// ฮีลที่ได้รับเพิ่มขึ้น — Ally เท่านั้น — ยังไม่มีสมการไหนใช้ เพิ่มไว้เฉยๆ
 }
 
 // รายชื่อ StatsType ที่แต่ละฝั่งใช้จริง (Ally เท่านั้น / Both) — ใช้ตอน initDefaultStats() ใน constructor ของ AllyUnit

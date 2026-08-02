@@ -2,6 +2,7 @@ import { UnitStatus, StatsType, ActionType, ElementType ,Side} from "../Constant
 
 export class Unit {
     public stats: Map<string, number> = new Map();
+    public defaultStats: Map<string, number> = new Map(); // ค่าที่ reset() จะเซ็ตกลับไปหา — ไม่ auto-populate ตอนสร้าง ต้อง set เองถ้าต้องการ
     public status: UnitStatus = UnitStatus.Alive;
     public name: string;
     public side : Side = Side.None;
@@ -9,7 +10,7 @@ export class Unit {
     constructor(name: string, initialStats: Partial<Record<StatsType, number>>);
     constructor(name: string, initialStats?: Partial<Record<StatsType, number>>) {
         this.name = name;
-        
+
         if (initialStats) {
             // เมื่อเป็น String Enum เราสามารถวน Loop ได้โดยตรง
             for (const [key, value] of Object.entries(initialStats)) {
@@ -99,5 +100,14 @@ export class Unit {
     public hasStat(st: StatsType, et: ElementType, at: ActionType): boolean;
     public hasStat(st: StatsType, arg2?: ActionType | ElementType, arg3?: ActionType): boolean {
         return this.stats.has(this.generateKey(st, arg2, arg3));
+    }
+
+    // --- initDefaultStats ---
+    // วน key ที่มีอยู่จริงใน stats (ไม่ใช่ทุก StatsType) แล้วเซ็ตกลับไปเป็นค่าใน defaultStats ของ key เดียวกัน
+    // ถ้า key นั้นไม่มีใน defaultStats (ได้ undefined) ให้ใส่ 0 แทน
+    public initDefaultStats(): void {
+        for (const key of this.stats.keys()) {
+            this.stats.set(key, this.defaultStats.get(key) ?? 0);
+        }
     }
 }
