@@ -72,7 +72,8 @@ export enum ActionType {
     Echo = "Echo",   // Echo Skill
     Intro = "Intro", // Intro Skill
     Outro = "Outro", // Outro Skill
-    TB = "Tune Break"        // Tune Break (หรือปุ่มหลบ)
+    TB = "Tune Break",       // Tune Break (หรือปุ่มหลบ)
+    CoordAtk = "Coordinated Attack" // ดาเมจนอกสนาม — ตัวละครที่ไม่ได้ยืนอยู่ในสนามช่วยโจมตี (เช่น Camellya, Cantarella, Zani)
 }
 
 export enum ElementType {
