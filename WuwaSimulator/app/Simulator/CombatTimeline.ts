@@ -6,6 +6,7 @@ import { ActionEvent } from "../Models/Combat/CombatEvent/ActionEvent";
 import { NotificationEvent } from "../Models/Combat/CombatEvent/NotificationEvent";
 import { IndexedPriorityQueue } from "../Utils/indexedPriorityQueue";
 import { TriggerBus } from "./TriggerBus";
+import { battleField } from "./BattleField";
 
 /**
  * CombatTimeline — จัดการ event ทั้งหมดในการต่อสู้
@@ -21,11 +22,15 @@ export class CombatTimeline {
     /** pointer ตัวละครที่ยืนบนสนามอยู่ */
     public onFieldChar: AllyUnit | null = null;
 
-    /** รายชื่อตัวละครฝ่ายผู้เล่นทั้งหมดในการต่อสู้ */
-    public allies: AllyUnit[] = [];
+    /** รายชื่อตัวละครฝ่ายผู้เล่นทั้งหมดในการต่อสู้ — ผูกกับ battleField (global) โดยตรง ไม่ได้ถือ array แยกของตัวเอง */
+    public get allies(): AllyUnit[] {
+        return battleField.allies;
+    }
 
-    /** รายชื่อศัตรูทั้งหมดในการต่อสู้ */
-    public enemies: EnemyUnit[] = [];
+    /** รายชื่อศัตรูทั้งหมดในการต่อสู้ — ผูกกับ battleField (global) โดยตรง ไม่ได้ถือ array แยกของตัวเอง */
+    public get enemies(): EnemyUnit[] {
+        return battleField.enemies;
+    }
 
     /** block manual action ใหม่จาก RotationBuilder */
     public isGlobalLocked: boolean = false;
