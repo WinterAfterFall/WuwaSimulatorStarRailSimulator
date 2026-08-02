@@ -27,7 +27,7 @@ export abstract class ActionEvent extends CombatEvent {
     constructor(
         name: string,
         time: number,
-        duration: number,
+        duration: number | undefined,
         unit: AllyUnit,
         actionType: ActionType,
         isManual: boolean,
