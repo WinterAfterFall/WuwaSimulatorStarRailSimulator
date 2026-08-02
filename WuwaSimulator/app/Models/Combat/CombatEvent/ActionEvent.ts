@@ -1,10 +1,15 @@
 import { ActionType } from "../../../Constants/Enum";
-import { AllyUnit } from "../../AllyUnit";
+import { AllyUnit, TimelineRef } from "../../AllyUnit";
 import { CombatEvent } from "./CombatEvent";
+import { notifyEndAction } from "../../../Services/Combat/EndActionService";
 
 /**
  * ActionEvent — base class ของทุก action ที่ตัวละครทำ
  * ใช้เช็ค "เมื่อมีการ action" ได้ด้วย instanceof ActionEvent
+ *
+ * execute เริ่มต้น (ใช้ร่วมกันทุก subclass): setBusy → onExecute?.() → auto-schedule
+ * NotificationEvent(EndAction) ถ้ามีทั้ง duration และ timeline — เปลี่ยนทีหลังได้เหมือนตัวแปรทั่วไป
+ * (event.execute = () => {...}) ถ้า subclass ต้องการ logic อื่น
  *
  * subclass:
  *   AttackActionEvent — action โจมตี
@@ -31,11 +36,22 @@ export abstract class ActionEvent extends CombatEvent {
         unit: AllyUnit,
         actionType: ActionType,
         isManual: boolean,
-        priority: number = 0
+        priority: number = 0,
+        onExecute?: () => void,
+        timeline?: TimelineRef
     ) {
         super(name, time, duration, priority);
         this.unit       = unit;
         this.actionType = actionType;
         this.isManual   = isManual;
+
+        this.execute = () => {
+            this.unit.setBusy();
+            onExecute?.();
+
+            if (this.duration !== undefined && timeline) {
+                notifyEndAction(timeline, this.duration);
+            }
+        };
     }
 }
