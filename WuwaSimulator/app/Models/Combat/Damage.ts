@@ -1,6 +1,7 @@
 import { ActionType, ElementType, SkillRange, MultiplierType } from "../../Constants/Enum";
 import { AllyUnit } from "../AllyUnit";
 import { EnemyUnit } from "../EnemyUnit";
+import { battleField } from "../../Simulator/BattleField";
 
 type SkillScaling = Record<MultiplierType, number>;
 
@@ -114,13 +115,12 @@ export class Damage {
         concentoEnergyGain?: number
     );
 
-    // --- Overload 2: SkillRange — วนหาเป้าจาก enemies list ตาม position ---
+    // --- Overload 2: SkillRange — กรองเป้าจาก battleField.enemies (global) ตาม position เอง ไม่ต้องแนบ enemies list มา ---
     constructor(
         attacker   : AllyUnit,
         name       : string,
         attackType : ActionType | ActionType[],
         range      : SkillRange,
-        enemies    : EnemyUnit[],
         energyGain?: number,
         concentoEnergyGain?: number
     );
@@ -130,31 +130,25 @@ export class Damage {
         name          : string,
         attackType    : ActionType | ActionType[],
         targetOrRange : EnemyUnit | EnemyUnit[] | SkillRange,
-        enemiesOrEnergy      ?: EnemyUnit[] | number,
-        energyOrConcento     ?: number,
-        concentoEnergyGain   ?: number
+        energyGain?: number,
+        concentoEnergyGain?: number
     ) {
         this.attacker      = attacker;
         this.name          = name;
         this.element       = attacker.elementType;
         this.attackTypeList = Array.isArray(attackType) ? attackType : [attackType];
+        this.energyGain         = energyGain;
+        this.concentoEnergyGain = concentoEnergyGain;
 
         if (typeof targetOrRange === "string") {
-            // SkillRange path — กรอง enemies ที่ position < range
-            const enemies = enemiesOrEnergy as EnemyUnit[];
-            this.targets           = enemies.filter(e => Number(e.position) < Number(targetOrRange));
-            this.energyGain        = energyOrConcento;
-            this.concentoEnergyGain = concentoEnergyGain;
+            // SkillRange path — กรอง battleField.enemies (global) ที่ position < range
+            this.targets = battleField.enemies.filter(e => Number(e.position) < Number(targetOrRange));
         } else if (Array.isArray(targetOrRange)) {
             // EnemyUnit[] path
-            this.targets            = targetOrRange;
-            this.energyGain         = enemiesOrEnergy as number | undefined;
-            this.concentoEnergyGain = energyOrConcento;
+            this.targets = targetOrRange;
         } else {
             // Single EnemyUnit path
-            this.targets            = [targetOrRange];
-            this.energyGain         = enemiesOrEnergy as number | undefined;
-            this.concentoEnergyGain = energyOrConcento;
+            this.targets = [targetOrRange];
         }
     }
 }
