@@ -15,11 +15,10 @@ export abstract class BuffEvent extends CombatEvent {
     constructor(
         name: string,
         time: number,
-        duration: number,
         target: AllyUnit,
         priority: number = 0
     ) {
-        super(name, time, duration, priority);
+        super(name, time, priority);
         this.target = target;
     }
 }

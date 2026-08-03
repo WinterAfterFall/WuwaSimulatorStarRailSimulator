@@ -21,7 +21,7 @@ export class NotificationEvent extends CombatEvent {
         unit: AllyUnit | null = null,
         priority: number = 0
     ) {
-        super(name, time, 0, priority);
+        super(name, time, priority);
         this.notifyType = notifyType;
         this.unit       = unit;
 

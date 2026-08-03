@@ -21,7 +21,7 @@ export class DamageEvent extends CombatEvent {
         onExecute?: () => void,
         triggerBus?: TriggerBus
     ) {
-        super(name, time, 0, priority);
+        super(name, time, priority);
         this.damage = damage;
         this.target = target;
 
