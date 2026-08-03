@@ -11,7 +11,11 @@ export function notifyEndAction(timeline: TimelineRef, duration: number, actionN
     const t    = timeline.currentFrame;
     const name = actionName ? `${actionName}-end` : `${unit?.name ?? "unknown"}-action-end`;
 
-    timeline.schedule(
-        new NotificationEvent(`${name}-f${t}`, t + duration, NotificationType.EndAction, unit)
-    );
+    const event = new NotificationEvent(`${name}-f${t}`, t + duration, NotificationType.EndAction, unit);
+    // ปล่อย GlobalLock + ฟรีตัวละครตอน action จบ (ทำงานตอน tick ถึง frame นี้จริง ไม่ใช่ตอน schedule)
+    event.execute = () => {
+        timeline.isGlobalLocked = false;
+        unit?.setFree();
+    };
+    timeline.schedule(event);
 }
