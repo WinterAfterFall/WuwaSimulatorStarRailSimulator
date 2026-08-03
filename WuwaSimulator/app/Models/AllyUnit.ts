@@ -11,6 +11,7 @@ export type TimelineRef = {
     readonly currentFrame: number;
     readonly triggerBus: TriggerBus;
     readonly onFieldChar: AllyUnit | null;
+    isGlobalLocked: boolean;
 };
 
 export class AllyUnit extends Unit {
