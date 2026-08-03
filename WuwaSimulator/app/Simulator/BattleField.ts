@@ -17,3 +17,11 @@ export function createEnemy(name: string): EnemyUnit {
     battleField.enemies.push(enemy);
     return enemy;
 }
+
+// resetAllUnits — เรียกก่อนเริ่ม simulate รอบใหม่ทุกครั้ง วน unit ทุกตัวใน battleField (ทั้ง allies/enemies)
+// แล้วสั่ง initDefaultStats() ให้ stats ของแต่ละตัวกลับไปเป็นค่า default ก่อนเริ่มรอบถัดไป
+export function resetAllUnits(): void {
+    for (const unit of [...battleField.allies, ...battleField.enemies]) {
+        unit.initDefaultStats();
+    }
+}

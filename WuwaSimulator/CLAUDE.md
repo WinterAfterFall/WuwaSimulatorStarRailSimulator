@@ -107,7 +107,7 @@ app/
 | `ActionState` | `Free`, `Busy` |
 | `NotificationType` | `ChangeToAuto`, `EndAction`, `BuffExpired`, `DebuffExpired` |
 | `TriggerEvent` | `EnergyIncrease` (เพิ่ม event ใหม่ที่นี่ + payload คู่กันใน `TriggerEventMap`) |
-| `StatsType` | `AtkP`, `FlatAtk`, `Hp`, `FlatHp`, `DefP`, `FlatDef`, `CR`, `CD`, `Dmg`, `Amp`, `Sp`, `DefShred`, `DefRed`, `ResRed`, `ResPen`, `DmgRed`, `ElemRed`, `TbBoost`, `HealBonus`, `IncHealBonus` — แต่ละตัว comment กำกับว่า Ally/Enemy/Both ใช้จริง (อ้างอิง `DamageCalculate.ts`); `TbBoost`/`HealBonus`/`IncHealBonus` ยังไม่ต่อสายเข้าสูตรไหน — เพิ่มไว้เฉยๆ; `ALLY_STATS`/`ENEMY_STATS` (array แยก) เป็น dead export ไม่มีใครเรียกใช้ตอนนี้ |
+| `StatsType` | `AtkP`, `FlatAtk`, `Hp`, `FlatHp`, `DefP`, `FlatDef`, `CR`, `CD`, `Dmg`, `Amp`, `Sp`, `DefShred`, `DefRed`, `Res`, `ResRed`, `ResPen`, `DmgRed`, `ElemRed`, `TbBoost`, `HealBonus`, `IncHealBonus` — แต่ละตัว comment กำกับว่า Ally/Enemy/Both ใช้จริง (อ้างอิง `DamageCalculate.ts`); `TbBoost`/`HealBonus`/`IncHealBonus` ยังไม่ต่อสายเข้าสูตรไหน — เพิ่มไว้เฉยๆ; `ALLY_STATS`/`ENEMY_STATS` (array แยก) เป็น dead export ไม่มีใครเรียกใช้ตอนนี้ |
 | `ActionType` | `None`, `BA`, `HA`, `Skill`, `Ult`, `Echo`, `Intro`, `Outro`, `TB` |
 | `ElementType` | `None`, `Glacio`, `Fusion`, `Electro`, `Aero`, `Spectro`, `Havoc` |
 | `WeaponType` | `None`, `Broadblade`, `Sword`, `Pistols`, `Gauntlets`, `Rectifier` |
@@ -269,7 +269,7 @@ damage = base × dmgBonus × crit × amp × def × res × reduction
 | amp | `1 + Amplify` |
 | enemy DEF | `8×LVL_enemy + 792` แล้วลด `× (1−DefRed)` (DefRed = debuff บน enemy ลด DEF ก่อนสูตร) |
 | def | `(800+8×LVL_attacker) / (800+8×LVL_attacker + DEF_enemy×(1−DefShred))` |
-| res | piecewise โดย `RES = elemRed − resPen`: `RES<0 → 1−RES/2` / `0≤RES<0.8 → 1−RES` / `RES≥0.8 → 1/(1+5×RES)` |
+| res | piecewise โดย `RES = res − resred − resPen` (`res` = ต้านทานพื้นฐานของ enemy, `resred` = debuff ที่ลด `res`, `resPen` = attacker เจาะ): `RES<0 → 1−RES/2` / `0≤RES<0.8 → 1−RES` / `RES≥0.8 → 1/(1+5×RES)` |
 | reduction | `max(0, 1 − DmgRed)` |
 
 ---

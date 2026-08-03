@@ -103,11 +103,15 @@ export class Unit {
     }
 
     // --- initDefaultStats ---
-    // วน key ที่มีอยู่จริงใน stats (ไม่ใช่ทุก StatsType) แล้วเซ็ตกลับไปเป็นค่าใน defaultStats ของ key เดียวกัน
-    // ถ้า key นั้นไม่มีใน defaultStats (ได้ undefined) ให้ใส่ 0 แทน
+    // 1. เคลียร์ค่าเดิมทุก key ที่มีอยู่ใน stats ให้เป็น 0 ก่อน (set ทับ key เดิม ไม่ clear()/สร้าง Map ใหม่ — reuse backing store เดิม ไม่มี rehash)
+    // 2. วน defaultStats ทั้งหมดแล้ว set ทับเข้า stats — ครอบคลุมทั้ง key ที่มีอยู่แล้วและ key ที่ยังไม่เคยอยู่ใน stats มาก่อน
+    //    (แก้บั๊กเดิมที่วนแค่ key ใน stats.keys() ทำให้ stat ที่ตั้งผ่าน addDefaultStat/setDefaultStat อย่างเดียว เช่น Mornye's DefP/HealBonus ไม่เคยถูก populate เข้า stats เลย)
     public initDefaultStats(): void {
         for (const key of this.stats.keys()) {
-            this.stats.set(key, this.defaultStats.get(key) ?? 0);
+            this.stats.set(key, 0);
+        }
+        for (const [key, value] of this.defaultStats) {
+            this.stats.set(key, value);
         }
     }
 

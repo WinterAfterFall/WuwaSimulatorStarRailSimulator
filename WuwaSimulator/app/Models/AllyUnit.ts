@@ -58,6 +58,10 @@ export class AllyUnit extends Unit {
 
     constructor(name: string) {
         super(name);
+        // ค่าตั้งต้นของทุกตัวละคร (ก่อนบวก Echo/อาวุธ/บัพ) — Crit Rate 5% / Crit DMG 150%
+        this.setDefaultStat(StatsType.CR, 5);
+        this.setDefaultStat(StatsType.CD, 150);
+        this.initDefaultStats();
     }
 
     public isFree(): boolean {

@@ -1,5 +1,5 @@
 import { Unit } from "./Unit";
-import { EnemyPosition } from "../Constants/Enum";
+import { EnemyPosition, StatsType } from "../Constants/Enum";
 
 export class EnemyUnit extends Unit {
 
@@ -19,5 +19,8 @@ export class EnemyUnit extends Unit {
 
     constructor(name: string) {
         super(name);
+        // ค่าต้านทานธาตุพื้นฐานของ enemy ทุกตัว = 10% (ก่อนหัก ResRed/ResPen)
+        this.setDefaultStat(StatsType.Res, 10);
+        this.initDefaultStats();
     }
 }
