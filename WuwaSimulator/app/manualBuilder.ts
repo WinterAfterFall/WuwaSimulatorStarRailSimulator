@@ -1,6 +1,6 @@
 import { AllyUnit } from "./Models/AllyUnit";
-import { setupTest1 } from "./Models/Characters/Test1";
-import { setupTest2 } from "./Models/Characters/Test2";
+import { setupTest1 } from "./Data/Characters/Test1";
+import { setupTest2 } from "./Data/Characters/Test2";
 import { CombatTimeline } from "./Simulator/CombatTimeline";
 import { RotationDirector } from "./Simulator/RotationDirector";
 import { RotationAction } from "./Models/Combat/RotationAction";
