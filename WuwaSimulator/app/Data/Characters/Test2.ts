@@ -24,17 +24,17 @@ export function setupTest2(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Test2-BA1", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(new AttackActionEvent(`Test2-BA1-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, () => console.log(`[f${t}] Test2-BA1`)));
+                timeline.schedule(AttackActionEvent.manual(`Test2-BA1-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, undefined, () => console.log(`[f${t}] Test2-BA1`)));
                 timeline.schedule(new NotificationEvent(`Test2-BA1-end-f${t}`, t + BA_DURATION, NotificationType.EndAction, unit));
             })
             .add("Test2-Skill", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(new AttackActionEvent(`Test2-Skill-f${t}`, t, 0, unit, ActionType.Skill, SKILL_DURATION, () => console.log(`[f${t}] Test2-Skill`)));
+                timeline.schedule(AttackActionEvent.manual(`Test2-Skill-f${t}`, t, 0, unit, ActionType.Skill, SKILL_DURATION, undefined, () => console.log(`[f${t}] Test2-Skill`)));
                 timeline.schedule(new NotificationEvent(`Test2-Skill-end-f${t}`, t + SKILL_DURATION, NotificationType.EndAction, unit));
             })
             .add("Test2-BA2", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(new AttackActionEvent(`Test2-BA2-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, () => console.log(`[f${t}] Test2-BA2`)));
+                timeline.schedule(AttackActionEvent.manual(`Test2-BA2-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, undefined, () => console.log(`[f${t}] Test2-BA2`)));
                 timeline.schedule(new NotificationEvent(`Test2-BA2-end-f${t}`, t + BA_DURATION, NotificationType.EndAction, unit));
             })
             .build()
@@ -44,12 +44,12 @@ export function setupTest2(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Test2-Ult", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(new AttackActionEvent(`Test2-Ult-f${t}`, t, 0, unit, ActionType.Ult, ULT_DURATION, () => console.log(`[f${t}] Test2-Ult`)));
+                timeline.schedule(AttackActionEvent.manual(`Test2-Ult-f${t}`, t, 0, unit, ActionType.Ult, ULT_DURATION, undefined, () => console.log(`[f${t}] Test2-Ult`)));
                 timeline.schedule(new NotificationEvent(`Test2-Ult-end-f${t}`, t + ULT_DURATION, NotificationType.EndAction, unit));
             })
             .add("Test2-BA1", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(new AttackActionEvent(`Test2-BA1-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, () => console.log(`[f${t}] Test2-BA1`)));
+                timeline.schedule(AttackActionEvent.manual(`Test2-BA1-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, undefined, () => console.log(`[f${t}] Test2-BA1`)));
                 timeline.schedule(new NotificationEvent(`Test2-BA1-end-f${t}`, t + BA_DURATION, NotificationType.EndAction, unit));
             })
             .build()
@@ -59,12 +59,12 @@ export function setupTest2(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Test2-Echo", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(new AttackActionEvent(`Test2-Echo-f${t}`, t, 0, unit, ActionType.Echo, ECHO_DURATION, () => console.log(`[f${t}] Test2-Echo`)));
+                timeline.schedule(AttackActionEvent.manual(`Test2-Echo-f${t}`, t, 0, unit, ActionType.Echo, ECHO_DURATION, undefined, () => console.log(`[f${t}] Test2-Echo`)));
                 timeline.schedule(new NotificationEvent(`Test2-Echo-end-f${t}`, t + ECHO_DURATION, NotificationType.EndAction, unit));
             })
             .add("Test2-Skill", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(new AttackActionEvent(`Test2-Skill-f${t}`, t, 0, unit, ActionType.Skill, SKILL_DURATION, () => console.log(`[f${t}] Test2-Skill`)));
+                timeline.schedule(AttackActionEvent.manual(`Test2-Skill-f${t}`, t, 0, unit, ActionType.Skill, SKILL_DURATION, undefined, () => console.log(`[f${t}] Test2-Skill`)));
                 timeline.schedule(new NotificationEvent(`Test2-Skill-end-f${t}`, t + SKILL_DURATION, NotificationType.EndAction, unit));
             })
             .build()

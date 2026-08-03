@@ -12,9 +12,6 @@ export abstract class CombatEvent {
     /** tie-breaker เมื่อ time เท่ากัน (น้อย = ออกก่อน) */
     public priority: number;
 
-    /** กินเวลากี่ frame ตั้งแต่เริ่มจนจบ event — "-" (undefined) = ไม่ระบุ/ไม่มี duration */
-    public duration?: number;
-
     /**
      * โค้ดที่ CombatTimeline จะเรียกตอน tick — เป็นตัวแปร (field) ไม่ใช่ method ตายตัว
      * เปลี่ยนค่าทีหลังได้เหมือนตัวแปรทั่วไป เช่น `event.execute = () => {...}`
@@ -22,10 +19,9 @@ export abstract class CombatEvent {
      */
     public execute: () => void = () => {};
 
-    constructor(name: string, time: number, duration?: number, priority: number = 0) {
+    constructor(name: string, time: number, priority: number = 0) {
         this.name     = name;
         this.time     = time;
-        this.duration = duration;
         this.priority = priority;
     }
 }

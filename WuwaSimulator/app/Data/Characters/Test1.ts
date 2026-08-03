@@ -23,17 +23,17 @@ export function setupTest1(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Test1-BA1", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(new AttackActionEvent(`Test1-BA1-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, () => console.log(`[f${t}] Test1-BA1`)));
+                timeline.schedule(AttackActionEvent.manual(`Test1-BA1-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, undefined, () => console.log(`[f${t}] Test1-BA1`)));
                 timeline.schedule(new NotificationEvent(`Test1-BA1-end-f${t}`, t + BA_DURATION, NotificationType.EndAction, unit));
             })
             .add("Test1-BA2", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(new AttackActionEvent(`Test1-BA2-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, () => console.log(`[f${t}] Test1-BA2`)));
+                timeline.schedule(AttackActionEvent.manual(`Test1-BA2-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, undefined, () => console.log(`[f${t}] Test1-BA2`)));
                 timeline.schedule(new NotificationEvent(`Test1-BA2-end-f${t}`, t + BA_DURATION, NotificationType.EndAction, unit));
             })
             .add("Test1-Skill", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(new AttackActionEvent(`Test1-Skill-f${t}`, t, 0, unit, ActionType.Skill, SKILL_DURATION, () => console.log(`[f${t}] Test1-Skill`)));
+                timeline.schedule(AttackActionEvent.manual(`Test1-Skill-f${t}`, t, 0, unit, ActionType.Skill, SKILL_DURATION, undefined, () => console.log(`[f${t}] Test1-Skill`)));
                 timeline.schedule(new NotificationEvent(`Test1-Skill-end-f${t}`, t + SKILL_DURATION, NotificationType.EndAction, unit));
             })
             .build()
@@ -43,12 +43,12 @@ export function setupTest1(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Test1-Ult", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(new AttackActionEvent(`Test1-Ult-f${t}`, t, 0, unit, ActionType.Ult, ULT_DURATION, () => console.log(`[f${t}] Test1-Ult`)));
+                timeline.schedule(AttackActionEvent.manual(`Test1-Ult-f${t}`, t, 0, unit, ActionType.Ult, ULT_DURATION, undefined, () => console.log(`[f${t}] Test1-Ult`)));
                 timeline.schedule(new NotificationEvent(`Test1-Ult-end-f${t}`, t + ULT_DURATION, NotificationType.EndAction, unit));
             })
             .add("Test1-BA1", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(new AttackActionEvent(`Test1-BA1-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, () => console.log(`[f${t}] Test1-BA1`)));
+                timeline.schedule(AttackActionEvent.manual(`Test1-BA1-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, undefined, () => console.log(`[f${t}] Test1-BA1`)));
                 timeline.schedule(new NotificationEvent(`Test1-BA1-end-f${t}`, t + BA_DURATION, NotificationType.EndAction, unit));
             })
             .build()
