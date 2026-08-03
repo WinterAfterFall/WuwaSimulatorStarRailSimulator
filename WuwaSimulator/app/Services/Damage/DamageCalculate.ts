@@ -30,17 +30,19 @@ interface TargetStats {
     dmgBonus: number;
     dmgRed  : number;
     amp     : number;
-    resred  : number;   // natural elemental resistance → piecewise RES Multiplier
+    res     : number;   // ค่าต้านทานธาตุพื้นฐานของ enemy → เข้าสูตร piecewise RES ร่วมกับ resred/respen
+    resred  : number;   // debuff ที่ลด Res ของ enemy ลง
     elemRed : number;   // Elemental Reduction → multiplier แยก (1 − elemRed)
 }
 
 // stats ที่ต้องรวม dimension ของ element เข้าไปด้วย
-// ResRed (natural resistance) เป็น element-specific → อยู่ใน set
+// Res/ResRed เป็น element-specific (ต้านทาน/debuff แยกตามธาตุได้) → อยู่ใน set
 // ElemRed (Elemental Reduction) เป็น global multiplier → ไม่ต้องการ element dimension
 const ELEMENT_DIMENSION_STATS = new Set<StatsType>([
     StatsType.Dmg,
     StatsType.Amp,
     StatsType.ResPen,
+    StatsType.Res,
     StatsType.ResRed,
 ]);
 
@@ -118,6 +120,7 @@ function computeTargetStats(target: EnemyUnit, damage: Damage): TargetStats {
         dmgBonus: sumStat(target, StatsType.Dmg,    damage),
         dmgRed  : sumStat(target, StatsType.DmgRed, damage),
         amp     : sumStat(target, StatsType.Amp,    damage),
+        res     : sumStat(target, StatsType.Res,     damage),
         resred  : sumStat(target, StatsType.ResRed,  damage),
         elemRed : sumStat(target, StatsType.ElemRed, damage),
     };
@@ -145,7 +148,7 @@ function applyDamageFormula(
 
     // Crit (expected value: 1 + CR × CD)
     const critMulti = damage.isCritable
-        ? 1 + attackerStats.cr * attackerStats.cd
+        ? 1 + Math.min(attackerStats.cr, 1) * attackerStats.cd
         : 1;
 
     // Amplify — รวม attacker + enemy (Σ additive)
@@ -160,8 +163,8 @@ function applyDamageFormula(
     const defDenom   = lvlFactor + targetStats.def * (1 - attackerStats.defShred);
     const defMulti   = defDenom <= 0 ? 2 : Math.min(2, lvlFactor / defDenom);
 
-    // ResRed บน enemy เก็บเป็น (debuffs − natural_res) → negate เพื่อให้ได้ (natural_res − debuffs − ResPen)
-    const resTotal = -targetStats.resred - attackerStats.respen;
+    // RES = Res (ต้านทานพื้นฐานของ enemy) − ResRed (debuff ที่ลด Res) − ResPen (attacker เจาะ Res)
+    const resTotal = targetStats.res - targetStats.resred - attackerStats.respen;
     const resMulti = resTotal < 0   ? 1 - resTotal / 2
                    : resTotal < 0.8 ? 1 - resTotal
                    :                  1 / (1 + 5 * resTotal);

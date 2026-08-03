@@ -27,8 +27,9 @@ export enum StatsType {
     Sp = "Special",      // Ally เท่านั้น
     DefShred = "Def Ignore",        // Ally เท่านั้น — attacker ใช้ลด DEF ของ enemy
     DefRed = "Def Reduction",       // Enemy เท่านั้น — debuff บน enemy ลด DEF ตัวเองก่อนเข้าสูตร %DEF
-    ResRed = "Res Reduction",       // Enemy เท่านั้น — natural resistance − debuff ของ enemy
-    ResPen = "Res Penetration",     // Ally เท่านั้น — หักลบกับ ResRed ของ enemy
+    Res = "Res",                    // Enemy เท่านั้น — ค่าต้านทานธาตุพื้นฐานของ enemy (เช่น 0.1 = 10%) ก่อนหัก ResRed/ResPen
+    ResRed = "Res Reduction",       // Enemy เท่านั้น — debuff ที่ลด Res ของ enemy ลง (ค่าบวก = ลด RES)
+    ResPen = "Res Penetration",     // Ally เท่านั้น — หักลบกับ Res ของ enemy เหมือน ResRed
     DmgRed = "Damage Reduction",    // Enemy เท่านั้น
     ElemRed = "Elemental Reduction",// Enemy เท่านั้น
     TbBoost = "Tune Break Boost",   // ยังไม่ได้ต่อสายเข้า DamageCalculate.ts — เพิ่มไว้เฉยๆ
@@ -56,6 +57,7 @@ export const ALLY_STATS: StatsType[] = [
 // รายชื่อ StatsType ที่แต่ละฝั่งใช้จริง (Enemy เท่านั้น / Both) — ใช้ตอน initDefaultStats() ใน constructor ของ EnemyUnit
 export const ENEMY_STATS: StatsType[] = [
     StatsType.DefRed,
+    StatsType.Res,
     StatsType.ResRed,
     StatsType.DmgRed,
     StatsType.ElemRed,
