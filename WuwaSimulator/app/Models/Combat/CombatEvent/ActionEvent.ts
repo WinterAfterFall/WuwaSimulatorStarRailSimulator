@@ -1,22 +1,25 @@
 import { ActionType } from "../../../Constants/Enum";
-import { AllyUnit, TimelineRef } from "../../AllyUnit";
+import { AllyUnit } from "../../AllyUnit";
 import { CombatEvent } from "./CombatEvent";
-import { notifyEndAction } from "../../../Services/Combat/EndActionService";
-import { notifyChangeToAuto } from "../../../Services/Combat/ChangeToAutoService";
+import { resolveTimePriority } from "./resolveTimePriority";
 
 /**
  * ActionEvent — base class ของทุก action ที่ตัวละครทำ
  * ใช้เช็ค "เมื่อมีการ action" ได้ด้วย instanceof ActionEvent
  *
- * execute เริ่มต้น (ใช้ร่วมกันทุก subclass): setBusy → onExecute?.() → auto-schedule
- * NotificationEvent(EndAction) ถ้ามีทั้ง duration และ timeline, และ auto-schedule
- * NotificationEvent(ChangeToAuto) ถ้ามีทั้ง autoStartFrame และ timeline — เปลี่ยนทีหลังได้เหมือนตัวแปรทั่วไป
- * (event.execute = () => {...}) ถ้า subclass ต้องการ logic อื่น
+ * execute เริ่มต้น (ใช้ร่วมกันทุก subclass): setBusy → onExecute?.() เท่านั้น
  *
- * constructor เป็น internal เท่านั้น — สร้าง instance จริงผ่าน static factory ของ subclass เท่านั้น:
- *   AttackActionEvent.manual(...) / AttackActionEvent.auto(...)
- *   BuffActionEvent.manual(...)   / BuffActionEvent.auto(...)
- * (เลิกใช้ parseActionTail แบบเดา runtime type แล้ว — เพราะ 0 ชนกับ duration:0 จริง เช่นของ Mornye's Ult)
+ * duration/autoStartFrame ไม่ใช่ field ของ event นี้แล้ว — มันไม่ใช่ "ข้อมูลของ action"
+ * จริงๆ แค่ค่าที่ใช้ครั้งเดียวตอน schedule เพื่อบอกว่าจะ auto-schedule EndAction/ChangeToAuto
+ * ตามมาไหม จึงย้ายไปเป็น parameter ของ CombatTimeline.scheduleStartCombo() แทน (ดูที่นั่น)
+ *
+ * constructor เดียว — public, ไม่ต้องมี static factory .manual()/.auto() แยกแล้ว เพราะความต่างเดียว
+ * ระหว่างสองแบบคือ isManual (optional, default true) ล้วนๆ — AttackActionEvent/BuffActionEvent
+ * ไม่มี field เพิ่มของตัวเอง เลย inherit constructor นี้ตรงๆ ไม่ต้องเขียนซ้ำ
+ *
+ * รองรับ 3 รูปแบบเหมือน CombatEvent (name / name+time / name+time+priority) — unit/actionType/isManual/onExecute
+ * เลื่อนตามหลัง time/priority เสมอ (ดู resolveTimePriority ที่แยก args ให้) — isManual/onExecute เองก็แยกด้วย
+ * typeof (boolean vs function) เลยส่งแค่ onExecute เดี่ยวๆ แบบเดิม (ไม่มี isManual) ก็ยังใช้ได้
  */
 export abstract class ActionEvent extends CombatEvent {
     /** unit ที่ทำ action นี้ */
@@ -27,47 +30,35 @@ export abstract class ActionEvent extends CombatEvent {
 
     /**
      * action นี้เริ่มต้นเป็น manual หรือไม่
-     * true  → GlobalLock ON เมื่อ execute
+     * true  → GlobalLock ON เมื่อ execute (default)
      * false → UnitLock เท่านั้น
      */
     public readonly isManual: boolean;
 
-    /** กินเวลากี่ frame ตั้งแต่เริ่มจนจบ action — "-" (undefined) = ไม่ระบุ/ไม่มี duration (ย้ายมาจาก CombatEvent เพราะมีแค่ ActionEvent/BuffStartEvent ที่ใช้จริง) */
-    public readonly duration?: number;
+    constructor(name: string, unit: AllyUnit, actionType: ActionType, isManual?: boolean, onExecute?: () => void);
+    constructor(name: string, time: number, unit: AllyUnit, actionType: ActionType, isManual?: boolean, onExecute?: () => void);
+    constructor(name: string, time: number, priority: number, unit: AllyUnit, actionType: ActionType, isManual?: boolean, onExecute?: () => void);
+    constructor(name: string, ...args: unknown[]) {
+        const { time, priority, rest } = resolveTimePriority(args);
+        const [unit, actionType, ...tail] = rest as [AllyUnit, ActionType, ...unknown[]];
 
-    /** frame ที่เปลี่ยนเป็น auto นับจากเริ่ม action — ไม่ใส่ = action นี้ไม่มี auto transition */
-    public readonly autoStartFrame?: number;
+        // isManual/onExecute แยกด้วย typeof เหมือนกับ time/priority — boolean กับ function ไม่มีทางชนกัน
+        // จึงรับได้ทั้งสองแบบไม่ว่าจะส่งมาตามลำดับ (isManual, onExecute) ใหม่ หรือแบบเดิม (onExecute) เดี่ยวๆ
+        let isManual = true;
+        let onExecute: (() => void) | undefined;
+        for (const value of tail) {
+            if (typeof value === "boolean") isManual = value;
+            else if (typeof value === "function") onExecute = value as () => void;
+        }
 
-    constructor(
-        name: string,
-        time: number,
-        priority: number,
-        unit: AllyUnit,
-        actionType: ActionType,
-        isManual: boolean = true,
-        duration?: number,
-        autoStartFrame?: number,
-        onExecute?: () => void,
-        timeline?: TimelineRef
-    ) {
         super(name, time, priority);
-        this.unit           = unit;
-        this.actionType     = actionType;
-        this.isManual       = isManual;
-        this.duration       = duration;
-        this.autoStartFrame = autoStartFrame;
+        this.unit       = unit;
+        this.actionType = actionType;
+        this.isManual   = isManual;
 
         this.execute = () => {
             this.unit.setBusy();
             onExecute?.();
-
-            if (this.duration !== undefined && timeline) {
-                notifyEndAction(timeline, this.duration);
-            }
-
-            if (this.autoStartFrame !== undefined && timeline) {
-                notifyChangeToAuto(timeline, this.autoStartFrame);
-            }
         };
     }
 }

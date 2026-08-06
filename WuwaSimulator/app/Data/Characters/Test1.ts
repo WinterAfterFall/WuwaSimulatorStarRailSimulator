@@ -1,8 +1,7 @@
 import { AllyUnit } from "../../Models/AllyUnit";
 import { RotationBuilder } from "../../Simulator/RotationBuilder";
-import { ElementType, WeaponType, StatsType, ActionType, NotificationType } from "../../Constants/Enum";
+import { ElementType, WeaponType, StatsType, ActionType } from "../../Constants/Enum";
 import { AttackActionEvent } from "../../Models/Combat/CombatEvent/AttackActionEvent";
-import { NotificationEvent } from "../../Models/Combat/CombatEvent/NotificationEvent";
 
 const BA_DURATION    = 30;   // 0.5s
 const SKILL_DURATION = 60;   // 1.0s
@@ -23,18 +22,15 @@ export function setupTest1(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Test1-BA1", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Test1-BA1-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, undefined, () => console.log(`[f${t}] Test1-BA1`)));
-                timeline.schedule(new NotificationEvent(`Test1-BA1-end-f${t}`, t + BA_DURATION, NotificationType.EndAction, unit));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Test1-BA1-f${t}`, unit, ActionType.BA, () => console.log(`[f${t}] Test1-BA1`)), BA_DURATION);
             })
             .add("Test1-BA2", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Test1-BA2-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, undefined, () => console.log(`[f${t}] Test1-BA2`)));
-                timeline.schedule(new NotificationEvent(`Test1-BA2-end-f${t}`, t + BA_DURATION, NotificationType.EndAction, unit));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Test1-BA2-f${t}`, unit, ActionType.BA, () => console.log(`[f${t}] Test1-BA2`)), BA_DURATION);
             })
             .add("Test1-Skill", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Test1-Skill-f${t}`, t, 0, unit, ActionType.Skill, SKILL_DURATION, undefined, () => console.log(`[f${t}] Test1-Skill`)));
-                timeline.schedule(new NotificationEvent(`Test1-Skill-end-f${t}`, t + SKILL_DURATION, NotificationType.EndAction, unit));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Test1-Skill-f${t}`, unit, ActionType.Skill, () => console.log(`[f${t}] Test1-Skill`)), SKILL_DURATION);
             })
             .build()
     );
@@ -43,13 +39,11 @@ export function setupTest1(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Test1-Ult", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Test1-Ult-f${t}`, t, 0, unit, ActionType.Ult, ULT_DURATION, undefined, () => console.log(`[f${t}] Test1-Ult`)));
-                timeline.schedule(new NotificationEvent(`Test1-Ult-end-f${t}`, t + ULT_DURATION, NotificationType.EndAction, unit));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Test1-Ult-f${t}`, unit, ActionType.Ult, () => console.log(`[f${t}] Test1-Ult`)), ULT_DURATION);
             })
             .add("Test1-BA1", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Test1-BA1-f${t}`, t, 0, unit, ActionType.BA, BA_DURATION, undefined, () => console.log(`[f${t}] Test1-BA1`)));
-                timeline.schedule(new NotificationEvent(`Test1-BA1-end-f${t}`, t + BA_DURATION, NotificationType.EndAction, unit));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Test1-BA1-f${t}`, unit, ActionType.BA, () => console.log(`[f${t}] Test1-BA1`)), BA_DURATION);
             })
             .build()
     );

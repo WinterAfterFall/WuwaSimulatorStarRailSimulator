@@ -1,8 +1,9 @@
-import { NotificationType } from "../Constants/Enum";
 import { AllyUnit } from "../Models/AllyUnit";
 import { CombatEvent } from "../Models/Combat/CombatEvent/CombatEvent";
 import { ActionEvent } from "../Models/Combat/CombatEvent/ActionEvent";
-import { NotificationEvent } from "../Models/Combat/CombatEvent/NotificationEvent";
+import { BuffStartEvent } from "../Models/Combat/CombatEvent/BuffStartEvent";
+import { BuffEndEvent } from "../Models/Combat/CombatEvent/BuffEndEvent";
+import { ChangeToAuto } from "../Models/Combat/CombatEvent/ChangeToAuto";
 import { IndexedPriorityQueue } from "../Utils/indexedPriorityQueue";
 import { TriggerBus } from "./TriggerBus";
 
@@ -34,18 +35,57 @@ export class CombatTimeline {
         });
     }
 
-    /** เพิ่ม event เข้า timeline */
-    public schedule(event: CombatEvent): void {
+    /**
+     * เพิ่ม event เข้า timeline — ตั้ง event.time = currentFrame + offset ให้เอง (offset ไม่ใส่ = เกิดตอนนี้เลย)
+     * ถ้าชื่อซ้ำกับ event ที่มีอยู่แล้วใน IPQ (เช่น scheduleBuffStart ถูกเรียกซ้ำเพื่อ refresh บัพเดิม)
+     * จะ update() ตัวเดิมแทน push() ใหม่ — update() จัดเรียงตำแหน่งใน heap ให้ถูกต้องเองอยู่แล้ว
+     */
+    public schedule(event: CombatEvent): void;
+    public schedule(event: CombatEvent, offset: number): void;
+    public schedule(event: CombatEvent, offset: number = 0): void {
+        event.time = this.currentFrame + offset;
+
+        if (this.ipq.has(event.name)) {
+            this.ipq.update(event.name, event);
+        } else {
+            this.ipq.push(event, event.name);
+        }
+    }
+
+    /**
+     * schedule ActionEvent (AttackActionEvent/BuffActionEvent) — ถ้ามี autoStartFrame จะ auto-schedule
+     * ChangeToAuto คู่กันให้เอง (ปลด GlobalLock กลางท่า) — duration/EndAction ถูกถอดออกไปแล้ว
+     * รอ combat event เกี่ยวกับการสลับตัวละครมาแทนที่
+     */
+    public scheduleStartCombo(event: ActionEvent, duration?: number, autoStartFrame?: number, offset: number = 0): void {
+        event.time = this.currentFrame + offset;
         this.ipq.push(event, event.name);
+
+        if (autoStartFrame !== undefined) {
+            const changeToAuto = new ChangeToAuto(`${event.name}-change-to-auto`, this.onFieldChar);
+            this.schedule(changeToAuto, offset + autoStartFrame);
+        }
+    }
+
+    /**
+     * schedule BuffStartEvent — duration (บัพอยู่ได้กี่ frame) ไม่ใช่ field ของ event แล้ว ส่งเข้ามาตรงนี้แทน
+     * ถ้ามี duration จะ auto-schedule BuffEndEvent คู่กันให้เอง — ไม่ใส่ = บัพไม่มีวันหมดอายุเอง
+     */
+    public scheduleBuffStart(event: BuffStartEvent, duration?: number, offset: number = 0): void {
+        this.schedule(event, offset);
+
+        if (duration !== undefined) {
+            this.schedule(new BuffEndEvent(`${event.name}-end`, event.target), offset + duration);
+        }
     }
 
     /**
      * pop event ที่ frame น้อยสุด แล้ว execute
-     * หลัง execute จะตรวจ NotificationEvent เพื่อจัดการ lock อัตโนมัติ
+     * หลัง execute จะตรวจ ActionEvent/ChangeToAuto เพื่อจัดการ lock อัตโนมัติ
      */
     public tick(): CombatEvent | undefined {
         const event = this.ipq.pop();
-        if (!event) return undefined;   
+        if (!event) return undefined;
 
         this.currentFrame = event.time;
         event.execute();
@@ -55,16 +95,9 @@ export class CombatTimeline {
             this.isGlobalLocked = true;
         }
 
-        if (event instanceof NotificationEvent) {
-            if (event.notifyType === NotificationType.ChangeToAuto) {
-                // transition: ปล่อย GlobalLock แต่ unit ยัง Busy อยู่
-                this.isGlobalLocked = false;
-            }
-            if (event.notifyType === NotificationType.EndAction) {
-                // action จบ: ปล่อยทั้ง GlobalLock และ UnitLock
-                this.isGlobalLocked = false;
-                event.unit?.setFree();
-            }
+        if (event instanceof ChangeToAuto) {
+            // transition: ปล่อย GlobalLock แต่ unit ยัง Busy อยู่
+            this.isGlobalLocked = false;
         }
 
         return event;

@@ -4,10 +4,14 @@ import { Queue } from "../Utils/queue";
 import { RotationAction } from "./Combat/RotationAction";
 import { CombatEvent } from "./Combat/CombatEvent/CombatEvent";
 import type { TriggerBus } from "../Simulator/TriggerBus";
+import type { ActionEvent } from "./Combat/CombatEvent/ActionEvent";
+import type { BuffStartEvent } from "./Combat/CombatEvent/BuffStartEvent";
 
 /** Structural type — หลีกเลี่ยง circular import กับ CombatTimeline */
 export type TimelineRef = {
-    schedule(event: CombatEvent): void;
+    schedule(event: CombatEvent, offset?: number): void;
+    scheduleStartCombo(event: ActionEvent, duration?: number, autoStartFrame?: number, offset?: number): void;
+    scheduleBuffStart(event: BuffStartEvent, duration?: number, offset?: number): void;
     readonly currentFrame: number;
     readonly triggerBus: TriggerBus;
     readonly onFieldChar: AllyUnit | null;

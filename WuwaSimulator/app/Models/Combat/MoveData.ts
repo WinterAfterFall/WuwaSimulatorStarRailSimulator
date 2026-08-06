@@ -11,5 +11,5 @@ export interface MoveData {
     concento?     : number;          // concento energy ที่ได้จากท่านี้ — ไม่ใส่ = ท่านี้ไม่ให้ concento
     mtpr          : number;          // ตัวคูณสกิล (%) — หน่วยเดียวกับ DMG consts เดิม (หาร 100 ตอน setMultipliers)
     type          : MultiplierType;  // สเกลจากสเตตัสไหน — Atk / Hp / Def / Const
-    autoStartFrame?: number;         // frame ที่เปลี่ยนเป็น auto นับจากเริ่มท่า — ไม่ใส่ = ท่านี้ไม่มี auto transition (ส่งต่อเข้า ActionEvent เพื่อเรียก ChangeToAutoService)
+    autoStartFrame?: number;         // frame ที่เปลี่ยนเป็น auto นับจากเริ่มท่า — ไม่ใส่ = ท่านี้ไม่มี auto transition (ส่งต่อเข้า timeline.scheduleStartCombo() เพื่อ schedule ChangeToAuto)
 }

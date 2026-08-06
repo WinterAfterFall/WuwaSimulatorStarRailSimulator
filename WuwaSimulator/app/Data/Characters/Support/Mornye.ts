@@ -37,19 +37,19 @@ export function setupMornye(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Mornye-BA1", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Mornye-BA1-f${t}`, t, 0, unit, ActionType.BA, BA1.duration, undefined, () => console.log(`[f${t}] Mornye-BA1`), timeline));
-                timeline.schedule(new DamageEvent(`Mornye-BA1-dmg-f${t}`, t + BA1.damageFrame, new Damage(unit, "Mornye-BA1", ActionType.BA, SkillRange.Contact).setMultipliers([BA1.type, BA1.mtpr / 100]), unit, 0, undefined, timeline.triggerBus));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Mornye-BA1-f${t}`, unit, ActionType.BA, () => console.log(`[f${t}] Mornye-BA1`)), BA1.duration);
+                timeline.schedule(new DamageEvent(`Mornye-BA1-dmg-f${t}`, new Damage(unit, "Mornye-BA1", ActionType.BA, SkillRange.Contact).setMultipliers([BA1.type, BA1.mtpr / 100]), unit, undefined, timeline.triggerBus), BA1.damageFrame);
             })
             .add("Mornye-BA2", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Mornye-BA2-f${t}`, t, 0, unit, ActionType.BA, BA2.duration, undefined, () => console.log(`[f${t}] Mornye-BA2`), timeline));
-                timeline.schedule(new DamageEvent(`Mornye-BA2-dmg-f${t}`, t + BA2.damageFrame,
-                    new Damage(unit, "Mornye-BA2", ActionType.BA, SkillRange.Contact).setMultipliers([BA2.type, BA2.mtpr / 100]), unit, 0, undefined, timeline.triggerBus));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Mornye-BA2-f${t}`, unit, ActionType.BA, () => console.log(`[f${t}] Mornye-BA2`)), BA2.duration);
+                timeline.schedule(new DamageEvent(`Mornye-BA2-dmg-f${t}`,
+                    new Damage(unit, "Mornye-BA2", ActionType.BA, SkillRange.Contact).setMultipliers([BA2.type, BA2.mtpr / 100]), unit, undefined, timeline.triggerBus), BA2.damageFrame);
             })
             .add("Mornye-BA3", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Mornye-BA3-f${t}`, t, 0, unit, ActionType.BA, BA3.duration, undefined, () => console.log(`[f${t}] Mornye-BA3`), timeline));
-                timeline.schedule(new DamageEvent(`Mornye-BA3-dmg-f${t}`, t + BA3.damageFrame, new Damage(unit, "Mornye-BA3", ActionType.BA, SkillRange.Contact).setMultipliers([BA3.type, BA3.mtpr / 100]), unit, 0, undefined, timeline.triggerBus));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Mornye-BA3-f${t}`, unit, ActionType.BA, () => console.log(`[f${t}] Mornye-BA3`)), BA3.duration);
+                timeline.schedule(new DamageEvent(`Mornye-BA3-dmg-f${t}`, new Damage(unit, "Mornye-BA3", ActionType.BA, SkillRange.Contact).setMultipliers([BA3.type, BA3.mtpr / 100]), unit, undefined, timeline.triggerBus), BA3.damageFrame);
             })
             .build()
     );
@@ -58,18 +58,18 @@ export function setupMornye(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Mornye-EBA1", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Mornye-EBA1-f${t}`, t, 0, unit, ActionType.BA, EBA1.duration, undefined, () => console.log(`[f${t}] Mornye-EBA1`), timeline));
-                timeline.schedule(new DamageEvent(`Mornye-EBA1-dmg-f${t}`, t + EBA1.damageFrame, new Damage(unit, "Mornye-EBA1", ActionType.BA, SkillRange.Contact).setMultipliers([EBA1.type, EBA1.mtpr / 100]), unit, 0, undefined, timeline.triggerBus));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Mornye-EBA1-f${t}`, unit, ActionType.BA, () => console.log(`[f${t}] Mornye-EBA1`)), EBA1.duration);
+                timeline.schedule(new DamageEvent(`Mornye-EBA1-dmg-f${t}`, new Damage(unit, "Mornye-EBA1", ActionType.BA, SkillRange.Contact).setMultipliers([EBA1.type, EBA1.mtpr / 100]), unit, undefined, timeline.triggerBus), EBA1.damageFrame);
             })
             .add("Mornye-EBA2", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Mornye-EBA2-f${t}`, t, 0, unit, ActionType.BA, EBA2.duration, undefined, () => console.log(`[f${t}] Mornye-EBA2`), timeline));
-                timeline.schedule(new DamageEvent(`Mornye-EBA2-dmg-f${t}`, t + EBA2.damageFrame, new Damage(unit, "Mornye-EBA2", ActionType.BA, SkillRange.Contact).setMultipliers([EBA2.type, EBA2.mtpr / 100]), unit, 0, undefined, timeline.triggerBus));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Mornye-EBA2-f${t}`, unit, ActionType.BA, () => console.log(`[f${t}] Mornye-EBA2`)), EBA2.duration);
+                timeline.schedule(new DamageEvent(`Mornye-EBA2-dmg-f${t}`, new Damage(unit, "Mornye-EBA2", ActionType.BA, SkillRange.Contact).setMultipliers([EBA2.type, EBA2.mtpr / 100]), unit, undefined, timeline.triggerBus), EBA2.damageFrame);
             })
             .add("Mornye-EBA3", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Mornye-EBA3-f${t}`, t, 0, unit, ActionType.BA, EBA3.duration, undefined, () => console.log(`[f${t}] Mornye-EBA3`), timeline));
-                timeline.schedule(new DamageEvent(`Mornye-EBA3-dmg-f${t}`, t + EBA3.damageFrame, new Damage(unit, "Mornye-EBA3", ActionType.BA, SkillRange.Contact).setMultipliers([EBA3.type, EBA3.mtpr / 100]), unit, 0, undefined, timeline.triggerBus));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Mornye-EBA3-f${t}`, unit, ActionType.BA, () => console.log(`[f${t}] Mornye-EBA3`)), EBA3.duration);
+                timeline.schedule(new DamageEvent(`Mornye-EBA3-dmg-f${t}`, new Damage(unit, "Mornye-EBA3", ActionType.BA, SkillRange.Contact).setMultipliers([EBA3.type, EBA3.mtpr / 100]), unit, undefined, timeline.triggerBus), EBA3.damageFrame);
             })
             .build()
     );
@@ -78,8 +78,8 @@ export function setupMornye(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Mornye-HA-GeopotentialShift", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Mornye-HA-GeopotentialShift-f${t}`, t, 0, unit, ActionType.HA, HA_GEOPOTENTIAL_SHIFT_DAMAGE_FRAME.duration, undefined, () => console.log(`[f${t}] Mornye-HA-GeopotentialShift`), timeline));
-                timeline.schedule(new DamageEvent(`Mornye-HA-GeopotentialShift-dmg-f${t}`, t + HA_GEOPOTENTIAL_SHIFT_DAMAGE_FRAME.damageFrame, new Damage(unit, "Mornye-HA-GeopotentialShift", ActionType.HA, SkillRange.Contact).setMultipliers([HA_GEOPOTENTIAL_SHIFT_DAMAGE_FRAME.type, HA_GEOPOTENTIAL_SHIFT_DAMAGE_FRAME.mtpr / 100]), unit, 0, undefined, timeline.triggerBus));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Mornye-HA-GeopotentialShift-f${t}`, unit, ActionType.HA, () => console.log(`[f${t}] Mornye-HA-GeopotentialShift`)), HA_GEOPOTENTIAL_SHIFT_DAMAGE_FRAME.duration);
+                timeline.schedule(new DamageEvent(`Mornye-HA-GeopotentialShift-dmg-f${t}`, new Damage(unit, "Mornye-HA-GeopotentialShift", ActionType.HA, SkillRange.Contact).setMultipliers([HA_GEOPOTENTIAL_SHIFT_DAMAGE_FRAME.type, HA_GEOPOTENTIAL_SHIFT_DAMAGE_FRAME.mtpr / 100]), unit, undefined, timeline.triggerBus), HA_GEOPOTENTIAL_SHIFT_DAMAGE_FRAME.damageFrame);
             })
             .build()
     );
@@ -88,8 +88,8 @@ export function setupMornye(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Mornye-HA-Inversion", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Mornye-HA-Inversion-f${t}`, t, 0, unit, ActionType.HA, HA_INVERSION_DAMAGE_FRAME.duration, undefined, () => console.log(`[f${t}] Mornye-HA-Inversion`), timeline));
-                timeline.schedule(new DamageEvent(`Mornye-HA-Inversion-dmg-f${t}`, t + HA_INVERSION_DAMAGE_FRAME.damageFrame, new Damage(unit, "Mornye-HA-Inversion", ActionType.HA, SkillRange.Contact).setMultipliers([HA_INVERSION_DAMAGE_FRAME.type, HA_INVERSION_DAMAGE_FRAME.mtpr / 100]), unit, 0, undefined, timeline.triggerBus));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Mornye-HA-Inversion-f${t}`, unit, ActionType.HA, () => console.log(`[f${t}] Mornye-HA-Inversion`)), HA_INVERSION_DAMAGE_FRAME.duration);
+                timeline.schedule(new DamageEvent(`Mornye-HA-Inversion-dmg-f${t}`, new Damage(unit, "Mornye-HA-Inversion", ActionType.HA, SkillRange.Contact).setMultipliers([HA_INVERSION_DAMAGE_FRAME.type, HA_INVERSION_DAMAGE_FRAME.mtpr / 100]), unit, undefined, timeline.triggerBus), HA_INVERSION_DAMAGE_FRAME.damageFrame);
             })
             .build()
     );
@@ -98,8 +98,8 @@ export function setupMornye(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Mornye-ESkill", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Mornye-ESkill-f${t}`, t, 0, unit, ActionType.Skill, ESkill.duration, undefined, () => console.log(`[f${t}] Mornye-ESkill`), timeline));
-                timeline.schedule(new DamageEvent(`Mornye-ESkill-dmg-f${t}`, t + ESkill.damageFrame, new Damage(unit, "Mornye-ESkill", ActionType.Skill, SkillRange.Contact).setMultipliers([ESkill.type, ESkill.mtpr / 100]), unit, 0, undefined, timeline.triggerBus));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Mornye-ESkill-f${t}`, unit, ActionType.Skill, () => console.log(`[f${t}] Mornye-ESkill`)), ESkill.duration);
+                timeline.schedule(new DamageEvent(`Mornye-ESkill-dmg-f${t}`, new Damage(unit, "Mornye-ESkill", ActionType.Skill, SkillRange.Contact).setMultipliers([ESkill.type, ESkill.mtpr / 100]), unit, undefined, timeline.triggerBus), ESkill.damageFrame);
             })
             .build()
     );
@@ -108,8 +108,8 @@ export function setupMornye(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Mornye-Ult", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Mornye-Ult-f${t}`, t, 0, unit, ActionType.Ult, Ult.duration, undefined, () => console.log(`[f${t}] Mornye-Ult`), timeline));
-                timeline.schedule(new DamageEvent(`Mornye-Ult-dmg-f${t}`, t + Ult.damageFrame, new Damage(unit, "Mornye-Ult", ActionType.Ult, SkillRange.Contact).setMultipliers([Ult.type, Ult.mtpr / 100]), unit, 0, undefined, timeline.triggerBus));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Mornye-Ult-f${t}`, unit, ActionType.Ult, () => console.log(`[f${t}] Mornye-Ult`)), Ult.duration);
+                timeline.schedule(new DamageEvent(`Mornye-Ult-dmg-f${t}`, new Damage(unit, "Mornye-Ult", ActionType.Ult, SkillRange.Contact).setMultipliers([Ult.type, Ult.mtpr / 100]), unit, undefined, timeline.triggerBus), Ult.damageFrame);
             })
             .build()
     );
@@ -118,8 +118,8 @@ export function setupMornye(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Mornye-Intro", () => {
                 const t = timeline.currentFrame;
-                timeline.schedule(AttackActionEvent.manual(`Mornye-Intro-f${t}`, t, 0, unit, ActionType.Intro, Intro.duration, undefined, () => console.log(`[f${t}] Mornye-Intro`), timeline));
-                timeline.schedule(new DamageEvent(`Mornye-Intro-dmg-f${t}`, t + Intro.damageFrame, new Damage(unit, "Mornye-Intro", ActionType.Intro, SkillRange.Contact).setMultipliers([Intro.type, Intro.mtpr / 100]), unit, 0, undefined, timeline.triggerBus));
+                timeline.scheduleStartCombo(new AttackActionEvent(`Mornye-Intro-f${t}`, unit, ActionType.Intro, () => console.log(`[f${t}] Mornye-Intro`)), Intro.duration);
+                timeline.schedule(new DamageEvent(`Mornye-Intro-dmg-f${t}`, new Damage(unit, "Mornye-Intro", ActionType.Intro, SkillRange.Contact).setMultipliers([Intro.type, Intro.mtpr / 100]), unit, undefined, timeline.triggerBus), Intro.damageFrame);
             })
             .build()
     );
