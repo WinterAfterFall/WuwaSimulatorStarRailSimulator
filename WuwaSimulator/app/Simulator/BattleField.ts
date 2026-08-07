@@ -32,27 +32,3 @@ export class BattleField {
         }
     }
 }
-
-// ─────────────────────────────────────────────────────────────
-// ⚠️ ของเดิม (global singleton) — เหลือไว้ชั่วคราวให้ Damage.ts ที่ยังไม่ย้าย compile ผ่าน
-//    จะถูกลบทิ้งใน Task 4 ของแผน refactor นี้ ห้ามเขียนโค้ดใหม่ที่ใช้ของพวกนี้
-// ─────────────────────────────────────────────────────────────
-export const battleField: {
-    allies : AllyUnit[];
-    enemies: EnemyUnit[];
-} = {
-    allies : [],
-    enemies: [],
-};
-
-export function createEnemy(name: string): EnemyUnit {
-    const enemy = new EnemyUnit(name);
-    battleField.enemies.push(enemy);
-    return enemy;
-}
-
-export function resetAllUnits(): void {
-    for (const unit of [...battleField.allies, ...battleField.enemies]) {
-        unit.initDefaultStats();
-    }
-}
