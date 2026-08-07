@@ -45,7 +45,7 @@ app/
 │   ├── AllyUnit.ts                  # ตัวละครฝ่ายผู้เล่น extends Unit — combat state, rotations, buff/dmg tracking, TimelineRef
 │   ├── EnemyUnit.ts                 # ศัตรู extends Unit — level, baseElemRed, position, debuff tracking, dmgRecord
 │   └── Combat/
-│       ├── Damage.ts                # Data object — target เจาะจง (EnemyUnit[]) หรือ SkillRange (กรองจาก battleField.enemies เอง ไม่ต้องแนบ enemies list)
+│       ├── Damage.ts                # Data object ล้วน — รับ target เป็น EnemyUnit|EnemyUnit[] เท่านั้น ไม่ import อะไรจาก Simulator/
 │       ├── MoveData.ts              # interface รวมค่าท่า 1 ท่า — duration/damageFrame/mtpr/type + optional energyGain/concento/autoStartFrame
 │       ├── RotationAction.ts        # action ที่ถูก queue ไว้ก่อน schedule (name + execute callback, ยังไม่มี time)
 │       └── CombatEvent/
@@ -69,7 +69,7 @@ app/
 │
 ├── Simulator/
 │   ├── CombatTimeline.ts            # จัดการ event ด้วย IPQ, currentFrame, lock state, ถือ TriggerBus กลาง — ไม่มี allies/enemies แล้ว เข้าถึงผ่าน battleField โดยตรง
-│   ├── BattleField.ts               # global singleton `battleField.{allies,enemies}` (ES module = singleton) + createEnemy(name) สร้าง+push ให้เลย
+│   ├── BattleField.ts               # class BattleField (allies/enemies + createEnemy/enemiesInRange/resetAllUnits) — CombatTimeline ถือไว้ 1 ตัวต่อ 1 การต่อสู้
 │   ├── RotationBuilder.ts           # fluent builder → สร้าง Queue<RotationAction>
 │   ├── RotationDirector.ts          # ขับ setup/loop queue → execute action → tick timeline
 │   └── TriggerBus.ts                # pub/sub กลาง — ตัวละคร register listener ต่อ TriggerEvent แล้ว engine emit ตอน trigger จริง
@@ -80,11 +80,11 @@ app/
 │   └── IndexedPriorityQueue.ts      # PQ + positionMap → update/delete/has ด้วยชื่อ O(log n)
 │
 ├── Test/
-│   ├── automated/                   # ✅ Jest tests ที่ใช้งานได้ (ครอบคลุมโดย jest.config.js) — 8 suite / 100 tests
+│   ├── automated/                   # ✅ Jest tests ที่ใช้งานได้ (ครอบคลุมโดย jest.config.js) — 10 suite / 118 tests
 │   │   ├── Utils/                   #   Queue / PriorityQueue / IndexedPriorityQueue
-│   │   ├── Simulator/               #   TriggerBus.test.ts
+│   │   ├── Simulator/               #   TriggerBus.test.ts, BattleField.test.ts, CombatTimeline.test.ts
 │   │   ├── Services/                #   DamageCalculate.test.ts, EnergyService.test.ts
-│   │   └── Models/                  #   EnemyUnit.test.ts, Damage.test.ts (รวม SkillRange ผ่าน battleField.enemies)
+│   │   └── Models/                  #   EnemyUnit.test.ts, Damage.test.ts (การกรองตาม SkillRange ย้ายไปอยู่ที่ BattleField.test.ts แล้ว)
 │   ├── Utils/                       # ⚠️ legacy duplicate — import path ผิด (`../Utils/...`) ใช้ไม่ได้
 │   ├── manual/                      # รันด้วยมือ (tsx) — scratch tests + ไฟล์ trace .html (เอกสาร static เก่า ไม่ sync กับโค้ดปัจจุบันแล้ว)
 │   │   ├── 1-unit.ts / 2-hello.ts / 3-advanced-ipq.ts / 4-queue.ts
@@ -267,13 +267,13 @@ CombatTimeline.triggerBus : TriggerBus                    ← instance เดี
 
 ---
 
-## Global Battle State (`Simulator/BattleField.ts`)
-- `battleField: { allies: AllyUnit[]; enemies: EnemyUnit[] }` — global singleton (ES module import ที่ไหนก็ได้ object เดียวกันเสมอ) เก็บ ally/enemy ทั้งหมดที่อยู่ในสนามตอนนี้
-- `CombatTimeline` **ไม่มี** `allies`/`.enemies` (ไม่มี getter proxy แล้ว) — ที่ไหนอยากได้ roster ให้ import `battleField` แล้วอ่านตรงๆ (`TimelineRef` ก็ตัด 2 field นี้ออกไปด้วยเหตุผลเดียวกัน)
-- `createEnemy(name: string): EnemyUnit` — สร้าง `EnemyUnit` (stats พื้นฐาน default อยู่แล้วใน class) แล้ว push เข้า `battleField.enemies` ให้เลย คืนค่า instance ที่สร้างกลับมา
-- `Damage`'s SkillRange overload (`new Damage(attacker, name, attackType, range)`) **อ่าน `battleField.enemies` เองภายใน ไม่ต้องรับ `enemies` list เข้ามาแล้ว** — กรองด้วย `enemies.filter(e => Number(e.position) < Number(range))` เหมือนเดิม แค่ที่มาของ enemies list เปลี่ยนจาก parameter เป็น global
-- ⚠️ ยังไม่มีจุดไหนใน `manualBuilder.ts` เรียก `createEnemy()`/push เข้า `battleField` เลย — Test1/Test2 ไม่ได้ใช้ `Damage`/`DamageEvent` เลย (แค่ log)
-- ⚠️ `battleField` ไม่ถูก reset ระหว่างรัน simulate หลายรอบในโปรเซสเดียว — ถ้าจะทำ "รันซ้ำเทียบ substat" ตามที่คุยไว้ก่อนหน้า ต้อง clear `battleField.allies`/`.enemies` เองก่อนแต่ละรอบด้วย
+## Battle State (`Simulator/BattleField.ts`)
+- `BattleField` เป็น **class** — 1 instance = 1 การต่อสู้ ไม่ใช่ global singleton แล้ว
+- `CombatTimeline` เป็นเจ้าของ: `public battleField: BattleField = new BattleField()` (สร้างใน field initializer เหมือน `triggerBus`) → `new CombatTimeline()` 1 ครั้ง = สนามรบใหม่ที่แยกขาด ไม่มี state รั่วข้ามรอบ simulate หรือข้าม test case อีก
+- method: `createEnemy(name)` สร้าง+push เข้า `enemies` / `enemiesInRange(range)` กรอง `enemies` ที่ `position < range` (`SkillRange.None = "0"` จึงคืน array ว่างเสมอ) / `resetAllUnits()` วน unit ทุกตัวเรียก `initDefaultStats()`
+- `TimelineRef` มี `readonly battleField: BattleField` — rotation เข้าถึงผ่าน `timeline.battleField` ได้เลย (ใช้ `import type` เลี่ยง circular import แบบเดียวกับ `TriggerBus`)
+- `Damage` **ไม่รู้จัก `BattleField` แล้ว** — รับเฉพาะ `EnemyUnit | EnemyUnit[]` คนเรียกกรองเองก่อน: `new Damage(unit, "BA1", ActionType.BA, timeline.battleField.enemiesInRange(SkillRange.Contact))`
+- ⚠️ ยังไม่มีจุดไหนใน `manualBuilder.ts` เรียก `createEnemy()` เลย — Test1/Test2 ไม่ได้ใช้ `Damage`/`DamageEvent` (แค่ log) และยังไม่มีใครอ่าน `battleField.allies` เลยสักจุด (เก็บ field ไว้รอตอนทำบัพทีม)
 
 ---
 
