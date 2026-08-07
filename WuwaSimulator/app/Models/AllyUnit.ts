@@ -4,6 +4,7 @@ import { Queue } from "../Utils/queue";
 import { RotationAction } from "./Combat/RotationAction";
 import { CombatEvent } from "./Combat/CombatEvent/CombatEvent";
 import type { TriggerBus } from "../Simulator/TriggerBus";
+import type { BattleField } from "../Simulator/BattleField";
 import type { ActionEvent } from "./Combat/CombatEvent/ActionEvent";
 import type { BuffStartEvent } from "./Combat/CombatEvent/BuffStartEvent";
 
@@ -14,6 +15,7 @@ export type TimelineRef = {
     scheduleBuffStart(event: BuffStartEvent, duration?: number, offset?: number): void;
     readonly currentFrame: number;
     readonly triggerBus: TriggerBus;
+    readonly battleField: BattleField;
     readonly onFieldChar: AllyUnit | null;
     isGlobalLocked: boolean;
 };

@@ -6,6 +6,7 @@ import { BuffEndEvent } from "../Models/Combat/CombatEvent/BuffEndEvent";
 import { ChangeToAuto } from "../Models/Combat/CombatEvent/ChangeToAuto";
 import { IndexedPriorityQueue } from "../Utils/indexedPriorityQueue";
 import { TriggerBus } from "./TriggerBus";
+import { BattleField } from "./BattleField";
 
 /**
  * CombatTimeline — จัดการ event ทั้งหมดในการต่อสู้
@@ -26,6 +27,9 @@ export class CombatTimeline {
 
     /** รวม listener ของทุกตัวละคร — emit ตอน action ใดๆ trigger event กลาง (เช่น energy เพิ่ม) */
     public triggerBus: TriggerBus = new TriggerBus();
+
+    /** ally/enemy ทั้งหมดของการต่อสู้นี้ — 1 timeline = 1 สนามรบ ไม่แชร์กับ timeline อื่น */
+    public battleField: BattleField = new BattleField();
 
     constructor() {
         // เรียง event ที่ frame น้อยกว่าออกก่อน — ใช้ priority เป็น tie-breaker
