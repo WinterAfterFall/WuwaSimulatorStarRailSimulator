@@ -309,7 +309,7 @@ Expected: PASS ทุก suite (suite เดิม + `BattleField.test.ts` ท�
 - [ ] **Step 6: Commit**
 
 ```bash
-git add WuwaSimulator/app/Simulator/BattleField.ts WuwaSimulator/app/Test/automated/Simulator/BattleField.test.ts
+git add app/Simulator/BattleField.ts WuwaSimulator/app/Test/automated/Simulator/BattleField.test.ts
 git commit -m "feat : BattleField class + test (ยังไม่ลบ global เดิม)"
 ```
 
@@ -438,7 +438,7 @@ Expected: รันจบและ print `=== Combat End (frame=..., t=...s, loo
 - [ ] **Step 8: Commit**
 
 ```bash
-git add WuwaSimulator/app/Simulator/CombatTimeline.ts WuwaSimulator/app/Models/AllyUnit.ts WuwaSimulator/app/Test/automated/Simulator/CombatTimeline.test.ts
+git add app/Simulator/CombatTimeline.ts WuwaSimulator/app/Models/AllyUnit.ts WuwaSimulator/app/Test/automated/Simulator/CombatTimeline.test.ts
 git commit -m "feat : CombatTimeline ถือ BattleField instance + เพิ่มใน TimelineRef"
 ```
 
@@ -573,7 +573,7 @@ Expected: ไม่มีผลลัพธ์ (exit code 1)
 - [ ] **Step 8: Commit**
 
 ```bash
-git add WuwaSimulator/app/Models/Combat/Damage.ts WuwaSimulator/app/Test/automated/Models/Damage.test.ts
+git add app/Models/Combat/Damage.ts WuwaSimulator/app/Test/automated/Models/Damage.test.ts
 git commit -m "refactor : Damage ตัด overload SkillRange เลิกพึ่ง battleField global"
 ```
 
@@ -629,7 +629,7 @@ Expected: รันจบและ print `=== Combat End (frame=..., t=...s, loo
 - [ ] **Step 6: Commit**
 
 ```bash
-git add WuwaSimulator/app/Simulator/BattleField.ts
+git add app/Simulator/BattleField.ts
 git commit -m "refactor : ลบ battleField global singleton ทิ้ง เหลือแค่ class BattleField"
 ```
 
@@ -692,7 +692,7 @@ npm test
 - [ ] **Step 5: Commit**
 
 ```bash
-git add WuwaSimulator/CLAUDE.md
+git add CLAUDE.md
 git commit -m "docs : อัปเดต CLAUDE.md ตาม BattleField instance refactor"
 ```
 
