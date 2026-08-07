@@ -2,7 +2,7 @@ import { Damage } from '../../../Models/Combat/Damage';
 import { AllyUnit } from '../../../Models/AllyUnit';
 import { EnemyUnit } from '../../../Models/EnemyUnit';
 import { ActionType, ElementType, EnemyPosition, MultiplierType, SkillRange } from '../../../Constants/Enum';
-import { battleField } from '../../../Simulator/BattleField';
+import { BattleField } from '../../../Simulator/BattleField';
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -107,54 +107,36 @@ describe('Damage', () => {
     });
 
     // ─────────────────────────────────────────────
-    // Constructor — SkillRange
+    // ใช้ร่วมกับ BattleField.enemiesInRange() — pattern ที่ rotation จะเรียกจริง
+    // (test การกรองตาม SkillRange ทุก tier อยู่ที่ Simulator/BattleField.test.ts)
     // ─────────────────────────────────────────────
-    describe('constructor: SkillRange', () => {
-        let van: EnemyUnit;
-        let mid: EnemyUnit;
-        let rear: EnemyUnit;
-        let out: EnemyUnit;
+    describe('constructor: targets from BattleField.enemiesInRange', () => {
+        it('should take exactly the enemies returned by enemiesInRange', () => {
+            const field = new BattleField();
+            const van   = makeEnemy('Van', EnemyPosition.Vanguard);
+            const mid   = makeEnemy('Mid', EnemyPosition.Midrange);
+            field.enemies = [van, mid];
 
-        beforeEach(() => {
-            van  = makeEnemy('Van',  EnemyPosition.Vanguard);   // "0"
-            mid  = makeEnemy('Mid',  EnemyPosition.Midrange);   // "1"
-            rear = makeEnemy('Rear', EnemyPosition.Rearguard);  // "2"
-            out  = makeEnemy('Out',  EnemyPosition.OutOfRange); // "3"
-            // SkillRange overload กรองจาก battleField.enemies (global) แทนที่จะรับ enemies list เข้ามาตรงๆ
-            battleField.enemies = [van, mid, rear, out];
-        });
+            const d = new Damage(attacker, 'BA', ActionType.BA, field.enemiesInRange(SkillRange.Contact));
 
-        afterEach(() => {
-            battleField.enemies = [];
-        });
-
-        it('Contact (1) should hit only Vanguard', () => {
-            const d = new Damage(attacker, 'BA', ActionType.BA, SkillRange.Contact);
             expect(d.targets).toEqual([van]);
         });
 
-        it('Midrange (2) should hit Vanguard and Midrange', () => {
-            const d = new Damage(attacker, 'Skill', ActionType.Skill, SkillRange.Midrange);
-            expect(d.targets).toEqual([van, mid]);
-        });
+        it('should accept an empty result without error', () => {
+            const field = new BattleField();
 
-        it('Ranged (3) should hit Vanguard, Midrange, and Rearguard', () => {
-            const d = new Damage(attacker, 'Ult', ActionType.Ult, SkillRange.Ranged);
-            expect(d.targets).toEqual([van, mid, rear]);
-        });
+            const d = new Damage(attacker, 'BA', ActionType.BA, field.enemiesInRange(SkillRange.Global));
 
-        it('Global (999) should hit all positions including OutOfRange', () => {
-            const d = new Damage(attacker, 'Echo', ActionType.Echo, SkillRange.Global);
-            expect(d.targets).toEqual([van, mid, rear, out]);
-        });
-
-        it('None (0) should hit no enemies', () => {
-            const d = new Damage(attacker, 'BA', ActionType.BA, SkillRange.None);
             expect(d.targets).toEqual([]);
         });
 
-        it('should set energyGain when provided', () => {
-            const d = new Damage(attacker, 'Ult', ActionType.Ult, SkillRange.Global, 25, 12);
+        it('should still set energyGain when provided', () => {
+            const field = new BattleField();
+            const boss  = field.createEnemy('Boss');
+
+            const d = new Damage(attacker, 'Ult', ActionType.Ult, field.enemiesInRange(SkillRange.Global), 25, 12);
+
+            expect(d.targets).toEqual([boss]);
             expect(d.energyGain).toBe(25);
             expect(d.concentoEnergyGain).toBe(12);
         });

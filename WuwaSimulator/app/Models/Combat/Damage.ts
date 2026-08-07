@@ -1,7 +1,6 @@
-import { ActionType, ElementType, SkillRange, MultiplierType } from "../../Constants/Enum";
+import { ActionType, ElementType, MultiplierType } from "../../Constants/Enum";
 import { AllyUnit } from "../AllyUnit";
 import { EnemyUnit } from "../EnemyUnit";
-import { battleField } from "../../Simulator/BattleField";
 
 type SkillScaling = Record<MultiplierType, number>;
 
@@ -105,7 +104,11 @@ export class Damage {
         return this;
     }
 
-    // --- Overload 1: target เจาะจง (unit เดียวหรือหลาย unit) ---
+    /**
+     * target รับได้ทั้ง unit เดียวและหลาย unit
+     * ถ้าอยากยิงตาม SkillRange ให้กรองจาก battleField ก่อนแล้วค่อยส่งเข้ามา:
+     *   new Damage(unit, "BA1", ActionType.BA, timeline.battleField.enemiesInRange(SkillRange.Contact))
+     */
     constructor(
         attacker   : AllyUnit,
         name       : string,
@@ -113,42 +116,14 @@ export class Damage {
         target     : EnemyUnit | EnemyUnit[],
         energyGain?: number,
         concentoEnergyGain?: number
-    );
-
-    // --- Overload 2: SkillRange — กรองเป้าจาก battleField.enemies (global) ตาม position เอง ไม่ต้องแนบ enemies list มา ---
-    constructor(
-        attacker   : AllyUnit,
-        name       : string,
-        attackType : ActionType | ActionType[],
-        range      : SkillRange,
-        energyGain?: number,
-        concentoEnergyGain?: number
-    );
-
-    constructor(
-        attacker      : AllyUnit,
-        name          : string,
-        attackType    : ActionType | ActionType[],
-        targetOrRange : EnemyUnit | EnemyUnit[] | SkillRange,
-        energyGain?: number,
-        concentoEnergyGain?: number
     ) {
-        this.attacker      = attacker;
-        this.name          = name;
-        this.element       = attacker.elementType;
+        this.attacker       = attacker;
+        this.name           = name;
+        this.element        = attacker.elementType;
         this.attackTypeList = Array.isArray(attackType) ? attackType : [attackType];
         this.energyGain         = energyGain;
         this.concentoEnergyGain = concentoEnergyGain;
 
-        if (typeof targetOrRange === "string") {
-            // SkillRange path — กรอง battleField.enemies (global) ที่ position < range
-            this.targets = battleField.enemies.filter(e => Number(e.position) < Number(targetOrRange));
-        } else if (Array.isArray(targetOrRange)) {
-            // EnemyUnit[] path
-            this.targets = targetOrRange;
-        } else {
-            // Single EnemyUnit path
-            this.targets = [targetOrRange];
-        }
+        this.targets = Array.isArray(target) ? target : [target];
     }
 }
