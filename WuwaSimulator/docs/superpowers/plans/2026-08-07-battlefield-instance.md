@@ -161,13 +161,25 @@ describe('BattleField', () => {
         });
 
         it('should zero out stats that have no default value', () => {
+            // Sp ไม่มีใน defaultStats ของ AllyUnit (ต่างจาก CR/CD ที่ constructor ตั้งไว้ 5/150)
             const ally = new AllyUnit('Ally');
-            ally.setStat(StatsType.CR, 0.75);
+            ally.setStat(StatsType.Sp, 40);
             field.allies.push(ally);
 
             field.resetAllUnits();
 
-            expect(ally.getStats(StatsType.CR)).toBe(0);
+            expect(ally.getStats(StatsType.Sp)).toBe(0);
+        });
+
+        it('should keep AllyUnit built-in defaults (CR 5 / CD 150) after reset', () => {
+            const ally = new AllyUnit('Ally');
+            ally.setStat(StatsType.CR, 80);
+            field.allies.push(ally);
+
+            field.resetAllUnits();
+
+            expect(ally.getStats(StatsType.CR)).toBe(5);
+            expect(ally.getStats(StatsType.CD)).toBe(150);
         });
     });
 

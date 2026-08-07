@@ -1,8 +1,42 @@
-import { AllyUnit } from "../Models/AllyUnit";
+import type { AllyUnit } from "../Models/AllyUnit";
 import { EnemyUnit } from "../Models/EnemyUnit";
+import { SkillRange } from "../Constants/Enum";
 
-// battleField — global เดียวที่ทุกไฟล์ import แล้วเข้าถึงชุดเดียวกันได้เสมอ (ES module เป็น singleton อยู่แล้ว)
-// เก็บ ally/enemy ทั้งหมดในสนามตอนนี้ — CombatTimeline ผูกกับตัวนี้โดยตรง, Damage ก็อ่านจากตัวนี้แทนที่จะต้องรับ enemies list มาเอง
+/**
+ * BattleField — เก็บ ally/enemy ทั้งหมดในสนามตอนนี้
+ * 1 instance = 1 การต่อสู้ ที่แยกขาดจากกันสมบูรณ์ (CombatTimeline เป็นเจ้าของ)
+ */
+export class BattleField {
+    public allies : AllyUnit[]  = [];
+    public enemies: EnemyUnit[] = [];
+
+    /** สร้าง EnemyUnit (stats พื้นฐาน default อยู่แล้วใน class) แล้ว push เข้า enemies ให้เลย */
+    public createEnemy(name: string): EnemyUnit {
+        const enemy = new EnemyUnit(name);
+        this.enemies.push(enemy);
+        return enemy;
+    }
+
+    /**
+     * กรอง enemies ที่อยู่ในระยะของท่า — position น้อยกว่า range ถือว่าโดน
+     * SkillRange.None = "0" จึงคืน array ว่างเสมอ (ไม่มี position ไหนน้อยกว่า 0)
+     */
+    public enemiesInRange(range: SkillRange): EnemyUnit[] {
+        return this.enemies.filter(e => Number(e.position) < Number(range));
+    }
+
+    /** เรียกก่อนเริ่ม simulate รอบใหม่ — reset stats ของทุก unit กลับค่า default */
+    public resetAllUnits(): void {
+        for (const unit of [...this.allies, ...this.enemies]) {
+            unit.initDefaultStats();
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ⚠️ ของเดิม (global singleton) — เหลือไว้ชั่วคราวให้ Damage.ts ที่ยังไม่ย้าย compile ผ่าน
+//    จะถูกลบทิ้งใน Task 4 ของแผน refactor นี้ ห้ามเขียนโค้ดใหม่ที่ใช้ของพวกนี้
+// ─────────────────────────────────────────────────────────────
 export const battleField: {
     allies : AllyUnit[];
     enemies: EnemyUnit[];
@@ -11,15 +45,12 @@ export const battleField: {
     enemies: [],
 };
 
-// createEnemy — สร้าง EnemyUnit ด้วย stats พื้นฐาน (level/position default อยู่แล้วใน EnemyUnit) แล้วยัดเข้า battleField.enemies ให้เลย
 export function createEnemy(name: string): EnemyUnit {
     const enemy = new EnemyUnit(name);
     battleField.enemies.push(enemy);
     return enemy;
 }
 
-// resetAllUnits — เรียกก่อนเริ่ม simulate รอบใหม่ทุกครั้ง วน unit ทุกตัวใน battleField (ทั้ง allies/enemies)
-// แล้วสั่ง initDefaultStats() ให้ stats ของแต่ละตัวกลับไปเป็นค่า default ก่อนเริ่มรอบถัดไป
 export function resetAllUnits(): void {
     for (const unit of [...battleField.allies, ...battleField.enemies]) {
         unit.initDefaultStats();
