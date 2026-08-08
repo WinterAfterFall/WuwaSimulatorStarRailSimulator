@@ -2,6 +2,7 @@ import { CombatEvent } from "../Models/Combat/CombatEvent/CombatEvent";
 import { ActionEvent } from "../Models/Combat/CombatEvent/ActionEvent";
 import { BuffEndEvent } from "../Models/Combat/CombatEvent/BuffEndEvent";
 import { ChangeToAuto } from "../Models/Combat/CombatEvent/ChangeToAuto";
+import { GlobalLockChange } from "../Models/Combat/CombatEvent/GlobalLockChange";
 import { EnemyUnit } from "../Models/EnemyUnit";
 import { IndexedPriorityQueue } from "../Utils/IndexedPriorityQueue";
 import { TriggerBus } from "./TriggerBus";
@@ -36,7 +37,7 @@ export class BattleField {
     // ─────────────────────────────────────────────
 
     /** IPQ ที่เก็บ event ทั้งหมด — เรียงตาม frame (น้อย = ออกก่อน) */
-    private ipq: IndexedPriorityQueue<CombatEvent>;
+    private timeline: IndexedPriorityQueue<CombatEvent>;
 
     /** frame ปัจจุบันของ simulation (1 วิ = 60 frame) */
     public currentFrame: number = 0;
@@ -49,7 +50,7 @@ export class BattleField {
      *                   (default param ถูก evaluate ใหม่ทุกครั้งที่ `new` จึงได้ instance แยกกันเสมอ)
      */
     constructor(public triggerBus: TriggerBus = new TriggerBus()) {
-        this.ipq = new IndexedPriorityQueue<CombatEvent>((a, b) => {
+        this.timeline = new IndexedPriorityQueue<CombatEvent>((a, b) => {
             const diff = a.time - b.time;
             return diff !== 0 ? diff : a.priority - b.priority;
         });
@@ -95,26 +96,38 @@ export class BattleField {
     public schedule(event: CombatEvent, offset: number = 0): void {
         event.time = this.currentFrame + offset;
 
-        if (this.ipq.has(event.name)) {
-            this.ipq.update(event.name, event);
+        if (this.timeline.has(event.name)) {
+            this.timeline.update(event.name, event);
         } else {
-            this.ipq.push(event, event.name);
+            this.timeline.push(event, event.name);
         }
     }
 
     /**
-     * schedule ActionEvent (AttackActionEvent/BuffActionEvent) — ถ้ามี autoStartFrame จะ auto-schedule
-     * ChangeToAuto คู่กันให้เอง (ปลด GlobalLock กลางท่า) — duration/EndAction ถูกถอดออกไปแล้ว
-     * รอ combat event เกี่ยวกับการสลับตัวละครมาแทนที่
+     * schedule event พร้อม "ช่วงเวลาที่ GlobalLock ถูกล็อก" ครอบให้ในครั้งเดียว
+     *
+     * event เกิดที่ `currentFrame` เสมอ (คอมโบเริ่ม "เดี๋ยวนี้") จึงไม่มี offset ให้ใส่ —
+     * `duration` ทำหน้าที่เป็น offset ของ lock-off อยู่แล้ว ท่าที่ต้องเริ่มช้ากว่านี้ให้ใช้
+     * `schedule(event, offset)` ตรงๆ แทน (ท่ากลางคอมโบทำแบบนั้นอยู่)
+     *
+     * push `GlobalLockChange` คู่หนึ่งคร่อมหัวท้ายให้เอง:
+     *   - value 1 ที่ frame เดียวกับ event  → ล็อก
+     *   - value 0 ที่ frame + duration      → ปลด
+     *
+     * ออก event คู่จากที่เดียวเสมอ = ไม่มีทางล็อกแล้วลืมปลด ซึ่งเป็นบั๊กที่เคยเกิดจริงมาแล้ว
+     * 2 รอบสมัยที่ lock ถูกกดผ่าน `isManual` แล้วรอ EndAction ที่อยู่กันคนละที่มาปลด
+     *
+     * @throws ถ้า duration ติดลบ — ช่วงล็อกที่จบก่อนเริ่มไม่มีความหมาย ให้ดังตั้งแต่ตอน schedule
+     *         ดีกว่าปล่อยให้ lock ค้างเงียบๆ ตอนรัน
      */
-    public scheduleStartCombo(event: ActionEvent, duration?: number, autoStartFrame?: number, offset: number = 0): void {
-        event.time = this.currentFrame + offset;
-        this.ipq.push(event, event.name);
-
-        if (autoStartFrame !== undefined) {
-            const changeToAuto = new ChangeToAuto(`${event.name}-change-to-auto`, this.onFieldChar);
-            this.schedule(changeToAuto, offset + autoStartFrame);
+    public scheduleStartCombo(event: CombatEvent, duration: number): void {
+        if (duration < 0) {
+            throw new Error(`Invalid lock duration for "${event.name}": ${duration}`);
         }
+
+        this.schedule(event);
+        this.schedule(new GlobalLockChange(`${event.name}-lock-on`,  1));
+        this.schedule(new GlobalLockChange(`${event.name}-lock-off`, 0), duration);
     }
 
     /**
@@ -138,7 +151,7 @@ export class BattleField {
      * ส่งตัวเองเข้าไปใน execute ด้วย — event จึงเอื้อมถึง roster/triggerBus ได้โดยไม่ต้องแนบมาตอนสร้าง
      */
     public tick(): CombatEvent | undefined {
-        const event = this.ipq.pop();
+        const event = this.timeline.pop();
         if (!event) return undefined;
 
         this.currentFrame = event.time;
@@ -158,22 +171,22 @@ export class BattleField {
 
     /** run event ทั้งหมดตามลำดับ frame จนหมดคิว */
     public runAll(): void {
-        while (!this.ipq.isEmpty) {
+        while (!this.timeline.isEmpty) {
             this.tick();
         }
     }
 
     /** ดู event ถัดไปโดยไม่ pop */
     public peek(): CombatEvent | undefined {
-        return this.ipq.peek();
+        return this.timeline.peek();
     }
 
     public get isEmpty(): boolean {
-        return this.ipq.isEmpty;
+        return this.timeline.isEmpty;
     }
 
     public get size(): number {
-        return this.ipq.size;
+        return this.timeline.size;
     }
 
     // ─────────────────────────────────────────────

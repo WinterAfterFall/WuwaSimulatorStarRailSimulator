@@ -5,6 +5,7 @@ import { EnemyUnit } from '../../../Models/EnemyUnit';
 import { Damage } from '../../../Models/Combat/Damage';
 import { CombatEvent } from '../../../Models/Combat/CombatEvent/CombatEvent';
 import { DamageEvent } from '../../../Models/Combat/CombatEvent/DamageEvent';
+import { GlobalLockChange } from '../../../Models/Combat/CombatEvent/GlobalLockChange';
 import { EnemyPosition, SkillRange, StatsType, ActionType, ElementType, TriggerEvent } from '../../../Constants/Enum';
 
 function makeEnemy(name: string, position: EnemyPosition): EnemyUnit {
@@ -296,6 +297,92 @@ describe('BattleField', () => {
 
             expect(attacker.energy).toBe(20);
             expect(listener).toHaveBeenCalledWith({ unit: attacker, amount: 20, actionType: ActionType.Skill });
+        });
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // GlobalLockChange + scheduleStartCombo
+    // ค้ำสัญญาเดียวที่สำคัญที่สุดของ lock: ล็อกแล้ว "ต้องมีวันปลด" เสมอ
+    // ─────────────────────────────────────────────────────────────
+    describe('GlobalLockChange', () => {
+        it('should set isGlobalLocked to true when value is 1', () => {
+            field.schedule(new GlobalLockChange('lock-on', 1));
+            field.tick();
+
+            expect(field.isGlobalLocked).toBe(true);
+        });
+
+        it('should set isGlobalLocked to false when value is 0', () => {
+            field.isGlobalLocked = true;
+
+            field.schedule(new GlobalLockChange('lock-off', 0));
+            field.tick();
+
+            expect(field.isGlobalLocked).toBe(false);
+        });
+    });
+
+    describe('scheduleStartCombo', () => {
+        const makeEvent = (name: string) => new (class extends CombatEvent {})(name);
+
+        it('should schedule the event itself plus a lock-on and a lock-off event', () => {
+            field.scheduleStartCombo(makeEvent('combo'), 100);
+
+            expect(field.size).toBe(3);
+        });
+
+        // ลำดับในเฟรมเดียวกันสำคัญ: ถ้า event หลักออกก่อน lock-on
+        // do-while ของ RotationDirector จะเห็น locked=false แล้วหลุดไปดึง action ถัดไปทันที
+        it('should turn the lock on before the event it wraps', () => {
+            field.scheduleStartCombo(makeEvent('combo'), 100);
+
+            expect(field.peek()!.name).toBe('combo-lock-on');
+
+            field.tick();
+            expect(field.isGlobalLocked).toBe(true);
+        });
+
+        it('should lock at the event frame and unlock at frame + duration', () => {
+            field.scheduleStartCombo(makeEvent('combo'), 100);
+
+            field.tick();                                    // lock-on ที่ f0
+            expect(field.isGlobalLocked).toBe(true);
+
+            field.runAll();
+            expect(field.currentFrame).toBe(100);            // ปลดที่ f0 + 100 พอดี
+            expect(field.isGlobalLocked).toBe(false);
+        });
+
+        // ปลดหลังสุดของเฟรม — event อื่นที่ลงพอดีเฟรมจบต้องได้ทำงานก่อน lock จะเปิด
+        it('should unlock after every other event landing on the same frame', () => {
+            field.scheduleStartCombo(makeEvent('combo'), 100);
+            field.schedule(makeEvent('late'), 100);
+
+            field.runAll();
+
+            expect(field.isGlobalLocked).toBe(false);
+        });
+
+        // ไม่มี offset ให้ใส่แล้ว — event ลงที่ currentFrame เสมอ
+        // คอมโบที่เริ่มกลางเกมจึงเลื่อนตาม currentFrame เองโดยอัตโนมัติ
+        it('should anchor the lock window to currentFrame at call time', () => {
+            field.schedule(makeEvent('warmup'), 30);
+            field.runAll();                                  // เดินเวลาไปที่ f30 ก่อน
+
+            field.scheduleStartCombo(makeEvent('combo'), 100);
+            field.runAll();
+
+            expect(field.currentFrame).toBe(130);            // 30 + 100
+            expect(field.isGlobalLocked).toBe(false);
+        });
+
+        it('should never leave the lock on after the queue drains', () => {
+            field.scheduleStartCombo(makeEvent('a'), 50);
+            field.scheduleStartCombo(makeEvent('b'), 25);
+
+            field.runAll();
+
+            expect(field.isGlobalLocked).toBe(false);
         });
     });
 });
