@@ -1,7 +1,11 @@
 import { BattleField } from '../../../Simulator/BattleField';
+import { TriggerBus } from '../../../Simulator/TriggerBus';
 import { AllyUnit } from '../../../Models/AllyUnit';
 import { EnemyUnit } from '../../../Models/EnemyUnit';
-import { EnemyPosition, SkillRange, StatsType } from '../../../Constants/Enum';
+import { Damage } from '../../../Models/Combat/Damage';
+import { CombatEvent } from '../../../Models/Combat/CombatEvent/CombatEvent';
+import { DamageEvent } from '../../../Models/Combat/CombatEvent/DamageEvent';
+import { EnemyPosition, SkillRange, StatsType, ActionType, ElementType, TriggerEvent } from '../../../Constants/Enum';
 
 function makeEnemy(name: string, position: EnemyPosition): EnemyUnit {
     const e = new EnemyUnit(name);
@@ -179,6 +183,119 @@ describe('BattleField', () => {
 
             expect(fieldA.enemiesInRange(SkillRange.Global)).toEqual([vanA]);
             expect(fieldB.enemiesInRange(SkillRange.Global)).toEqual([vanB]);
+        });
+
+        it('should not share a TriggerBus between two BattleFields', () => {
+            const fieldA = new BattleField();
+            const fieldB = new BattleField();
+
+            expect(fieldA.triggerBus).toBeInstanceOf(TriggerBus);
+            expect(fieldA.triggerBus).not.toBe(fieldB.triggerBus);
+        });
+    });
+
+    // ─────────────────────────────────────────────
+    // ทรัพยากรที่ผู้ตีได้จากท่า — ย้ายออกมาจาก calculateDamage
+    // เพราะเป็นคนละเรื่องกับสูตรดาเมจ และตรงนี้มี triggerBus อยู่แล้ว
+    // ─────────────────────────────────────────────
+    describe('applyResourceGain', () => {
+        let attacker: AllyUnit;
+        let enemy   : EnemyUnit;
+
+        beforeEach(() => {
+            attacker = new AllyUnit('Attacker');
+            attacker.elementType = ElementType.Spectro;
+            attacker.maxEnergy   = 100;
+            attacker.energy      = 0;
+
+            enemy = new EnemyUnit('Boss');
+        });
+
+        it('should add energyGain to the attacker', () => {
+            field.applyResourceGain(new Damage(attacker, 'Skill', ActionType.Skill, enemy, 20));
+
+            expect(attacker.energy).toBe(20);
+        });
+
+        it('should emit EnergyIncrease on its own triggerBus so passives can react', () => {
+            const listener = jest.fn();
+            field.triggerBus.on(TriggerEvent.EnergyIncrease, listener);
+
+            field.applyResourceGain(new Damage(attacker, 'Ult', ActionType.Ult, enemy, 15));
+
+            expect(listener).toHaveBeenCalledWith({ unit: attacker, amount: 15, actionType: ActionType.Ult });
+        });
+
+        it('should add concentoEnergyGain to the attacker', () => {
+            attacker.concentoEnergy = 5;
+
+            field.applyResourceGain(new Damage(attacker, 'Skill', ActionType.Skill, enemy, undefined, 3));
+
+            expect(attacker.concentoEnergy).toBe(8);
+        });
+
+        it('should accumulate gauges onto whatever the attacker already had', () => {
+            attacker.gauges.set('Spectro', 10);
+
+            field.applyResourceGain(
+                new Damage(attacker, 'BA', ActionType.BA, enemy).addGauges(['Spectro', 4], ['Havoc', 7])
+            );
+
+            expect(attacker.gauges.get('Spectro')).toBe(14);
+            expect(attacker.gauges.get('Havoc')).toBe(7);
+        });
+
+        it('should do nothing when the damage carries no resource gain at all', () => {
+            const listener = jest.fn();
+            field.triggerBus.on(TriggerEvent.EnergyIncrease, listener);
+
+            field.applyResourceGain(new Damage(attacker, 'BA', ActionType.BA, enemy));
+
+            expect(attacker.energy).toBe(0);
+            expect(listener).not.toHaveBeenCalled();
+        });
+    });
+
+    // ─────────────────────────────────────────────
+    // สนามรบส่งตัวเองเข้าไปตอน execute — event จึงเอื้อมถึง roster/triggerBus
+    // ได้โดยไม่ต้องแนบอะไรมาตอนสร้าง (เดิม DamageEvent ต้องรับ triggerBus เอง ลืมส่ง = no-op เงียบ)
+    // ─────────────────────────────────────────────
+    describe('execute receives the battleField', () => {
+        class SpyEvent extends CombatEvent {
+            public seen: BattleField | null = null;
+
+            constructor(name: string) {
+                super(name);
+                this.execute = (battleField) => { this.seen = battleField; };
+            }
+        }
+
+        it('should hand itself to the event being executed', () => {
+            const event = new SpyEvent('spy');
+            field.schedule(event);
+
+            field.tick();
+
+            expect(event.seen).toBe(field);
+        });
+
+        it('should let a DamageEvent grant resources without being handed a TriggerBus', () => {
+            const attacker = new AllyUnit('Attacker');
+            attacker.elementType = ElementType.Spectro;
+            attacker.maxEnergy   = 100;
+            attacker.energy      = 0;
+            const enemy = field.createEnemy('Boss');
+
+            const listener = jest.fn();
+            field.triggerBus.on(TriggerEvent.EnergyIncrease, listener);
+
+            const damage = new Damage(attacker, 'Skill', ActionType.Skill, enemy, 20);
+            field.schedule(new DamageEvent('skill-hit', damage, attacker));
+
+            field.tick();
+
+            expect(attacker.energy).toBe(20);
+            expect(listener).toHaveBeenCalledWith({ unit: attacker, amount: 20, actionType: ActionType.Skill });
         });
     });
 });

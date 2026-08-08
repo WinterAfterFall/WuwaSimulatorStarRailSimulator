@@ -2,23 +2,7 @@ import { Unit } from "./Unit";
 import { StatsType, ElementType, WeaponType, ActionState } from "../Constants/Enum";
 import { Queue } from "../Utils/queue";
 import { RotationAction } from "./Combat/RotationAction";
-import { CombatEvent } from "./Combat/CombatEvent/CombatEvent";
-import type { TriggerBus } from "../Simulator/TriggerBus";
 import type { BattleField } from "../Simulator/BattleField";
-import type { ActionEvent } from "./Combat/CombatEvent/ActionEvent";
-import type { BuffStartEvent } from "./Combat/CombatEvent/BuffStartEvent";
-
-/** Structural type — หลีกเลี่ยง circular import กับ CombatTimeline */
-export type TimelineRef = {
-    schedule(event: CombatEvent, offset?: number): void;
-    scheduleStartCombo(event: ActionEvent, duration?: number, autoStartFrame?: number, offset?: number): void;
-    scheduleBuffStart(event: BuffStartEvent, duration?: number, offset?: number): void;
-    readonly currentFrame: number;
-    readonly triggerBus: TriggerBus;
-    readonly battleField: BattleField;
-    readonly onFieldChar: AllyUnit | null;
-    isGlobalLocked: boolean;
-};
 
 export class AllyUnit extends Unit {
 
@@ -39,7 +23,7 @@ export class AllyUnit extends Unit {
 
     // --- Rotation Definitions ---
     /** key = ชื่อ rotation, value = factory รับ timeline แล้วคืน Queue<RotationAction> */
-    public rotations: Map<string, (timeline: TimelineRef) => Queue<RotationAction>> = new Map();
+    public rotations: Map<string, (battleField: BattleField) => Queue<RotationAction>> = new Map();
 
     // --- Energy ---
     public energy    : number = 0;

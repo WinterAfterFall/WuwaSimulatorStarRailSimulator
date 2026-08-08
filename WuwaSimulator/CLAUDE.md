@@ -8,6 +8,27 @@
 
 ---
 
+## หลักการออกแบบ — อ่านง่ายและแก้ทีหลังได้ มาก่อนเสมอ
+
+> **เป้าหมายลำดับแรกคือโค้ดที่คนอ่านแล้วเข้าใจทันที และแก้ทีหลังได้โดยไม่กลัวพัง**
+> ความเร็วและความ "ถูกหลัก" ทางสถาปัตยกรรม เป็นเรื่องรอง — optimize ทีหลังเมื่อมีหลักฐานว่าช้าจริง
+
+สิ่งที่หลักการนี้แปลว่าเวลาต้องตัดสินใจ
+
+| เจอทางเลือกแบบนี้ | ให้เลือก |
+|---|---|
+| แยกคลาสให้ layering สวย vs รวมไว้ก้อนเดียวที่อ่านรวดเดียวจบ | **รวม** ถ้าทุกที่ที่ใช้ตัวหนึ่งก็ต้องใช้อีกตัวอยู่แล้ว การแยกที่ไม่มีใครได้ประโยชน์วันนี้ = ต้นทุนเปล่า |
+| เช็คประเภทเพื่อจัดรูป argument vs ส่งเหมือนกันหมดทุกครั้ง | **ส่งเหมือนกันหมด** — signature เดียวกันทั้งหมด ทำให้ caller ไม่ต้องรู้จัก subclass และเพิ่มชนิดใหม่ไม่ต้องกลับมาแก้ที่เดิม |
+| เพิ่ม abstraction เผื่ออนาคต vs เขียนตรง ๆ ก่อน | **เขียนตรง ๆ** (YAGNI) รอจนมีคนใช้จริงค่อยยก |
+| optimize ให้เร็วขึ้น vs เขียนให้อ่านง่าย | **อ่านง่าย** จนกว่าจะวัดแล้วพบว่าช้าจริงตรงจุดนั้น |
+
+**สิ่งที่ห้ามแลกทิ้งเพื่อความ simple** — สองข้อนี้คือสิ่งที่ทำให้ "แก้ทีหลังได้" เป็นจริง ไม่ใช่ของฟุ่มเฟือย
+
+1. **test ต้องเขียวเสมอ** และงานใหม่ทุกชิ้นเขียน test ก่อน (ดูรอบการทำงานใน `docs/superpowers/`) — test คือสิ่งเดียวที่ทำให้กล้ารื้อโครงทีหลัง
+2. **ห้าม state รั่วข้ามรอบ simulate** — ไม่มี global mutable, ทุกอย่างผูกกับ instance ที่มีอายุชัดเจน (เหตุผลเต็มอยู่ใน `docs/superpowers/summaries/2026-08-07-battlefield-instance-summary.md`)
+
+---
+
 ## คำสั่งหลัก (`package.json` + `jest.config.js`)
 
 | คำสั่ง | ทำอะไร |
@@ -68,10 +89,10 @@ app/
 │       └── ChangeToAutoService.ts   # notifyChangeToAuto(timeline, autoStartFrame, actionName?) — schedule NotificationEvent(ChangeToAuto), event.execute ปล่อยแค่ isGlobalLocked (unit ยัง Busy)
 │
 ├── Simulator/
-│   ├── CombatTimeline.ts            # จัดการ event ด้วย IPQ, currentFrame, lock state, ถือ TriggerBus กลาง — ไม่มี allies/enemies แล้ว เข้าถึงผ่าน battleField โดยตรง
-│   ├── BattleField.ts               # class BattleField (allies/enemies + createEnemy/enemiesInRange/resetAllUnits) — CombatTimeline ถือไว้ 1 ตัวต่อ 1 การต่อสู้
+│   ├── BattleField.ts               # การต่อสู้ 1 ครั้ง — roster (allies/enemies/onFieldChar) + คิว event (IPQ/currentFrame/isGlobalLocked) + applyResourceGain รวมอยู่ในคลาสเดียว
+│   ├── Simulate.ts                  # ตัวจัดการรอบการรัน — ถือ BattleField, addAlly/spawnEnemy/increaseEnergy/run
 │   ├── RotationBuilder.ts           # fluent builder → สร้าง Queue<RotationAction>
-│   ├── RotationDirector.ts          # ขับ setup/loop queue → execute action → tick timeline
+│   ├── RotationDirector.ts          # ขับ setup/loop queue → execute action → tick battleField
 │   └── TriggerBus.ts                # pub/sub กลาง — ตัวละคร register listener ต่อ TriggerEvent แล้ว engine emit ตอน trigger จริง
 │
 ├── Utils/
@@ -267,13 +288,35 @@ CombatTimeline.triggerBus : TriggerBus                    ← instance เดี
 
 ---
 
-## Battle State (`Simulator/BattleField.ts`)
-- `BattleField` เป็น **class** — 1 instance = 1 การต่อสู้ ไม่ใช่ global singleton แล้ว
-- `CombatTimeline` เป็นเจ้าของ: `public battleField: BattleField = new BattleField()` (สร้างใน field initializer เหมือน `triggerBus`) → `new CombatTimeline()` 1 ครั้ง = สนามรบใหม่ที่แยกขาด ไม่มี state รั่วข้ามรอบ simulate หรือข้าม test case อีก
-- method: `createEnemy(name)` สร้าง+push เข้า `enemies` / `enemiesInRange(range)` กรอง `enemies` ที่ `position < range` (`SkillRange.None = "0"` จึงคืน array ว่างเสมอ) / `resetAllUnits()` วน unit ทุกตัวเรียก `initDefaultStats()`
-- `TimelineRef` มี `readonly battleField: BattleField` — rotation เข้าถึงผ่าน `timeline.battleField` ได้เลย (ใช้ `import type` เลี่ยง circular import แบบเดียวกับ `TriggerBus`)
-- `Damage` **ไม่รู้จัก `BattleField` แล้ว** — รับเฉพาะ `EnemyUnit | EnemyUnit[]` คนเรียกกรองเองก่อน: `new Damage(unit, "BA1", ActionType.BA, timeline.battleField.enemiesInRange(SkillRange.Contact))`
-- ⚠️ ยังไม่มีจุดไหนใน `manualBuilder.ts` เรียก `createEnemy()` เลย — Test1/Test2 ไม่ได้ใช้ `Damage`/`DamageEvent` (แค่ log) และยังไม่มีใครอ่าน `battleField.allies` เลยสักจุด (เก็บ field ไว้รอตอนทำบัพทีม)
+## BattleField — การต่อสู้ 1 ครั้ง (`Simulator/BattleField.ts`)
+
+`BattleField` กับ `CombatTimeline` **ถูกรวมเป็นคลาสเดียวแล้ว** (`CombatTimeline.ts` ถูกลบทิ้ง) เพราะทุกจุดที่ใช้ตัวหนึ่งก็ต้องใช้อีกตัวเสมอ — แยกไว้แล้วไม่มีใครได้ประโยชน์ มีแต่ต้องส่งต่อกันไปมา
+
+| กลุ่ม | member |
+|---|---|
+| ใครอยู่ในสนาม | `allies`, `enemies`, `onFieldChar`, `createEnemy()`, `enemiesInRange()`, `resetAllUnits()` |
+| เวลาและคิว event | `currentFrame`, `isGlobalLocked`, `schedule()`, `scheduleStartCombo()`, `scheduleBuffStart()`, `tick()`, `runAll()`, `peek()`, `isEmpty`, `size` |
+| อื่นๆ | `triggerBus` (รับทาง constructor แบบมี default), `applyResourceGain()` |
+
+- **1 instance = 1 การต่อสู้ที่แยกขาด** — ไม่ใช่ global singleton แล้ว ไม่มี state รั่วข้ามรอบ simulate หรือข้าม test case
+- `enemiesInRange(range)` กรอง `enemies` ที่ `position < range` (`SkillRange.None = "0"` จึงคืน array ว่างเสมอ)
+- `resetAllUnits()` วน unit ทุกตัวเรียก `initDefaultStats()` — **ตัวละครที่ `setStat()` ต้อง `setDefaultStat()` คู่กันเสมอ** ไม่งั้นค่าจะกลายเป็น 0 ตั้งแต่รอบแรก
+- `applyResourceGain(damage)` จ่าย energy/concento/gauge ให้ผู้ตี — แยกออกมาจาก `calculateDamage` เพราะเป็นคนละเรื่องกับสูตรดาเมจ
+- **ไม่มี `TimelineRef` แล้ว** — `AllyUnit.rotations` รับ `BattleField` ตรงๆ (`import type` เลี่ยง circular import)
+- `Damage` ไม่รู้จัก `BattleField` — รับเฉพาะ `EnemyUnit | EnemyUnit[]` คนเรียกกรองเองก่อน: `new Damage(unit, "BA1", ActionType.BA, battleField.enemiesInRange(SkillRange.Contact))`
+- ⚠️ ยังไม่มีจุดไหนใน `manualBuilder.ts` เรียก `spawnEnemy()` เลย — Test1/Test2 ไม่ได้ใช้ `Damage`/`DamageEvent` (แค่ log)
+
+## Simulate (`Simulator/Simulate.ts`)
+ตัวจัดการ **รอบการรัน** — `BattleField` คือสถานะระหว่างสู้ ส่วน `Simulate` คือคนประกอบและสั่งเริ่ม
+
+```ts
+const sim   = new Simulate();
+const unit  = sim.addAlly(new AllyUnit("Mornye"));   // ตัวแรกกลายเป็น onFieldChar ให้เอง
+const enemy = sim.spawnEnemy("Dummy");
+const loops = sim.run(setupQueue, loopQueue, maxLoops);   // resetAllUnits ก่อนเสมอ
+```
+
+`sim.triggerBus` เป็น getter ที่ชี้ไปที่ `battleField.triggerBus` ตัวเดียวกัน ไม่ใช่ instance ที่สอง
 
 ---
 

@@ -4,8 +4,6 @@ import { EnemyUnit } from "../../Models/EnemyUnit";
 import { Unit } from "../../Models/Unit";
 import { StatsType, ActionType, ElementType } from "../../Constants/Enum";
 import { MultiplierType } from "../../Constants/Enum";
-import { TriggerBus } from "../../Simulator/TriggerBus";
-import { increaseEnergy } from "../Combat/EnergyService";
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -182,7 +180,12 @@ function applyDamageFormula(
 // calculateDamage (public API)
 // ─────────────────────────────────────────────────────────────
 
-export function calculateDamage(damage: Damage, triggerBus: TriggerBus): void {
+/**
+ * คำนวณดาเมจอย่างเดียว ไม่แตะ state ของผู้ตีเลย
+ * ทรัพยากรที่ได้จากท่า (energy/concento/gauge) เป็นหน้าที่ของ `CombatTimeline.applyResourceGain()`
+ * ซึ่ง `DamageEvent` เรียกต่อให้เองตอน execute
+ */
+export function calculateDamage(damage: Damage): void {
     const attacker      = damage.attacker;
     const attackerStats = computeAttackerStats(attacker, damage);
 
@@ -191,16 +194,5 @@ export function calculateDamage(damage: Damage, triggerBus: TriggerBus): void {
         const result      = applyDamageFormula(damage, attackerStats, targetStats);
 
         console.log(`[Damage] ${attacker.name} ตี ${target.name}: ${result.toFixed(2)}`);
-    }
-
-    // Apply resource gains to attacker
-    if (damage.energyGain !== undefined) {
-        increaseEnergy(attacker, damage.energyGain, triggerBus, damage.attackTypeList[0]);
-    }
-    if (damage.concentoEnergyGain !== undefined) {
-        attacker.concentoEnergy += damage.concentoEnergyGain;
-    }
-    for (const [name, value] of damage.gauges) {
-        attacker.gauges.set(name, (attacker.gauges.get(name) ?? 0) + value);
     }
 }

@@ -1,33 +1,30 @@
 import { AllyUnit } from "./Models/AllyUnit";
 import { setupTest1 } from "./Data/Characters/Test1";
 import { setupTest2 } from "./Data/Characters/Test2";
-import { CombatTimeline } from "./Simulator/CombatTimeline";
-import { RotationDirector } from "./Simulator/RotationDirector";
+import { Simulate } from "./Simulator/Simulate";
 import { RotationAction } from "./Models/Combat/RotationAction";
 import { Queue } from "./Utils/queue";
 
 const F = 60; // 1 วินาที = 60 frame
 
 // ─────────────────────────────────────────────────────────────
-// 1. สร้าง Unit จาก setup function
+// manualBuilder — ซีนตัวอย่างสำหรับรันด้วยมือ (dev test version)
+// การต่อสายทั้งหมดอยู่ใน Simulate แล้ว ไฟล์นี้เหลือแค่ "ใครอยู่ในสนาม ตีท่าอะไรบ้าง"
 // ─────────────────────────────────────────────────────────────
-const test1 = new AllyUnit("Test1");
+const sim = new Simulate();
+
+// addAlly ตัวแรกกลายเป็น onFieldChar ให้เอง ไม่ต้องตั้งมือ
+const test1 = sim.addAlly(new AllyUnit("Test1"));
 setupTest1(test1);
 test1.isOnField = true;
 
-const test2 = new AllyUnit("Test2");
+const test2 = sim.addAlly(new AllyUnit("Test2"));
 setupTest2(test2);
 
 // ─────────────────────────────────────────────────────────────
-// 2. สร้าง CombatTimeline
-// ─────────────────────────────────────────────────────────────
-const timeline = new CombatTimeline();
-timeline.onFieldChar = test1;
-
-// ─────────────────────────────────────────────────────────────
-// 3. รวม rotation ของ test1 + test2 เข้า queue เดียว (factory → Queue ใหม่)
-//    - Setup queue: ใช้ครั้งเดียวตอนเปิดฉาก (Burst)
-//    - Loop queue : วนซ้ำตาม maxLoops (Standard)
+// รวม rotation ของ test1 + test2 เข้า queue เดียว (factory → Queue ใหม่)
+//   - setupQueue: ใช้ครั้งเดียวตอนเปิดฉาก (Burst)
+//   - loopQueue : วนซ้ำตาม maxLoops (Standard)
 // ─────────────────────────────────────────────────────────────
 function mergeQueues(...queues: Queue<RotationAction>[]): Queue<RotationAction> {
     const merged = new Queue<RotationAction>();
@@ -37,18 +34,16 @@ function mergeQueues(...queues: Queue<RotationAction>[]): Queue<RotationAction> 
     return merged;
 }
 
-const setupQueue = mergeQueues(test1.rotations.get("Burst")!(timeline), test2.rotations.get("Burst")!(timeline));
-const loopQueue  = mergeQueues(test1.rotations.get("Standard")!(timeline), test2.rotations.get("Standard")!(timeline));
+const setupQueue = mergeQueues(test1.rotations.get("Burst")!(sim.battleField),    test2.rotations.get("Burst")!(sim.battleField));
+const loopQueue  = mergeQueues(test1.rotations.get("Standard")!(sim.battleField), test2.rotations.get("Standard")!(sim.battleField));
+const maxLoops   = 2;
 
 // ─────────────────────────────────────────────────────────────
-// 4. RotationDirector — ขับ setupQueue ก่อน แล้ววน loopQueue ตาม maxLoops
-// ─────────────────────────────────────────────────────────────
-const maxLoops = 2;
-const director = new RotationDirector(timeline, setupQueue, loopQueue, maxLoops);
-
-// ─────────────────────────────────────────────────────────────
-// 5. รัน Simulation
+// รัน
 // ─────────────────────────────────────────────────────────────
 console.log(`=== Combat Start — setup=[${setupQueue.toArray().map(a => a.name).join(", ")}], loop=[${loopQueue.toArray().map(a => a.name).join(", ")}], maxLoops=${maxLoops} ===\n`);
-director.run();
-console.log(`\n=== Combat End (frame=${timeline.currentFrame}, t=${(timeline.currentFrame / F).toFixed(2)}s, loops completed=${director.currentLoopCount}) ===`);
+
+const loopsCompleted = sim.run(setupQueue, loopQueue, maxLoops);
+
+const frame = sim.battleField.currentFrame;
+console.log(`\n=== Combat End (frame=${frame}, t=${(frame / F).toFixed(2)}s, loops completed=${loopsCompleted}) ===`);

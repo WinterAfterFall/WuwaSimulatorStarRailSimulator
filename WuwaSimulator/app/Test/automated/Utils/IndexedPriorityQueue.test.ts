@@ -1,4 +1,4 @@
-import { IndexedPriorityQueue } from '../../../Utils/indexedPriorityQueue';
+import { IndexedPriorityQueue } from '../../../Utils/IndexedPriorityQueue';
 
 describe('IndexedPriorityQueue', () => {
     let pq: IndexedPriorityQueue<number>;

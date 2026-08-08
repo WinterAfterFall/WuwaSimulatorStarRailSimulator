@@ -1,4 +1,4 @@
-import { IndexedPriorityQueue } from "../../Utils/indexedPriorityQueue"; // เปลี่ยน path ให้ตรงกับไฟล์ของคุณ
+import { IndexedPriorityQueue } from "../../Utils/IndexedPriorityQueue"; // เปลี่ยน path ให้ตรงกับไฟล์ของคุณ
 
 // 1. จำลองข้อมูล Unit ในเกม
 interface BattleUnit {
@@ -48,3 +48,20 @@ function runAdvancedTest() {
     console.log("\n[Test 4] Verifying order after Chixia's buff...");
     
     const p1 = turnQueue.pop(); // Expected: Chixia (40)
+    console.log(`1st: ${p1?.name} (AV ${p1?.actionValue}) — Expected: Chixia (AV 40)`);
+
+    const p2 = turnQueue.pop(); // Expected: Verina (50)
+    console.log(`2nd: ${p2?.name} (AV ${p2?.actionValue}) — Expected: Verina (AV 50)`);
+
+    // AV เท่ากันทั้งคู่ (100) → comparator ตัดสินด้วย level มากไปน้อย
+    const p3 = turnQueue.pop(); // Expected: Yangyang (Lv90)
+    console.log(`3rd: ${p3?.name} (Lv ${p3?.level}) — Expected: Yangyang (Lv 90)`);
+
+    const p4 = turnQueue.pop(); // Expected: Rover (Lv80)
+    console.log(`4th: ${p4?.name} (Lv ${p4?.level}) — Expected: Rover (Lv 80)`);
+
+    console.log(`\nQueue Size: ${turnQueue.size} (Expected: 0)`);
+    console.log("--- ✅ Advanced IPQ Battle Test Done ---");
+}
+
+runAdvancedTest();

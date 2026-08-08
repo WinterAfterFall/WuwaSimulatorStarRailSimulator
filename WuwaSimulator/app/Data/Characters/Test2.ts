@@ -16,6 +16,9 @@ export function setupTest2(unit: AllyUnit): void {
     unit.weaponType  = WeaponType.Gauntlets;
     unit.maxEnergy   = 150;
 
+    // ลง defaultStats คู่กันเสมอ — ดูเหตุผลใน Test1.ts
+    unit.setDefaultStat(StatsType.CR, 0.05);
+    unit.setDefaultStat(StatsType.CD, 1.5);
     unit.setStat(StatsType.CR, 0.05);
     unit.setStat(StatsType.CD, 1.5);
 

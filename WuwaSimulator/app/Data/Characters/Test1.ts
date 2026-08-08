@@ -15,6 +15,10 @@ export function setupTest1(unit: AllyUnit): void {
     unit.weaponType  = WeaponType.Sword;
     unit.maxEnergy   = 100;
 
+    // ต้องลง defaultStats คู่กับ stats เสมอ — resetAllUnits() ก่อนเริ่มรอบใหม่ set ทุก key ใน stats
+    // เป็น 0 ก่อนแล้วค่อยเอา defaultStats ทับ ถ้าไม่ลงไว้ค่าจะหายไปเงียบๆ ตั้งแต่รอบแรก
+    unit.setDefaultStat(StatsType.CR, 0.05);
+    unit.setDefaultStat(StatsType.CD, 1.5);
     unit.setStat(StatsType.CR, 0.05);
     unit.setStat(StatsType.CD, 1.5);
 
