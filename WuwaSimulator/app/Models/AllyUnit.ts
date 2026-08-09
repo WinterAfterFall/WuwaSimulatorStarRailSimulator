@@ -25,6 +25,20 @@ export class AllyUnit extends Unit {
     /** key = ชื่อ rotation, value = factory รับ timeline แล้วคืน Queue<RotationAction> */
     public rotations: Map<string, (battleField: BattleField) => Queue<RotationAction>> = new Map();
 
+    /**
+     * rotation ของตัวนี้ถูกสั่งไปแล้วกี่ครั้ง — **นับเฉพาะของ unit ตัวนี้**
+     * (คนละเรื่องกับ `RotationDirector.currentLoopCount` ที่นับรอบของ loopQueue ทั้งทีม)
+     *
+     * เพิ่มค่าตอน action เริ่ม execute จริง ก่อน schedule อะไรลงคิว — ระหว่างรอบแรกจึงอ่านได้ `1`
+     * ตรงกับคำว่า "ครั้งที่ 1" ไม่ใช่ 0
+     *
+     * ใช้เขียน rotation ที่พฤติกรรมต่างกันตามรอบ เช่น
+     * `if (unit.rotationCount === 1) { ...เปิดด้วย Ult... } else { ...คอมโบปกติ... }`
+     *
+     * ถูก reset เป็น 0 ทุกครั้งที่ `BattleField.resetAllUnits()` ทำงาน (ต้นรอบ `sim.run()`)
+     */
+    public rotationCount: number = 0;
+
     // --- Energy ---
     public energy    : number = 0;
     public maxEnergy : number = 0;

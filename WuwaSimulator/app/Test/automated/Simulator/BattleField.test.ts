@@ -90,7 +90,7 @@ describe('BattleField', () => {
         });
 
         it('None (0) should hit no enemies', () => {
-            expect(field.enemiesInRange(SkillRange.None)).toEqual([]);
+            expect(field.enemiesInRange(SkillRange.Single)).toEqual([]);
         });
 
         it('should not mutate enemies', () => {

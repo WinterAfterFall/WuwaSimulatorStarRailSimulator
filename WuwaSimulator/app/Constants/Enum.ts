@@ -129,7 +129,7 @@ export enum MultiplierType {
 }
 
 export enum SkillRange {
-    None = "0",      
+    Single = "0",      
     Contact = "1",      
     Midrange = "2",   
     Ranged = "3",    

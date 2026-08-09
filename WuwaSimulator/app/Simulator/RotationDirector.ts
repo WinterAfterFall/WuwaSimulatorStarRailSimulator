@@ -55,10 +55,22 @@ export class RotationDirector {
         return true;
     }
 
-    /** setupQueue ก่อน — หมดแล้วใช้ loopQueue วนจน currentLoopCount ครบ maxLoops */
+    /**
+     * setupQueue ก่อน — หมดแล้วใช้ loopQueue วนจน currentLoopCount ครบ maxLoops
+     *
+     * ทุกครั้งที่ "จบ 1 ชุด" (setup drain หมด หรือ loop ครบ 1 รอบ) จะเพิ่ม
+     * `battleField.rotationCount` ให้ 1 — ตัวนี้คือสิ่งที่ `SwapCharacterEvent` ใช้ตัดสินว่าถึงคิวใคร
+     */
     private nextAction(): RotationAction | undefined {
         if (!this.setupQueue.isEmpty()) {
-            return this.setupQueue.dequeue();
+            const action = this.setupQueue.dequeue();
+
+            // เพิ่งหยิบตัวสุดท้ายของ setup ออกไป = ชุด setup จบแล้ว
+            if (this.setupQueue.isEmpty()) {
+                this.battleField.endRotation();
+            }
+
+            return action;
         }
 
         if (this.loopQueue.isEmpty()) return undefined;
@@ -70,6 +82,7 @@ export class RotationDirector {
         if (this.loopStepCount === this.loopQueue.length) {
             this.loopStepCount = 0;
             this.currentLoopCount++;
+            this.battleField.endRotation();
         }
 
         return action;

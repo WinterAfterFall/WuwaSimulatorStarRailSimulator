@@ -166,4 +166,77 @@ describe('Simulate — run', () => {
 
         expect(unit.getStats(StatsType.AtkP)).toBe(0.1);
     });
+
+    // rotationCount เป็น state ที่ผูกกับ "รอบการรัน" ไม่ใช่ตัวละคร — ห้ามค้างข้ามรอบ
+    it('should reset every ally rotationCount before running', () => {
+        const sim  = new Simulate();
+        const unit = sim.addAlly(new AllyUnit('Mornye'));
+        unit.rotationCount = 7;
+
+        sim.run(emptyQueue(), emptyQueue(), 0);
+
+        expect(unit.rotationCount).toBe(0);
+    });
+
+    // เจ้าของ rotationCount คือ SwapCharacterEvent ไม่ใช่ rotation — ทีม 1 คนก็ยังนับครบทุกรอบ
+    it('should count each rotation through the auto swap at the end of the round', () => {
+        const sim  = new Simulate();
+        const unit = sim.addAlly(new AllyUnit('Mornye'));
+
+        sim.run(emptyQueue(), new RotationBuilder().add('combo', () => {}).build(), 3);
+
+        expect(unit.rotationCount).toBe(3);
+    });
+
+    // battleField.rotationCount = "ตอนนี้รอบที่เท่าไหร่" — SwapCharacterEvent ใช้ตัดสินว่าถึงคิวใคร
+    describe('battleField.rotationCount', () => {
+        it('should start at 0', () => {
+            expect(new Simulate().battleField.rotationCount).toBe(0);
+        });
+
+        it('should tick up once when the setup queue finishes', () => {
+            const sim = new Simulate();
+
+            sim.run(
+                new RotationBuilder().add('s1', () => {}).add('s2', () => {}).build(),
+                emptyQueue(),
+                0,
+            );
+
+            expect(sim.battleField.rotationCount).toBe(1);
+        });
+
+        it('should tick up once per completed loop round', () => {
+            const sim = new Simulate();
+
+            sim.run(
+                emptyQueue(),
+                new RotationBuilder().add('l1', () => {}).add('l2', () => {}).build(),
+                3,
+            );
+
+            expect(sim.battleField.rotationCount).toBe(3);
+        });
+
+        it('should count the setup queue and every loop round together', () => {
+            const sim = new Simulate();
+
+            sim.run(
+                new RotationBuilder().add('s1', () => {}).build(),
+                new RotationBuilder().add('l1', () => {}).build(),
+                2,
+            );
+
+            expect(sim.battleField.rotationCount).toBe(3);   // setup 1 + loop 2
+        });
+
+        it('should reset before a new run', () => {
+            const sim = new Simulate();
+            sim.battleField.rotationCount = 9;
+
+            sim.run(emptyQueue(), emptyQueue(), 0);
+
+            expect(sim.battleField.rotationCount).toBe(0);
+        });
+    });
 });

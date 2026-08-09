@@ -56,7 +56,23 @@ export abstract class ActionEvent extends CombatEvent {
         this.actionType = actionType;
         this.isManual   = isManual;
 
-        this.execute = () => {
+        this.execute = (battleField) => {
+            // ─── check ─────────────────────────────────────────────────────
+            // manual action = ผู้เล่นกดเอง จึงทำได้เฉพาะตัวที่ยืนอยู่บนสนามตอนนั้นเท่านั้น
+            // ถ้าไม่ตรงแปลว่า rotation สั่งท่าให้ตัวที่ยังไม่ได้ swap เข้ามา (หรือลืมสั่ง swap)
+            //
+            // ให้ดังตรงนี้เลย เพราะถ้าปล่อยผ่าน ผลจะไปโผล่เป็นดาเมจของตัวที่ไม่ได้อยู่ในสนาม
+            // ปนอยู่ในสรุป DPS โดยไม่มีอะไรฟ้อง — ผิดแบบเงียบที่สุดที่จะเป็นไปได้
+            //
+            // action ที่ไม่ใช่ manual (ท่าที่ต่อเนื่องมาเองกลางคอมโบ) ไม่ต้องเช็ค เพราะมันเกิด
+            // หลังตัวละครสลับออกไปแล้วได้ตามปกติ
+            if (this.isManual && battleField.onFieldChar !== this.unit) {
+                throw new Error(
+                    `${this.name}: "${this.unit.name}" สั่ง manual action ทั้งที่ไม่ได้อยู่บนสนาม ` +
+                    `(onFieldChar = ${battleField.onFieldChar?.name ?? "ไม่มี"})`
+                );
+            }
+
             this.unit.setBusy();
             onExecute?.();
         };

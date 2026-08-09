@@ -3,6 +3,7 @@ import { ActionEvent } from "../Models/Combat/CombatEvent/ActionEvent";
 import { BuffEndEvent } from "../Models/Combat/CombatEvent/BuffEndEvent";
 import { ChangeToAuto } from "../Models/Combat/CombatEvent/ChangeToAuto";
 import { GlobalLockChange } from "../Models/Combat/CombatEvent/GlobalLockChange";
+import { SwapCharacterEvent } from "../Models/Combat/CombatEvent/SwapCharacterEvent";
 import { EnemyUnit } from "../Models/EnemyUnit";
 import { IndexedPriorityQueue } from "../Utils/IndexedPriorityQueue";
 import { TriggerBus } from "./TriggerBus";
@@ -46,6 +47,15 @@ export class BattleField {
     public isGlobalLocked: boolean = false;
 
     /**
+     * รอบ rotation ปัจจุบันของทั้งสนาม — เริ่มที่ 0
+     *
+     * `RotationDirector` เพิ่มค่านี้ทุกครั้งที่ drain setup queue จบ หรือวน loop queue ครบ 1 รอบ
+     * ใช้คู่กับ `AllyUnit.rotationCount` เป็นตัวตัดสินว่า "ถึงคิวใคร": ตัวที่ค่าของตัวเอง
+     * ยังเท่ากับค่าของสนาม แปลว่ายังไม่ได้ออกในรอบนี้ — `SwapCharacterEvent` จะหยิบตัวนั้น
+     */
+    public rotationCount: number = 0;
+
+    /**
      * @param triggerBus รวม listener ของทุกตัวละคร — ไม่ส่งมาก็สร้างของตัวเอง
      *                   (default param ถูก evaluate ใหม่ทุกครั้งที่ `new` จึงได้ instance แยกกันเสมอ)
      */
@@ -75,11 +85,24 @@ export class BattleField {
         return this.enemies.filter(e => Number(e.position) < Number(range));
     }
 
-    /** เรียกก่อนเริ่ม simulate รอบใหม่ — reset stats ของทุก unit กลับค่า default */
+    /**
+     * เรียกก่อนเริ่ม simulate รอบใหม่ — reset stats ของทุก unit กลับค่า default
+     * แล้วล้างตัวนับที่ผูกกับ "รอบการรัน" ไม่ใช่ตัวละคร (rotationCount) ไม่ให้ค้างข้ามรอบ
+     */
     public resetAllUnits(): void {
         for (const unit of [...this.allies, ...this.enemies]) {
             unit.initDefaultStats();
         }
+
+        // rotationCount ทั้งฝั่ง unit และฝั่งสนามต้องกลับไปที่ 0 พร้อมกัน
+        // ถ้าเหลื่อมกันเมื่อไหร่ SwapCharacterEvent จะหาตัวที่ "ถึงคิว" ไม่เจอตั้งแต่รอบแรก
+        this.rotationCount = 0;
+        for (const ally of this.allies) {
+            ally.rotationCount = 0;
+        }
+
+        // เริ่มเกมด้วยตัวแรกในทีมเสมอ — รอบก่อนหน้าอาจทิ้ง onFieldChar ไว้ที่ตัวไหนก็ได้
+        this.onFieldChar = this.allies[0] ?? null;
     }
 
     // ─────────────────────────────────────────────
@@ -140,6 +163,17 @@ export class BattleField {
         if (duration !== undefined) {
             this.schedule(new BuffEndEvent(`${event.name}-end`, event.target), offset + duration);
         }
+    }
+
+    /**
+     * จบ rotation 1 ชุด (setup drain หมด หรือ loop ครบ 1 รอบ) — ขึ้นรอบใหม่แล้วสลับตัวปิดท้าย
+     *
+     * 1 rotation ตัวละครทุกตัวต้องได้ลงสนามครบ ดังนั้น rotation เป็นคนสั่ง swap เอง N-1 ครั้ง
+     * (N = จำนวนตัวในทีม) ส่วนครั้งสุดท้ายที่วนกลับไปตัวแรก ระบบออกให้ตรงนี้
+     */
+    public endRotation(): void {
+        this.rotationCount++;
+        this.schedule(new SwapCharacterEvent());
     }
 
     // ─────────────────────────────────────────────
