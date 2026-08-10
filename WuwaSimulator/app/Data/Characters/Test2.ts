@@ -26,15 +26,21 @@ export function setupTest2(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Test2-BA1", () => {
                 const t = timeline.currentFrame;
-                timeline.scheduleStartCombo(new AttackActionEvent(`Test2-BA1-f${t}`, unit, ActionType.BA, () => console.log(`[f${t}] Test2-BA1`)), BA_DURATION);
+                const event = new AttackActionEvent(`Test2-BA1-f${t}`, unit, ActionType.BA);
+                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-BA1`));
+                timeline.scheduleStartOnFieldAction(event, BA_DURATION);
             })
             .add("Test2-Skill", () => {
                 const t = timeline.currentFrame;
-                timeline.scheduleStartCombo(new AttackActionEvent(`Test2-Skill-f${t}`, unit, ActionType.Skill, () => console.log(`[f${t}] Test2-Skill`)), SKILL_DURATION);
+                const event = new AttackActionEvent(`Test2-Skill-f${t}`, unit, ActionType.Skill);
+                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-Skill`));
+                timeline.scheduleStartOnFieldAction(event, SKILL_DURATION);
             })
             .add("Test2-BA2", () => {
                 const t = timeline.currentFrame;
-                timeline.scheduleStartCombo(new AttackActionEvent(`Test2-BA2-f${t}`, unit, ActionType.BA, () => console.log(`[f${t}] Test2-BA2`)), BA_DURATION);
+                const event = new AttackActionEvent(`Test2-BA2-f${t}`, unit, ActionType.BA);
+                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-BA2`));
+                timeline.scheduleStartOnFieldAction(event, BA_DURATION);
             })
             .build()
     );
@@ -43,11 +49,15 @@ export function setupTest2(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Test2-Ult", () => {
                 const t = timeline.currentFrame;
-                timeline.scheduleStartCombo(new AttackActionEvent(`Test2-Ult-f${t}`, unit, ActionType.Ult, () => console.log(`[f${t}] Test2-Ult`)), ULT_DURATION);
+                const event = new AttackActionEvent(`Test2-Ult-f${t}`, unit, ActionType.Ult);
+                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-Ult`));
+                timeline.scheduleStartOnFieldAction(event, ULT_DURATION);
             })
             .add("Test2-BA1", () => {
                 const t = timeline.currentFrame;
-                timeline.scheduleStartCombo(new AttackActionEvent(`Test2-BA1-f${t}`, unit, ActionType.BA, () => console.log(`[f${t}] Test2-BA1`)), BA_DURATION);
+                const event = new AttackActionEvent(`Test2-BA1-f${t}`, unit, ActionType.BA);
+                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-BA1`));
+                timeline.scheduleStartOnFieldAction(event, BA_DURATION);
             })
             .build()
     );
@@ -56,11 +66,15 @@ export function setupTest2(unit: AllyUnit): void {
         new RotationBuilder()
             .add("Test2-Echo", () => {
                 const t = timeline.currentFrame;
-                timeline.scheduleStartCombo(new AttackActionEvent(`Test2-Echo-f${t}`, unit, ActionType.Echo, () => console.log(`[f${t}] Test2-Echo`)), ECHO_DURATION);
+                const event = new AttackActionEvent(`Test2-Echo-f${t}`, unit, ActionType.Echo);
+                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-Echo`));
+                timeline.scheduleStartOnFieldAction(event, ECHO_DURATION);
             })
             .add("Test2-Skill", () => {
                 const t = timeline.currentFrame;
-                timeline.scheduleStartCombo(new AttackActionEvent(`Test2-Skill-f${t}`, unit, ActionType.Skill, () => console.log(`[f${t}] Test2-Skill`)), SKILL_DURATION);
+                const event = new AttackActionEvent(`Test2-Skill-f${t}`, unit, ActionType.Skill);
+                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-Skill`));
+                timeline.scheduleStartOnFieldAction(event, SKILL_DURATION);
             })
             .build()
     );

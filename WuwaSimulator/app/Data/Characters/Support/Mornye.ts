@@ -41,11 +41,11 @@ type Step = [name: string, actionType: ActionType, move: MoveData, range?: Skill
  * offset ของแต่ละท่า = ผลรวม duration ของท่าก่อนหน้า (ท่าถัดไปเริ่มตอนท่าก่อนหน้าจบพอดี)
  *
  * กติกา lock ของคอมโบ — **หน้าต่างเดียวครอบทั้งคอมโบ**:
- *   - ท่าแรกเรียก `scheduleStartCombo(event, ผลรวม duration ทุกท่า)` → ได้ lock window 1 ช่วงยาว
+ *   - ท่าแรกเรียก `scheduleStartOnFieldAction(event, ผลรวม duration ทุกท่า)` → ล็อก 1 ช่วงยาว
  *   - ท่าที่เหลือใช้ `schedule()` ธรรมดา ไม่ออก lock ของตัวเอง
- *   - ทุกท่าเป็น `isManual: false` — `GlobalLockChange` เป็นเจ้าของ isGlobalLocked แต่ผู้เดียว
+ *   - ทุกท่าเป็น `isManual: false` — ขาล็อกมาจาก `scheduleStartOnFieldAction` ที่เดียว
  *
- * ⚠️ ห้ามเรียก `scheduleStartCombo` ทุกท่า — จะได้ lock window ต่อกัน 3 ช่วง แล้วที่รอยต่อ
+ * ⚠️ ห้ามเรียก `scheduleStartOnFieldAction` ทุกท่า — จะได้ lock window ต่อกัน 3 ช่วง แล้วที่รอยต่อ
  * (เช่น f25) `lock-on` ของท่าถัดไป priority -1 จะออกก่อน `lock-off` ของท่าก่อนหน้า priority +1
  * ผลคือ lock ถูกปลดทิ้งกลางคอมโบ
  *
@@ -62,11 +62,12 @@ function rotation(unit: AllyUnit, comboName: string, ...steps: Step[]): (field: 
 
                 steps.forEach(([name, actionType, move, range = SkillRange.Contact], i) => {
                     const t     = t0 + offset;
-                    const event = new AttackActionEvent(`${name}-f${t}`, unit, actionType, false, () => console.log(`[f${t}] ${name}`));
+                    const event = new AttackActionEvent(`${name}-f${t}`, unit, actionType, false);
+                    field.appendOnExecute(event, () => console.log(`[f${t}] ${name}`));
 
                     // ท่าแรกเป็นคนพก lock window ของทั้งคอมโบมาด้วย (offset ของมันคือ 0 เสมอ)
                     // ที่เหลือ schedule เปล่าๆ พร้อม offset ของตัวเอง
-                    if (i === 0) field.scheduleStartCombo(event, total);
+                    if (i === 0) field.scheduleStartOnFieldAction(event, total);
                     else         field.schedule(event, offset);
 
                     field.schedule(
@@ -113,7 +114,7 @@ export function setupMornye(unit: AllyUnit): void {
         new RotationBuilder()
 
             // ทั้งคอมโบเป็น RotationAction **ตัวเดียว** — execute ครั้งเดียวได้ event ครบ 8 ตัว
-            // (ท่า 3 + ดาเมจ 3 + lock-on/lock-off อีก 2 ที่ scheduleStartCombo แถมให้)
+            // (ท่า 3 + ดาเมจ 3 + ActionFreeEvent ที่ scheduleStartOnFieldAction แถมให้)
             .add("Mornye-BA-Combo", () => {
 
                 // frame ที่คอมโบ "เริ่ม" — ท่าที่เหลือคำนวณเป็น offset นับจากตรงนี้ทั้งหมด
@@ -127,22 +128,21 @@ export function setupMornye(unit: AllyUnit): void {
                 const OFFSET_BA1 = 0;
                 const T_BA1      = t0 + OFFSET_BA1;
 
-                // scheduleStartCombo = schedule() ธรรมดา + แถม GlobalLockChange คู่หนึ่ง
-                //   f0        GlobalLockChange(1)  ล็อก   (priority -1 → ออกก่อนใครในเฟรมนั้น)
-                //   f0 + 133  GlobalLockChange(0)  ปลด    (priority +1 → ออกหลังใครในเฟรมนั้น)
+                // scheduleStartOnFieldAction = schedule() + เสียบขาล็อกไว้หน้า execute
+                //   f0        setBusy + isGlobalLocked = true   (อยู่ใน execute ของ event เอง)
+                //   f0 + 133  ActionFreeEvent.onField           (setFree + ปลด GlobalLock)
                 // ไม่มี offset ให้ใส่ — ตัว event ลงที่ currentFrame เสมอ (คอมโบเริ่มเดี๋ยวนี้)
                 // ท่าแรกเท่านั้นที่เรียกตัวนี้ — ท่าที่เหลือใช้ schedule() เปล่าพร้อม offset ของตัวเอง
                 // ถ้าเรียกทุกท่าจะได้ lock window ซ้อนกัน 3 ช่วง แล้วปลดผิดจังหวะที่รอยต่อ
-                field.scheduleStartCombo(
-                    new AttackActionEvent(
-                        `Mornye-BA1-f${T_BA1}`,
-                        unit,
-                        ActionType.BA,
-                        false,                    // isManual — ปล่อย false ให้ GlobalLockChange
-                        () => console.log(`[f${T_BA1}] Mornye-BA1`),   // เป็นเจ้าของ lock แต่ผู้เดียว
-                    ),
-                    TOTAL,                        // อายุ lock ของทั้งคอมโบ
-                );
+                // isManual: false — ขาล็อกมาจาก scheduleStartOnFieldAction ไม่ใช่จาก event เอง
+                const eventBA1 = new AttackActionEvent(`Mornye-BA1-f${T_BA1}`, unit, ActionType.BA, false);
+
+                // ผลข้างเคียงเฉพาะท่า (ที่นี่คือ log) ต่อผ่าน appendOnExecute — มัน **ห่อ** execute เดิม
+                // ไม่ใช่ทับ ทำให้ check/setBusy ของ ActionEvent ยังทำงานครบ
+                // (ActionEvent ไม่รับ onExecute ทาง constructor แล้ว)
+                field.appendOnExecute(eventBA1, () => console.log(`[f${T_BA1}] Mornye-BA1`));
+
+                field.scheduleStartOnFieldAction(eventBA1, TOTAL);   // TOTAL = อายุ lock ของทั้งคอมโบ
 
                 field.schedule(
                     new DamageEvent(
@@ -160,16 +160,10 @@ export function setupMornye(unit: AllyUnit): void {
                 const OFFSET_BA2 = OFFSET_BA1 + BA1.duration;              // 0 + 25 = 25
                 const T_BA2      = t0 + OFFSET_BA2;
 
-                field.schedule(
-                    new AttackActionEvent(
-                        `Mornye-BA2-f${T_BA2}`,
-                        unit,
-                        ActionType.BA,
-                        false,
-                        () => console.log(`[f${T_BA2}] Mornye-BA2`),
-                    ),
-                    OFFSET_BA2,
-                );
+                const eventBA2 = new AttackActionEvent(`Mornye-BA2-f${T_BA2}`, unit, ActionType.BA, false);
+                field.appendOnExecute(eventBA2, () => console.log(`[f${T_BA2}] Mornye-BA2`));
+
+                field.schedule(eventBA2, OFFSET_BA2);
 
                 field.schedule(
                     new DamageEvent(
@@ -185,16 +179,10 @@ export function setupMornye(unit: AllyUnit): void {
                 const OFFSET_BA3 = OFFSET_BA2 + BA2.duration;              // 25 + 55 = 80
                 const T_BA3      = t0 + OFFSET_BA3;
 
-                field.schedule(
-                    new AttackActionEvent(
-                        `Mornye-BA3-f${T_BA3}`,
-                        unit,
-                        ActionType.BA,
-                        false,
-                        () => console.log(`[f${T_BA3}] Mornye-BA3`),
-                    ),
-                    OFFSET_BA3,
-                );
+                const eventBA3 = new AttackActionEvent(`Mornye-BA3-f${T_BA3}`, unit, ActionType.BA, false);
+                field.appendOnExecute(eventBA3, () => console.log(`[f${T_BA3}] Mornye-BA3`));
+
+                field.schedule(eventBA3, OFFSET_BA3);
 
                 field.schedule(
                     new DamageEvent(

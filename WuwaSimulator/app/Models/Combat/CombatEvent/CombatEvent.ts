@@ -10,7 +10,7 @@ export abstract class CombatEvent {
 
     /**
      * frame ที่ event นี้จะเกิดขึ้น — IPQ เรียงจากน้อยไปมาก (1 วิ = 60 frame)
-     * ปกติ BattleField.schedule()/scheduleStartCombo()/scheduleBuffStart() เป็นคนตั้งค่านี้ให้
+     * ปกติ BattleField.schedule()/scheduleStartOnFieldAction()/scheduleStartOffFieldAction() เป็นคนตั้งค่านี้ให้
      * (currentFrame + offset) แต่ constructor ก็รับตรงๆ ได้เหมือนกันถ้าอยากตั้งเอง
      */
     public time: number;

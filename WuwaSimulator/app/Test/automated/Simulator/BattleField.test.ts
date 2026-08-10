@@ -5,7 +5,7 @@ import { EnemyUnit } from '../../../Models/EnemyUnit';
 import { Damage } from '../../../Models/Combat/Damage';
 import { CombatEvent } from '../../../Models/Combat/CombatEvent/CombatEvent';
 import { DamageEvent } from '../../../Models/Combat/CombatEvent/DamageEvent';
-import { GlobalLockChange } from '../../../Models/Combat/CombatEvent/GlobalLockChange';
+import { AttackActionEvent } from '../../../Models/Combat/CombatEvent/AttackActionEvent';
 import { EnemyPosition, SkillRange, StatsType, ActionType, ElementType, TriggerEvent } from '../../../Constants/Enum';
 
 function makeEnemy(name: string, position: EnemyPosition): EnemyUnit {
@@ -301,88 +301,173 @@ describe('BattleField', () => {
     });
 
     // ─────────────────────────────────────────────────────────────
-    // GlobalLockChange + scheduleStartCombo
     // ค้ำสัญญาเดียวที่สำคัญที่สุดของ lock: ล็อกแล้ว "ต้องมีวันปลด" เสมอ
     // ─────────────────────────────────────────────────────────────
-    describe('GlobalLockChange', () => {
-        it('should set isGlobalLocked to true when value is 1', () => {
-            field.schedule(new GlobalLockChange('lock-on', 1));
+
+
+    // ─────────────────────────────────────────────
+    // scheduleOnFieldAction / scheduleOffFieldAction
+    // ─────────────────────────────────────────────
+    describe('scheduleOnFieldAction', () => {
+        let unit: AllyUnit;
+
+        beforeEach(() => {
+            unit = new AllyUnit('Mornye');
+            field.allies.push(unit);
+            field.onFieldChar = unit;
+        });
+
+        const onFieldEvent = (unit: AllyUnit) =>
+            new AttackActionEvent('atk', unit, ActionType.BA, true);
+
+        it('should hold the global lock for the whole action', () => {
+            field.scheduleStartOnFieldAction(onFieldEvent(unit), 100);
+
+            field.tick();
+            expect(field.isGlobalLocked).toBe(true);
+
+            field.runAll();
+            expect(field.currentFrame).toBe(100);
+            expect(field.isGlobalLocked).toBe(false);
+        });
+
+        // ปลายท่าเป็น ActionFreeEvent.onField — คืน unit เป็น Free แล้วปลด GlobalLock ในตัวเดียว
+        it('should free the unit at the end of the action', () => {
+            field.scheduleStartOnFieldAction(onFieldEvent(unit), 100);
+
+            field.tick();
+            expect(unit.isFree()).toBe(false);      // setBusy จาก ActionEvent
+
+            field.runAll();
+            expect(field.currentFrame).toBe(100);
+            expect(unit.isFree()).toBe(true);
+        });
+
+        // event.time ที่ตั้งมาตอนสร้างทำหน้าที่เป็น offset — schedule บวก currentFrame ให้อีกที
+        it('should treat the event own time as an offset from now', () => {
+            const event = new AttackActionEvent('atk', 30, unit, ActionType.BA, true);
+
+            field.scheduleStartOnFieldAction(event, 100);
+
+            expect(field.peek()!.time).toBe(30);
+        });
+
+        // changeToAutoTime → GlobalFreeEvent ปลด lock ก่อนท่าจบ แต่ unit ยัง Busy ต่อ
+        it('should release the lock early at changeToAutoTime', () => {
+            field.scheduleStartOnFieldAction(onFieldEvent(unit), 100, 40);
+
+            while (field.currentFrame < 40) field.tick();
+
+            expect(field.isGlobalLocked).toBe(false);
+            expect(unit.isFree()).toBe(false);          // ยังติดแอนิเมชันอยู่
+
+            field.runAll();
+            expect(field.currentFrame).toBe(100);
+            expect(unit.isFree()).toBe(true);
+        });
+
+        it('should not schedule a GlobalFreeEvent when changeToAutoTime is omitted', () => {
+            field.scheduleStartOnFieldAction(onFieldEvent(unit), 100);
+
+            expect(field.size).toBe(2);                 // action + free เท่านั้น
+        });
+
+        // onExecute ทับ execute เดิมทั้งก้อน — ของเดิมต้องไม่ทำงานเลย
+        it('should override the original execute entirely', () => {
+            const seen: string[] = [];
+            const event = new AttackActionEvent('atk', unit, ActionType.BA, true);
+            field.appendOnExecute(event, () => seen.push('original'));
+
+            field.scheduleStartOnFieldAction(event, 100, undefined, () => seen.push('override'));
+            field.runAll();
+
+            expect(seen).toEqual(['override']);
+        });
+
+        // ขาล็อกถูกเสียบไว้หน้าสุด "หลัง" การทับ จึงรอดแม้คนเรียกจะทับ execute ทั้งก้อน
+        it('should still lock even when the execute is overridden', () => {
+            const event = new AttackActionEvent('atk', unit, ActionType.BA, true);
+
+            field.scheduleStartOnFieldAction(event, 100, undefined, () => {});
             field.tick();
 
+            expect(unit.isFree()).toBe(false);
             expect(field.isGlobalLocked).toBe(true);
         });
 
-        it('should set isGlobalLocked to false when value is 0', () => {
-            field.isGlobalLocked = true;
+        it('should lock before running the execute body', () => {
+            const seen: string[] = [];
+            const event = new AttackActionEvent('atk', unit, ActionType.BA, true);
 
-            field.schedule(new GlobalLockChange('lock-off', 0));
+            field.scheduleStartOnFieldAction(event, 100, undefined, (bf) => {
+                seen.push(bf.isGlobalLocked ? 'locked' : 'open');
+                seen.push(unit.isFree() ? 'free' : 'busy');
+            });
             field.tick();
 
-            expect(field.isGlobalLocked).toBe(false);
+            expect(seen).toEqual(['locked', 'busy']);
+        });
+
+        it('should keep the original execute when no callback is given', () => {
+            const event = new AttackActionEvent('atk', unit, ActionType.BA, true);
+
+            field.scheduleStartOnFieldAction(event, 100);
+            field.tick();
+
+            expect(unit.isFree()).toBe(false);      // setBusy เดิมยังทำงาน
         });
     });
 
-    describe('scheduleStartCombo', () => {
-        const makeEvent = (name: string) => new (class extends CombatEvent {})(name);
+    describe('scheduleOffFieldAction', () => {
+        let onField: AllyUnit;
+        let offField: AllyUnit;
 
-        it('should schedule the event itself plus a lock-on and a lock-off event', () => {
-            field.scheduleStartCombo(makeEvent('combo'), 100);
-
-            expect(field.size).toBe(3);
+        beforeEach(() => {
+            onField  = new AllyUnit('OnField');
+            offField = new AllyUnit('OffField');
+            field.allies.push(onField, offField);
+            field.onFieldChar = onField;
         });
 
-        // ลำดับในเฟรมเดียวกันสำคัญ: ถ้า event หลักออกก่อน lock-on
-        // do-while ของ RotationDirector จะเห็น locked=false แล้วหลุดไปดึง action ถัดไปทันที
-        it('should turn the lock on before the event it wraps', () => {
-            field.scheduleStartCombo(makeEvent('combo'), 100);
+        const offFieldEvent = (unit: AllyUnit) =>
+            new AttackActionEvent('coord', unit, ActionType.CoordAtk, false);
 
-            expect(field.peek()!.name).toBe('combo-lock-on');
+        it('should never touch the global lock', () => {
+            field.scheduleStartOffFieldAction(offFieldEvent(offField), 100);
 
+            field.runAll();
+
+            expect(field.isGlobalLocked).toBe(false);
+        });
+
+        it('should schedule the action plus its free event', () => {
+            field.scheduleStartOffFieldAction(offFieldEvent(offField), 100);
+
+            expect(field.size).toBe(2);
+        });
+
+        it('should free the off-field unit at the end without touching the lock', () => {
+            field.isGlobalLocked = true;
+
+            field.scheduleStartOffFieldAction(offFieldEvent(offField), 100);
             field.tick();
-            expect(field.isGlobalLocked).toBe(true);
-        });
-
-        it('should lock at the event frame and unlock at frame + duration', () => {
-            field.scheduleStartCombo(makeEvent('combo'), 100);
-
-            field.tick();                                    // lock-on ที่ f0
-            expect(field.isGlobalLocked).toBe(true);
+            expect(offField.isFree()).toBe(false);      // setBusy
 
             field.runAll();
-            expect(field.currentFrame).toBe(100);            // ปลดที่ f0 + 100 พอดี
-            expect(field.isGlobalLocked).toBe(false);
+            expect(field.currentFrame).toBe(100);
+            expect(offField.isFree()).toBe(true);
+            expect(field.isGlobalLocked).toBe(true);    // ของคนอื่นต้องไม่โดนแตะ
         });
 
-        // ปลดหลังสุดของเฟรม — event อื่นที่ลงพอดีเฟรมจบต้องได้ทำงานก่อน lock จะเปิด
-        it('should unlock after every other event landing on the same frame', () => {
-            field.scheduleStartCombo(makeEvent('combo'), 100);
-            field.schedule(makeEvent('late'), 100);
+        it('should override the original execute entirely', () => {
+            const seen: string[] = [];
+            const event = new AttackActionEvent('coord', offField, ActionType.CoordAtk, false);
+            field.appendOnExecute(event, () => seen.push('original'));
 
+            field.scheduleStartOffFieldAction(event, 100, () => seen.push('override'));
             field.runAll();
 
-            expect(field.isGlobalLocked).toBe(false);
-        });
-
-        // ไม่มี offset ให้ใส่แล้ว — event ลงที่ currentFrame เสมอ
-        // คอมโบที่เริ่มกลางเกมจึงเลื่อนตาม currentFrame เองโดยอัตโนมัติ
-        it('should anchor the lock window to currentFrame at call time', () => {
-            field.schedule(makeEvent('warmup'), 30);
-            field.runAll();                                  // เดินเวลาไปที่ f30 ก่อน
-
-            field.scheduleStartCombo(makeEvent('combo'), 100);
-            field.runAll();
-
-            expect(field.currentFrame).toBe(130);            // 30 + 100
-            expect(field.isGlobalLocked).toBe(false);
-        });
-
-        it('should never leave the lock on after the queue drains', () => {
-            field.scheduleStartCombo(makeEvent('a'), 50);
-            field.scheduleStartCombo(makeEvent('b'), 25);
-
-            field.runAll();
-
-            expect(field.isGlobalLocked).toBe(false);
+            expect(seen).toEqual(['override']);
         });
     });
 });

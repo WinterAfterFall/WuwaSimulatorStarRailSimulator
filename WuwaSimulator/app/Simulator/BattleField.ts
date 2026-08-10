@@ -1,9 +1,9 @@
 import { CombatEvent } from "../Models/Combat/CombatEvent/CombatEvent";
 import { ActionEvent } from "../Models/Combat/CombatEvent/ActionEvent";
 import { BuffEndEvent } from "../Models/Combat/CombatEvent/BuffEndEvent";
-import { ChangeToAuto } from "../Models/Combat/CombatEvent/ChangeToAuto";
-import { GlobalLockChange } from "../Models/Combat/CombatEvent/GlobalLockChange";
 import { SwapCharacterEvent } from "../Models/Combat/CombatEvent/SwapCharacterEvent";
+import { ActionFreeEvent } from "../Models/Combat/CombatEvent/ActionFreeEvent";
+import { GlobalFreeEvent } from "../Models/Combat/CombatEvent/GlobalFreeEvent";
 import { EnemyUnit } from "../Models/EnemyUnit";
 import { IndexedPriorityQueue } from "../Utils/IndexedPriorityQueue";
 import { TriggerBus } from "./TriggerBus";
@@ -79,7 +79,7 @@ export class BattleField {
 
     /**
      * กรอง enemies ที่อยู่ในระยะของท่า — position น้อยกว่า range ถือว่าโดน
-     * SkillRange.None = "0" จึงคืน array ว่างเสมอ (ไม่มี position ไหนน้อยกว่า 0)
+     * SkillRange.Single = "0" จึงคืน array ว่างเสมอ (ไม่มี position ไหนน้อยกว่า 0)
      */
     public enemiesInRange(range: SkillRange): EnemyUnit[] {
         return this.enemies.filter(e => Number(e.position) < Number(range));
@@ -111,8 +111,8 @@ export class BattleField {
 
     /**
      * เพิ่ม event เข้าคิว — ตั้ง event.time = currentFrame + offset ให้เอง (ไม่ใส่ offset = เกิดตอนนี้เลย)
-     * ถ้าชื่อซ้ำกับ event ที่อยู่ในคิวแล้ว (เช่น scheduleBuffStart ถูกเรียกซ้ำเพื่อ refresh บัพเดิม)
-     * จะ update() ตัวเดิมแทน push() ใหม่ — update() จัดตำแหน่งใน heap ให้เองอยู่แล้ว
+     * ถ้าชื่อซ้ำกับ event ที่อยู่ในคิวแล้ว จะ update() ตัวเดิมแทน push() ใหม่
+     * — update() จัดตำแหน่งใน heap ให้เองอยู่แล้ว
      */
     public schedule(event: CombatEvent): void;
     public schedule(event: CombatEvent, offset: number): void;
@@ -126,31 +126,103 @@ export class BattleField {
         }
     }
 
-    /**
-     * schedule event พร้อม "ช่วงเวลาที่ GlobalLock ถูกล็อก" ครอบให้ในครั้งเดียว
-     *
-     * event เกิดที่ `currentFrame` เสมอ (คอมโบเริ่ม "เดี๋ยวนี้") จึงไม่มี offset ให้ใส่ —
-     * `duration` ทำหน้าที่เป็น offset ของ lock-off อยู่แล้ว ท่าที่ต้องเริ่มช้ากว่านี้ให้ใช้
-     * `schedule(event, offset)` ตรงๆ แทน (ท่ากลางคอมโบทำแบบนั้นอยู่)
-     *
-     * push `GlobalLockChange` คู่หนึ่งคร่อมหัวท้ายให้เอง:
-     *   - value 1 ที่ frame เดียวกับ event  → ล็อก
-     *   - value 0 ที่ frame + duration      → ปลด
-     *
-     * ออก event คู่จากที่เดียวเสมอ = ไม่มีทางล็อกแล้วลืมปลด ซึ่งเป็นบั๊กที่เคยเกิดจริงมาแล้ว
-     * 2 รอบสมัยที่ lock ถูกกดผ่าน `isManual` แล้วรอ EndAction ที่อยู่กันคนละที่มาปลด
-     *
-     * @throws ถ้า duration ติดลบ — ช่วงล็อกที่จบก่อนเริ่มไม่มีความหมาย ให้ดังตั้งแต่ตอน schedule
-     *         ดีกว่าปล่อยให้ lock ค้างเงียบๆ ตอนรัน
-     */
-    public scheduleStartCombo(event: CombatEvent, duration: number): void {
-        if (duration < 0) {
-            throw new Error(`Invalid lock duration for "${event.name}": ${duration}`);
-        }
 
-        this.schedule(event);
-        this.schedule(new GlobalLockChange(`${event.name}-lock-on`,  1));
-        this.schedule(new GlobalLockChange(`${event.name}-lock-off`, 0), duration);
+    /**
+     * schedule action ของตัวละครที่ยืนอยู่บนสนาม (`isManual: true`)
+     *
+     * ล็อก GlobalLock ตลอดท่า — Director ดึง action ใหม่ไม่ได้จนกว่าจะปลด
+     *
+     * @param duration           ท่านี้ยาวกี่ frame — ใช้เป็นเวลาปลดล็อกถ้าไม่ส่ง changeToAutoTime
+     * @param changeToAutoTime   frame ที่ท่าเปลี่ยนเป็น auto — schedule `GlobalFreeEvent` ปลด
+     *                           GlobalLock **ก่อน** ท่าจบ (unit ยัง Busy ต่อจนถึง duration)
+     *                           ไม่ส่ง = ล็อกยาวจนจบท่า
+     * @param execute          **ทับ** execute ของ event ทั้งก้อน (ไม่ใช่ต่อท้าย) — ใส่แล้ว check
+     *                           `isManual` ต้องอยู่บนสนาม กับ `setBusy()` ของเดิมจะไม่ทำงาน
+     *                           ไม่ส่งมา = ใช้ execute เดิมตามปกติ
+     *                           รับ `battleField` เหมือน `CombatEvent.execute` — จะไม่ใช้ก็ละไว้ได้
+     */
+    public scheduleStartOnFieldAction(
+        event: ActionEvent,
+        duration: number,
+        changeToAutoTime?: number,
+        execute?: (battleField: BattleField) => void,
+    ): void {
+        // ทับ execute เดิมทั้งก้อน ไม่ใช่ต่อท้าย — ไม่ส่งมาก็ปล่อยของเดิมไว้
+        if (execute) event.execute = execute;
+
+        // แล้วเสียบ "ขาล็อก" ไว้หน้าสุดเสมอ — ทำหลังการทับ จึงรับประกันว่าถึงคนเรียกจะส่ง
+        // execute ของตัวเองมาทับทั้งก้อน unit ก็ยังถูกตั้ง Busy และ GlobalLock ก็ยังถูกล็อกอยู่ดี
+        //
+        // คู่ปลดคือ ActionFreeEvent.onField ที่ schedule ไว้ปลายท่าข้างล่าง — ออกจากที่เดียวกัน
+        // ทั้งขาล็อกและขาปลด จึงไม่มีทางล็อกแล้วลืมปลด
+        const base = event.execute;
+        event.execute = (battleField) => {
+            event.unit.setBusy();
+            battleField.isGlobalLocked = true;
+
+            base(battleField);
+        };
+
+        // event.time ที่ตั้งมาตอนสร้างทำหน้าที่เป็น offset (default 0 = ออกเดี๋ยวนี้)
+        // schedule บวก currentFrame ให้อีกที → ผลคือ time += t
+        this.schedule(event, event.time);
+
+        // ปลายท่า: คืน unit เป็น Free แล้วปลด GlobalLock ในตัวเดียวกัน
+        this.schedule(ActionFreeEvent.onField(`${event.name}-free`, event.unit), duration);
+
+        // ท่าที่เปลี่ยนเป็น auto กลางคัน — ปลด GlobalLock ก่อนท่าจบ ให้ Director สั่งตัวถัดไปได้
+        // ส่วน unit ยังติดแอนิเมชันต่อจนถึง duration (ActionFreeEvent ข้างบนเป็นคนคืน Free)
+        if (changeToAutoTime !== undefined) {
+            this.schedule(new GlobalFreeEvent(`${event.name}-to-auto`, event.unit), changeToAutoTime);
+        }
+    }
+
+    /**
+     * schedule action ของตัวละครที่ไม่ได้อยู่บนสนาม (`isManual: false`)
+     *
+     * ไม่แตะ GlobalLock เลย — ท่าแบบนี้เกิดคู่ขนานไปกับตัวที่ยืนอยู่ได้ (เช่น `ActionType.CoordAtk`)
+     *
+     * @param duration   ท่านี้ยาวกี่ frame — ยังไม่มีใครใช้จนกว่า unit lock (actionState) จะต่อสาย
+     * @param onExecute  **ทับ** execute ของ event ทั้งก้อน (ไม่ใช่ต่อท้าย) — ไม่ส่งมา = ใช้ของเดิม
+     *                  รับ `battleField` เหมือน `CombatEvent.execute` — จะไม่ใช้ก็ละไว้ได้
+     */
+    public scheduleStartOffFieldAction(
+        event: ActionEvent,
+        duration: number,
+        execute?: (battleField: BattleField) => void,
+    ): void {
+
+        if (execute) event.execute = execute;
+
+        const base = event.execute;
+        event.execute = (battleField) => {
+            event.unit.setBusy();
+            base(battleField);
+        };
+
+        // event.time ที่ตั้งมาตอนสร้างทำหน้าที่เป็น offset (default 0 = ออกเดี๋ยวนี้)
+        // schedule บวก currentFrame ให้อีกที → ผลคือ time += t
+        this.schedule(event, event.time);
+        this.schedule(ActionFreeEvent.offField(`${event.name}-free`, event.unit), duration);
+    }
+
+    /**
+     * ต่อ callback ท้าย execute เดิมของ event — ของเดิมยังทำงานครบเหมือนไม่มีอะไรมาแทรก
+     *
+     * เป็นทางเดียวที่ควรใช้ใส่ "ผลข้างเคียงเฉพาะท่า" (log, บวก stack, ติดบัพ) หลัง `ActionEvent`
+     * เลิกรับ `onExecute` ทาง constructor แล้ว — ใช้ได้กับ event ทุกชนิด ไม่ใช่แค่ ActionEvent
+     *
+     * ⚠️ อย่าเขียน `event.execute = fn` เอง เพราะนั่นคือการ **ทับ** ไม่ใช่ต่อท้าย —
+     * check/setBusy ของ event เดิมจะหายไปเงียบๆ
+     */
+    public appendOnExecute(event: CombatEvent, execute?: (battleField: BattleField) => void): void {
+        if (!execute) return;
+
+        const base = event.execute;
+        event.execute = (battleField) => {
+            base(battleField);
+            execute(battleField);
+        };
     }
 
     /**
@@ -193,11 +265,6 @@ export class BattleField {
 
         if (event instanceof ActionEvent && event.isManual) {
             this.isGlobalLocked = true;
-        }
-
-        if (event instanceof ChangeToAuto) {
-            // transition: ปล่อย GlobalLock แต่ unit ยัง Busy อยู่
-            this.isGlobalLocked = false;
         }
 
         return event;
