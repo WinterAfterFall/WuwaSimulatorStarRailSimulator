@@ -3,6 +3,8 @@ import { AllyUnit } from '../../../Models/AllyUnit';
 import { Simulate } from '../../../Simulator/Simulate';
 import { RotationBuilder } from '../../../Simulator/RotationBuilder';
 import { SwapCharacterEvent } from '../../../Models/Combat/CombatEvent/SwapCharacterEvent';
+import { AttackActionEvent } from '../../../Models/Combat/CombatEvent/AttackActionEvent';
+import { ActionType } from '../../../Constants/Enum';
 
 describe('SwapCharacterEvent', () => {
     describe('constructor', () => {
@@ -164,6 +166,32 @@ describe('SwapCharacterEvent', () => {
             );
 
             expect([a.rotationCount, b.rotationCount, c.rotationCount]).toEqual([2, 2, 2]);
+        });
+
+        // ซีนเดียวกับ manualBuilder.ts: ทีม 2 คน คนละ 2 ท่า คั่นด้วย swap 1 ครั้ง (N-1)
+        // ท่าสุดท้ายของรอบต้องได้ออกก่อน swap ปิดท้าย ไม่ใช่หลัง
+        it('should let the last action of the round run before the closing swap', () => {
+            const sim   = new Simulate();
+            const a     = sim.addAlly(new AllyUnit('A'));
+            const b     = sim.addAlly(new AllyUnit('B'));
+            const field = sim.battleField;
+
+            const attack = (unit: AllyUnit, name: string) => () =>
+                field.scheduleStartOnFieldAction(
+                    new AttackActionEvent(`${name}-f${field.currentFrame}`, unit, ActionType.BA),
+                    30,
+                );
+
+            const setup = new RotationBuilder()
+                .add('a1', attack(a, 'A1'))
+                .add('a2', attack(a, 'A2'))
+                .add('swap', () => field.schedule(new SwapCharacterEvent()))
+                .add('b1', attack(b, 'B1'))
+                .add('b2', attack(b, 'B2'))      // ← ท่าสุดท้าย: endRotation ต้องไม่ swap ตัดหน้ามัน
+                .build();
+
+            expect(() => sim.run(setup, new RotationBuilder().build(), 0)).not.toThrow();
+            expect([a.rotationCount, b.rotationCount]).toEqual([1, 1]);
         });
 
         it('should start each run from the first ally', () => {
