@@ -25,12 +25,18 @@ setupTest2(test2);
 // รวม rotation ของ test1 + test2 เข้า queue เดียว (factory → Queue ใหม่)
 //   - setupQueue: ใช้ครั้งเดียวตอนเปิดฉาก (Burst)
 //   - loopQueue : วนซ้ำตาม maxLoops (Standard)
+//
+// ⚠️ 1 queue = 1 ตัวละคร — ลำดับ argument คือลำดับที่ตัวละครลงสนาม แค่ต่อคิวกันตรงๆ
+//    ไม่แทรก swap ให้เอง — ตัวละครที่ไม่ใช่ตัวสุดท้ายต้องสั่ง swap ท้ายท่าสุดท้ายของตัวเอง
+//    เอง (ผูกกับ real action เสมอ ห้ามท่าที่มีแต่สลับตัวเฉยๆ — ดูตัวอย่างใน Test1.ts)
 // ─────────────────────────────────────────────────────────────
 function mergeQueues(...queues: Queue<RotationAction>[]): Queue<RotationAction> {
     const merged = new Queue<RotationAction>();
+
     for (const q of queues) {
         while (!q.isEmpty()) merged.enqueue(q.dequeue()!);
     }
+
     return merged;
 }
 

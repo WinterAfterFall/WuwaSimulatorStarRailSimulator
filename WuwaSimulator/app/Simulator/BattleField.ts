@@ -155,11 +155,10 @@ export class BattleField {
         //
         // คู่ปลดคือ ActionFreeEvent.onField ที่ schedule ไว้ปลายท่าข้างล่าง — ออกจากที่เดียวกัน
         // ทั้งขาล็อกและขาปลด จึงไม่มีทางล็อกแล้วลืมปลด
+        this.isGlobalLocked = true;
         const base = event.execute;
         event.execute = (battleField) => {
             event.unit.setBusy();
-            battleField.isGlobalLocked = true;
-
             base(battleField);
         };
 
@@ -253,8 +252,15 @@ export class BattleField {
     // ─────────────────────────────────────────────
 
     /**
-     * pop event ที่ frame น้อยสุดออกมา execute แล้วจัดการ lock ตามชนิด event
+     * pop event ที่ frame น้อยสุดออกมาแล้ว execute
      * ส่งตัวเองเข้าไปใน execute ด้วย — event จึงเอื้อมถึง roster/triggerBus ได้โดยไม่ต้องแนบมาตอนสร้าง
+     *
+     * ไม่แตะ lock เอง — ล็อกถูกตั้งไปแล้วตอน schedule (`scheduleStartOnFieldAction`)
+     * ก่อนหน้านี้เคยมี branch เช็ค `ActionEvent.isManual` ตรงนี้ ลบทิ้งเพราะเป็นของซ้ำ:
+     * ทุก manual action เข้าคิวผ่าน `scheduleStartOnFieldAction` เท่านั้น (ล็อกไปแล้ว) และทุก
+     * off-field action ส่ง `isManual: false` มาเสมอ ไม่มี code path ไหนที่ branch นี้ยังจำเป็นอยู่ —
+     * เหลือไว้มีแต่ความเสี่ยง: ถ้าใครวันหลัง schedule manual action ผ่าน `schedule()` ตรงๆ
+     * ข้าม `scheduleStartOnFieldAction` ไป branch นี้จะล็อกให้แบบไม่มีคู่ปลดทันที
      */
     public tick(): CombatEvent | undefined {
         const event = this.timeline.pop();
@@ -262,10 +268,6 @@ export class BattleField {
 
         this.currentFrame = event.time;
         event.execute(this);
-
-        if (event instanceof ActionEvent && event.isManual) {
-            this.isGlobalLocked = true;
-        }
 
         return event;
     }

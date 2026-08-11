@@ -2,6 +2,7 @@ import { AllyUnit } from "../../Models/AllyUnit";
 import { RotationBuilder } from "../../Simulator/RotationBuilder";
 import { ElementType, WeaponType, StatsType, ActionType } from "../../Constants/Enum";
 import { AttackActionEvent } from "../../Models/Combat/CombatEvent/AttackActionEvent";
+import { SwapCharacterEvent } from "../../Models/Combat/CombatEvent/SwapCharacterEvent";
 
 const BA_DURATION    = 30;   // 0.5s
 const SKILL_DURATION = 60;   // 1.0s
@@ -40,6 +41,9 @@ export function setupTest1(unit: AllyUnit): void {
                 const t = timeline.currentFrame;
                 const event = new AttackActionEvent(`Test1-Skill-f${t}`, unit, ActionType.Skill);
                 timeline.appendOnExecute(event, () => console.log(`[f${t}] Test1-Skill`));
+                // ท่าสุดท้ายของ test1 ใน Standard — ต่อด้วย test2 ใน mergeQueues เสมอ
+                // สั่ง swap ต่อท้ายท่าจริงเอง (ห้ามท่าที่มีแต่สลับตัวเฉยๆ)
+                timeline.appendOnExecute(event, () => timeline.schedule(new SwapCharacterEvent()));
                 timeline.scheduleStartOnFieldAction(event, SKILL_DURATION);
             })
             .build()
@@ -57,6 +61,8 @@ export function setupTest1(unit: AllyUnit): void {
                 const t = timeline.currentFrame;
                 const event = new AttackActionEvent(`Test1-BA1-f${t}`, unit, ActionType.BA);
                 timeline.appendOnExecute(event, () => console.log(`[f${t}] Test1-BA1`));
+                // ท่าสุดท้ายของ test1 ใน Burst — ต่อด้วย test2 ใน mergeQueues เสมอ
+                timeline.appendOnExecute(event, () => timeline.schedule(new SwapCharacterEvent()));
                 timeline.scheduleStartOnFieldAction(event, BA_DURATION);
             })
             .build()

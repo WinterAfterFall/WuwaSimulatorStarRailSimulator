@@ -119,22 +119,29 @@ describe('SwapCharacterEvent', () => {
     // เทสระดับ Director — เคสที่ unit test ข้างบนจับไม่ได้ เพราะ battleField.rotationCount
     // ขยับจากฝั่ง Director สวนทางกับจังหวะที่ swap event รัน
     describe('driven by RotationDirector', () => {
+        // action ต้องทำท่าจริงก่อนค่อยสลับเสมอ (ห้าม action ที่มีแต่การสลับตัวเฉยๆ — ดู CLAUDE.md)
+        // ไม่งั้น swap ที่ rotation สั่งเองจะไปชนกับ swap ปิดรอบก่อนหน้าที่ endRotation() เพิ่ง
+        // schedule ไว้ในสเต็ปเดียวกัน (ชื่อ "SwapCharacter" ซ้ำกัน โดน update() ทับกันเอง)
         it('should rotate through the whole team once per round', () => {
             const sim = new Simulate();
-            sim.addAlly(new AllyUnit('A'));
-            sim.addAlly(new AllyUnit('B'));
-            sim.addAlly(new AllyUnit('C'));
+            const a = sim.addAlly(new AllyUnit('A'));
+            const b = sim.addAlly(new AllyUnit('B'));
+            const c = sim.addAlly(new AllyUnit('C'));
 
             const field = sim.battleField;
             const seen: string[] = [];
 
-            const swapAction = (name: string) =>
-                [name, () => field.schedule(new SwapCharacterEvent())] as const;
+            const attack = (unit: AllyUnit, name: string, thenSwap: boolean) => () => {
+                const event = new AttackActionEvent(`${name}-f${field.currentFrame}`, unit, ActionType.BA);
+                if (thenSwap) field.appendOnExecute(event, () => field.schedule(new SwapCharacterEvent()));
+                field.scheduleStartOnFieldAction(event, 10);
+            };
 
-            const loop = new RotationBuilder();
-            for (const [name, fn] of [swapAction('a1'), swapAction('a2'), swapAction('a3')]) {
-                loop.add(name, () => { if (name !== 'a3') fn(); });   // N-1 = 2 ครั้ง
-            }
+            const loop = new RotationBuilder()
+                .add('a1', attack(a, 'A1', true))
+                .add('a2', attack(b, 'A2', true))
+                .add('a3', attack(c, 'A3', false))   // N-1 = 2 ครั้ง
+                .build();
 
             const originalTick = field.tick.bind(field);
             field.tick = () => {
@@ -143,7 +150,7 @@ describe('SwapCharacterEvent', () => {
                 return event;
             };
 
-            sim.run(new RotationBuilder().build(), loop.build(), 2);
+            sim.run(new RotationBuilder().build(), loop, 2);
 
             expect(seen).toEqual(['B', 'C', 'A', 'B', 'C', 'A']);
         });
@@ -155,12 +162,19 @@ describe('SwapCharacterEvent', () => {
             const c = sim.addAlly(new AllyUnit('C'));
 
             const field = sim.battleField;
-            const swap  = () => field.schedule(new SwapCharacterEvent());
+
+            const attack = (unit: AllyUnit, name: string, thenSwap: boolean) => () => {
+                const event = new AttackActionEvent(`${name}-f${field.currentFrame}`, unit, ActionType.BA);
+                if (thenSwap) field.appendOnExecute(event, () => field.schedule(new SwapCharacterEvent()));
+                field.scheduleStartOnFieldAction(event, 10);
+            };
 
             sim.run(
                 new RotationBuilder().build(),
                 new RotationBuilder()
-                    .add('a1', swap).add('a2', swap).add('a3', () => {})
+                    .add('a1', attack(a, 'A1', true))
+                    .add('a2', attack(b, 'A2', true))
+                    .add('a3', attack(c, 'A3', false))
                     .build(),
                 2,
             );

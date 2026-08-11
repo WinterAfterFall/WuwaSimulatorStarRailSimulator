@@ -258,6 +258,16 @@ CombatTimeline.tick()
 
 ---
 
+## กติกาการออกแบบ rotation — ห้าม action ที่มีแต่การสลับตัวเฉยๆ
+
+**ห้าม**เขียน rotation action ที่ทำแค่ `battleField.schedule(new SwapCharacterEvent())` โดยไม่มีตัวละครทำท่าอะไรก่อนเลย — ในเกมจริงไม่มี "เปิด rotation ด้วยการสลับตัวเปล่าๆ" ตัวละครต้องทำท่าอะไรสักอย่าง (อย่างน้อยก็ auto attack) ก่อนจะสลับออกเสมอ
+
+เหตุผลเชิงเทคนิคที่รองรับกติกานี้: `SwapCharacterEvent` ทุกตัว (ทั้งที่ rotation สั่งเองและที่ `endRotation()` ออกให้อัตโนมัติตอนจบรอบ) ใช้ชื่อ `"SwapCharacter"` **ซ้ำกันหมด** — `BattleField.schedule()` เจอชื่อซ้ำในคิวจะ `update()` ทับตัวเดิมแทน `push()` ใหม่ ([BattleField.ts:117-127](app/Simulator/BattleField.ts:117)) ถ้า action แรกของรอบใหม่ยิง `schedule(new SwapCharacterEvent())` ทันทีโดยไม่มี action จริงคั่นก่อน มันจะ schedule ในสเต็ปเดียวกับที่ `endRotation()` เพิ่ง schedule swap ปิดรอบก่อนหน้าไปหมาดๆ (ยังไม่ทันโดน `tick()` ดึงออกไปประมวลผลเลย) → ตัวที่มาทีหลังทับตัวเดิมทิ้ง → swap ปิดรอบก่อนหน้าหายไปเงียบๆ ทำให้ `rotationCount` นับพลาด
+
+action ที่ใช้ `scheduleStartOnFieldAction()` (ท่าจริงที่มี duration + ล็อก) ไม่มีปัญหานี้ เพราะบังคับให้ `step()` วน `tick()` หลายรอบ (ผ่าน `do...while(isGlobalLocked && !isEmpty)`) ก่อนจะกลับไปหา action ถัดไป — swap ที่ schedule ไว้ก่อนหน้าจึงถูก`tick()` ดึงไปประมวลผลจนหมดคิวก่อนเสมอ ไม่มีทางชนกันเอง
+
+---
+
 ## หน่วยเวลา
 - ใช้ **frame** (integer) — `1 วินาที = 60 frame` (ค่าคงที่ `F = 60` ใน `manualBuilder.ts`)
 - `CombatTimeline.currentFrame` เก็บ frame ปัจจุบัน
