@@ -11,9 +11,28 @@ export interface EnergyIncreaseContext {
     actionType?: ActionType;
 }
 
+/** unit ที่เพิ่งกด Ultimate (ActionType.Ult) — emit จาก ActionEvent.execute ทุกครั้งที่ actionType ตรง */
+export interface UltimateCastContext {
+    unit: AllyUnit;
+}
+
+/** unit ที่เพิ่ง execute AttackActionEvent/BuffActionEvent — emit จากตัว event เองทุกครั้งที่ execute */
+export interface AttackActionContext {
+    unit: AllyUnit;
+    actionType: ActionType;
+}
+
+export interface BuffActionContext {
+    unit: AllyUnit;
+    actionType: ActionType;
+}
+
 /** เพิ่ม event ใหม่ที่นี่ — key ต้องตรงกับ TriggerEvent enum ใน Constants/Enum.ts */
 export interface TriggerEventMap {
     [TriggerEvent.EnergyIncrease]: EnergyIncreaseContext;
+    [TriggerEvent.UltimateCast]: UltimateCastContext;
+    [TriggerEvent.AttackAction]: AttackActionContext;
+    [TriggerEvent.BuffAction]: BuffActionContext;
 }
 
 interface Listener<K extends TriggerEvent> {

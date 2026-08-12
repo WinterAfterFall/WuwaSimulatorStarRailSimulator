@@ -29,6 +29,14 @@ export abstract class CombatEvent {
      */
     public execute: (battleField: BattleField) => void = () => {};
 
+    /**
+     * ตั้งค่า `execute` ใหม่ทั้งก้อน — **ทับ** ของเดิม ไม่ใช่ต่อท้าย
+     * (ต่อท้ายแบบไม่ทับของเดิม ใช้ `BattleField.appendOnExecute()` แทน)
+     */
+    public setExecute(execute: (battleField: BattleField) => void): void {
+        this.execute = execute;
+    }
+
     constructor(name: string);
     constructor(name: string, time: number);
     constructor(name: string, time: number, priority: number);

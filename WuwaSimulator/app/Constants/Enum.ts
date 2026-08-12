@@ -111,7 +111,10 @@ export enum NotificationType {
 
 // เพิ่ม event ใหม่ที่นี่แล้วเพิ่ม payload คู่กันใน TriggerEventMap (Simulator/TriggerBus.ts)
 export enum TriggerEvent {
-    EnergyIncrease = "EnergyIncrease"   // มีการเพิ่ม energy ให้ ally คนใดคนหนึ่ง
+    EnergyIncrease = "EnergyIncrease",  // มีการเพิ่ม energy ให้ ally คนใดคนหนึ่ง
+    UltimateCast   = "UltimateCast",    // ally คนใดคนหนึ่งกด Ultimate (ActionType.Ult)
+    AttackAction   = "AttackAction",    // ally คนใดคนหนึ่ง execute AttackActionEvent
+    BuffAction     = "BuffAction"       // ally คนใดคนหนึ่ง execute BuffActionEvent
 }
 
 export enum EnemyPosition{

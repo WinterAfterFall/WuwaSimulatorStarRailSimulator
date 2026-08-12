@@ -48,6 +48,7 @@ export class AllyUnit extends Unit {
     // --- Energy ---
     public energy    : number = 0;
     public maxEnergy : number = 0;
+    public ultCost   : number = 0;   // พลังงานที่ต้องใช้กด Ultimate — เช็คตอน CastUltimateEvent execute
 
     // --- Concerto Energy ---
     public concentoEnergy    : number = 0;
