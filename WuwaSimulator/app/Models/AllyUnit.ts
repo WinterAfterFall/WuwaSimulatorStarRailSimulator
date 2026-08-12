@@ -25,6 +25,12 @@ export class AllyUnit extends Unit {
     /** key = ชื่อ rotation, value = factory รับ timeline แล้วคืน Queue<RotationAction> */
     public rotations: Map<string, (battleField: BattleField) => Queue<RotationAction>> = new Map();
 
+    // --- Swap Skills ---
+    // ตัวละครที่ไม่มีท่านี้ไม่ต้อง set — ปล่อย undefined ไว้ (ไม่ใช่ทุกตัวมี outro/intro/ultimate)
+    public outroSkill?: (battleField: BattleField) => boolean;
+    public introSkill?: (battleField: BattleField) => void;
+    public ultimate?: (battleField: BattleField) => void;
+
     /**
      * rotation ของตัวนี้ถูกสั่งไปแล้วกี่ครั้ง — **นับเฉพาะของ unit ตัวนี้**
      * (คนละเรื่องกับ `RotationDirector.currentLoopCount` ที่นับรอบของ loopQueue ทั้งทีม)

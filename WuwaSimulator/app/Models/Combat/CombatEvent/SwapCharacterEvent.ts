@@ -63,7 +63,15 @@ export class SwapCharacterEvent extends CombatEvent {
                 );
             }
 
+            // 3) Outro ของตัวที่กำลังออก — เรียกตอนยังเป็น onFieldChar อยู่จริง
+            //    return true เท่านั้นถึงจะเรียก Intro ของตัวที่กำลังเข้า
+            const outroTriggered = current?.outroSkill?.(battleField) ?? false;
+
             battleField.onFieldChar = next;
+
+            if (outroTriggered) {
+                next.introSkill?.(battleField);
+            }
         };
     }
 }
