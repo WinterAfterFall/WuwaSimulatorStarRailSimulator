@@ -87,19 +87,37 @@ export class BattleField {
 
     /**
      * เรียกก่อนเริ่ม simulate รอบใหม่ — reset stats ของทุก unit กลับค่า default
-     * แล้วล้างตัวนับที่ผูกกับ "รอบการรัน" ไม่ใช่ตัวละคร (rotationCount) ไม่ให้ค้างข้ามรอบ
+     * แล้วล้างสถานะรันไทม์ทั้งหมดที่ combat จริง mutate ระหว่างสู้ ไม่ให้ค้างข้ามรอบ
+     * (ไม่รวม dmgRecord/maxDmgRecord — ตั้งใจเก็บไว้ให้ดูผลสรุปย้อนหลังได้หลังจบรอบ)
      */
     public resetAllUnits(): void {
         for (const unit of [...this.allies, ...this.enemies]) {
             unit.initDefaultStats();
         }
 
-        // rotationCount ทั้งฝั่ง unit และฝั่งสนามต้องกลับไปที่ 0 พร้อมกัน
-        // ถ้าเหลื่อมกันเมื่อไหร่ SwapCharacterEvent จะหาตัวที่ "ถึงคิว" ไม่เจอตั้งแต่รอบแรก
-        this.rotationCount = 0;
         for (const ally of this.allies) {
+            // rotationCount ทั้งฝั่ง unit และฝั่งสนามต้องกลับไปที่ 0 พร้อมกัน
+            // ถ้าเหลื่อมกันเมื่อไหร่ SwapCharacterEvent จะหาตัวที่ "ถึงคิว" ไม่เจอตั้งแต่รอบแรก
             ally.rotationCount = 0;
+
+            ally.energy         = 0;
+            ally.concentoEnergy = 0;
+            ally.currentHP      = 0;
+            ally.currentShield  = 0;
+
+            ally.stacks.clear();
+            ally.buffNote.clear();
+            ally.gauges.clear();
+            ally.buffCheck.clear();
         }
+
+        for (const enemy of this.enemies) {
+            enemy.debuffStacks.clear();
+            enemy.debuffNote.clear();
+            enemy.debuffCheck.clear();
+        }
+
+        this.rotationCount = 0;
 
         // เริ่มเกมด้วยตัวแรกในทีมเสมอ — รอบก่อนหน้าอาจทิ้ง onFieldChar ไว้ที่ตัวไหนก็ได้
         this.onFieldChar = this.allies[0] ?? null;
