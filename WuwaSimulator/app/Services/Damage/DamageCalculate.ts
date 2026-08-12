@@ -182,7 +182,7 @@ function applyDamageFormula(
 
 /**
  * คำนวณดาเมจอย่างเดียว ไม่แตะ state ของผู้ตีเลย
- * ทรัพยากรที่ได้จากท่า (energy/concento/gauge) เป็นหน้าที่ของ `CombatTimeline.applyResourceGain()`
+ * ทรัพยากรที่ได้จากท่า (energy/concento/gauge) เป็นหน้าที่ของ `BattleField.applyResourceGain()`
  * ซึ่ง `DamageEvent` เรียกต่อให้เองตอน execute
  */
 export function calculateDamage(damage: Damage): void {

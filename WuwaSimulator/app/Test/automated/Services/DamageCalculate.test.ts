@@ -4,8 +4,8 @@ import { AllyUnit } from '../../../Models/AllyUnit';
 import { EnemyUnit } from '../../../Models/EnemyUnit';
 import { ActionType, ElementType } from '../../../Constants/Enum';
 
-// การจ่าย energy/concento/gauge ย้ายไปอยู่ที่ CombatTimeline.applyResourceGain แล้ว
-// (test ชุดนั้นอยู่ใน Simulator/CombatTimeline.test.ts) — ที่นี่เหลือแค่เรื่องสูตรล้วนๆ
+// การจ่าย energy/concento/gauge ย้ายไปอยู่ที่ BattleField.applyResourceGain แล้ว
+// (test ชุดนั้นอยู่ใน Simulator/BattleField.test.ts) — ที่นี่เหลือแค่เรื่องสูตรล้วนๆ
 describe('calculateDamage — pure formula, no side effects on the attacker', () => {
     let attacker: AllyUnit;
     let enemy   : EnemyUnit;

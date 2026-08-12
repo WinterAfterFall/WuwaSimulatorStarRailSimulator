@@ -107,7 +107,7 @@ export class Damage {
     /**
      * target รับได้ทั้ง unit เดียวและหลาย unit
      * ถ้าอยากยิงตาม SkillRange ให้กรองจาก battleField ก่อนแล้วค่อยส่งเข้ามา:
-     *   new Damage(unit, "BA1", ActionType.BA, timeline.battleField.enemiesInRange(SkillRange.Contact))
+     *   new Damage(unit, "BA1", ActionType.BA, battleField.enemiesInRange(SkillRange.Contact))
      */
     constructor(
         attacker   : AllyUnit,

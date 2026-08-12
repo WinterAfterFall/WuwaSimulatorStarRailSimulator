@@ -29,6 +29,6 @@ export class NotificationEvent extends CombatEvent {
         this.unit       = unit ?? null;
 
         // NotificationEvent เป็นแค่ signal — ไม่รัน logic เอง (ใช้ default no-op execute จาก CombatEvent)
-        // logic จริงถูกกำหนดโดย CombatTimeline ตอน tick (เช็ค notifyType)
+        // logic จริงถูกกำหนดโดย BattleField ตอน tick (เช็ค notifyType)
     }
 }

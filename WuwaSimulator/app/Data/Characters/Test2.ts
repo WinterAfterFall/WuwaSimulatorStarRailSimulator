@@ -22,59 +22,59 @@ export function setupTest2(unit: AllyUnit): void {
     unit.setStat(StatsType.CR, 0.05);
     unit.setStat(StatsType.CD, 1.5);
 
-    unit.rotations.set("Standard", (timeline) =>
+    unit.rotations.set("Standard", (battleField) =>
         new RotationBuilder()
             .add("Test2-BA1", () => {
-                const t = timeline.currentFrame;
+                const t = battleField.currentFrame;
                 const event = new AttackActionEvent(`Test2-BA1-f${t}`, unit, ActionType.BA);
-                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-BA1`));
-                timeline.scheduleStartOnFieldAction(event, BA_DURATION);
+                battleField.appendOnExecute(event, () => console.log(`[f${t}] Test2-BA1`));
+                battleField.scheduleStartOnFieldAction(event, BA_DURATION);
             })
             .add("Test2-Skill", () => {
-                const t = timeline.currentFrame;
+                const t = battleField.currentFrame;
                 const event = new AttackActionEvent(`Test2-Skill-f${t}`, unit, ActionType.Skill);
-                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-Skill`));
-                timeline.scheduleStartOnFieldAction(event, SKILL_DURATION);
+                battleField.appendOnExecute(event, () => console.log(`[f${t}] Test2-Skill`));
+                battleField.scheduleStartOnFieldAction(event, SKILL_DURATION);
             })
             .add("Test2-BA2", () => {
-                const t = timeline.currentFrame;
+                const t = battleField.currentFrame;
                 const event = new AttackActionEvent(`Test2-BA2-f${t}`, unit, ActionType.BA);
-                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-BA2`));
-                timeline.scheduleStartOnFieldAction(event, BA_DURATION);
+                battleField.appendOnExecute(event, () => console.log(`[f${t}] Test2-BA2`));
+                battleField.scheduleStartOnFieldAction(event, BA_DURATION);
             })
             .build()
     );
 
-    unit.rotations.set("Burst", (timeline) =>
+    unit.rotations.set("Burst", (battleField) =>
         new RotationBuilder()
             .add("Test2-Ult", () => {
-                const t = timeline.currentFrame;
+                const t = battleField.currentFrame;
                 const event = new AttackActionEvent(`Test2-Ult-f${t}`, unit, ActionType.Ult);
-                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-Ult`));
-                timeline.scheduleStartOnFieldAction(event, ULT_DURATION);
+                battleField.appendOnExecute(event, () => console.log(`[f${t}] Test2-Ult`));
+                battleField.scheduleStartOnFieldAction(event, ULT_DURATION);
             })
             .add("Test2-BA1", () => {
-                const t = timeline.currentFrame;
+                const t = battleField.currentFrame;
                 const event = new AttackActionEvent(`Test2-BA1-f${t}`, unit, ActionType.BA);
-                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-BA1`));
-                timeline.scheduleStartOnFieldAction(event, BA_DURATION);
+                battleField.appendOnExecute(event, () => console.log(`[f${t}] Test2-BA1`));
+                battleField.scheduleStartOnFieldAction(event, BA_DURATION);
             })
             .build()
     );
 
-    unit.rotations.set("Echo Focus", (timeline) =>
+    unit.rotations.set("Echo Focus", (battleField) =>
         new RotationBuilder()
             .add("Test2-Echo", () => {
-                const t = timeline.currentFrame;
+                const t = battleField.currentFrame;
                 const event = new AttackActionEvent(`Test2-Echo-f${t}`, unit, ActionType.Echo);
-                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-Echo`));
-                timeline.scheduleStartOnFieldAction(event, ECHO_DURATION);
+                battleField.appendOnExecute(event, () => console.log(`[f${t}] Test2-Echo`));
+                battleField.scheduleStartOnFieldAction(event, ECHO_DURATION);
             })
             .add("Test2-Skill", () => {
-                const t = timeline.currentFrame;
+                const t = battleField.currentFrame;
                 const event = new AttackActionEvent(`Test2-Skill-f${t}`, unit, ActionType.Skill);
-                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test2-Skill`));
-                timeline.scheduleStartOnFieldAction(event, SKILL_DURATION);
+                battleField.appendOnExecute(event, () => console.log(`[f${t}] Test2-Skill`));
+                battleField.scheduleStartOnFieldAction(event, SKILL_DURATION);
             })
             .build()
     );

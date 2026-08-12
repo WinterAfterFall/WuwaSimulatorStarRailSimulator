@@ -22,7 +22,7 @@ export class AllyUnit extends Unit {
     public resonanceChain : number = 0; // C ตัวละครอ่ะ
 
     // --- Rotation Definitions ---
-    /** key = ชื่อ rotation, value = factory รับ timeline แล้วคืน Queue<RotationAction> */
+    /** key = ชื่อ rotation, value = factory รับ battleField แล้วคืน Queue<RotationAction> */
     public rotations: Map<string, (battleField: BattleField) => Queue<RotationAction>> = new Map();
 
     // --- Swap Skills ---

@@ -8,9 +8,9 @@ import { resolveTimePriority } from "./resolveTimePriority";
  * DamageEvent — ความเสียหายที่จะเกิดขึ้น ณ frame นั้น
  *
  * execute แบ่งเป็น 2 จังหวะ: `calculateDamage` คำนวณ+print ดาเมจ (สูตรล้วน ไม่แตะ state ใคร)
- * แล้ว `timeline.applyResourceGain` จ่าย energy/concento/gauge ให้ผู้ตี
+ * แล้ว `battleField.applyResourceGain` จ่าย energy/concento/gauge ให้ผู้ตี
  *
- * ไม่ต้องแนบ triggerBus มาตอนสร้างอีกแล้ว — timeline ส่งตัวเองเข้ามาตอน execute
+ * ไม่ต้องแนบ triggerBus มาตอนสร้างอีกแล้ว — battleField ส่งตัวเองเข้ามาตอน execute
  * (เดิมถ้าลืมส่งจะ no-op เงียบๆ ไม่มี error ให้เห็นเลย)
  *
  * รองรับ 3 รูปแบบเหมือน CombatEvent (name / name+time / name+time+priority) — damage/target/onExecute
@@ -31,9 +31,9 @@ export class DamageEvent extends CombatEvent {
         this.damage = damage;
         this.target = target;
 
-        this.execute = (timeline) => {
+        this.execute = (battleField) => {
             calculateDamage(this.damage);
-            timeline.applyResourceGain(this.damage);
+            battleField.applyResourceGain(this.damage);
             onExecute?.();
         };
     }

@@ -1,6 +1,6 @@
 /**
  * RotationAction — base class ของ action ที่ถูก queue ไว้ก่อน schedule
- * ต่างจาก RotationEvent คือยังไม่มี `time` — จะถูกกำหนดทีหลังตอน schedule ลง RotationTimeline
+ * ต่างจาก RotationEvent คือยังไม่มี `time` — จะถูกกำหนดทีหลังตอน schedule ลง BattleField
  */
 export class RotationAction {
     /** ชื่อ unique สำหรับใช้เป็น key ตอนถูก schedule ลง IPQ */

@@ -23,47 +23,47 @@ export function setupTest1(unit: AllyUnit): void {
     unit.setStat(StatsType.CR, 0.05);
     unit.setStat(StatsType.CD, 1.5);
 
-    unit.rotations.set("Standard", (timeline) =>
+    unit.rotations.set("Standard", (battleField) =>
         new RotationBuilder()
             .add("Test1-BA1", () => {
-                const t = timeline.currentFrame;
+                const t = battleField.currentFrame;
                 const event = new AttackActionEvent(`Test1-BA1-f${t}`, unit, ActionType.BA);
-                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test1-BA1`));
-                timeline.scheduleStartOnFieldAction(event, BA_DURATION);
+                battleField.appendOnExecute(event, () => console.log(`[f${t}] Test1-BA1`));
+                battleField.scheduleStartOnFieldAction(event, BA_DURATION);
             })
             .add("Test1-BA2", () => {
-                const t = timeline.currentFrame;
+                const t = battleField.currentFrame;
                 const event = new AttackActionEvent(`Test1-BA2-f${t}`, unit, ActionType.BA);
-                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test1-BA2`));
-                timeline.scheduleStartOnFieldAction(event, BA_DURATION);
+                battleField.appendOnExecute(event, () => console.log(`[f${t}] Test1-BA2`));
+                battleField.scheduleStartOnFieldAction(event, BA_DURATION);
             })
             .add("Test1-Skill", () => {
-                const t = timeline.currentFrame;
+                const t = battleField.currentFrame;
                 const event = new AttackActionEvent(`Test1-Skill-f${t}`, unit, ActionType.Skill);
-                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test1-Skill`));
+                battleField.appendOnExecute(event, () => console.log(`[f${t}] Test1-Skill`));
                 // ท่าสุดท้ายของ test1 ใน Standard — ต่อด้วย test2 ใน mergeQueues เสมอ
                 // สั่ง swap ต่อท้ายท่าจริงเอง (ห้ามท่าที่มีแต่สลับตัวเฉยๆ)
-                timeline.appendOnExecute(event, () => timeline.schedule(new SwapCharacterEvent()));
-                timeline.scheduleStartOnFieldAction(event, SKILL_DURATION);
+                battleField.appendOnExecute(event, () => battleField.schedule(new SwapCharacterEvent()));
+                battleField.scheduleStartOnFieldAction(event, SKILL_DURATION);
             })
             .build()
     );
 
-    unit.rotations.set("Burst", (timeline) =>
+    unit.rotations.set("Burst", (battleField) =>
         new RotationBuilder()
             .add("Test1-Ult", () => {
-                const t = timeline.currentFrame;
+                const t = battleField.currentFrame;
                 const event = new AttackActionEvent(`Test1-Ult-f${t}`, unit, ActionType.Ult);
-                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test1-Ult`));
-                timeline.scheduleStartOnFieldAction(event, ULT_DURATION);
+                battleField.appendOnExecute(event, () => console.log(`[f${t}] Test1-Ult`));
+                battleField.scheduleStartOnFieldAction(event, ULT_DURATION);
             })
             .add("Test1-BA1", () => {
-                const t = timeline.currentFrame;
+                const t = battleField.currentFrame;
                 const event = new AttackActionEvent(`Test1-BA1-f${t}`, unit, ActionType.BA);
-                timeline.appendOnExecute(event, () => console.log(`[f${t}] Test1-BA1`));
+                battleField.appendOnExecute(event, () => console.log(`[f${t}] Test1-BA1`));
                 // ท่าสุดท้ายของ test1 ใน Burst — ต่อด้วย test2 ใน mergeQueues เสมอ
-                timeline.appendOnExecute(event, () => timeline.schedule(new SwapCharacterEvent()));
-                timeline.scheduleStartOnFieldAction(event, BA_DURATION);
+                battleField.appendOnExecute(event, () => battleField.schedule(new SwapCharacterEvent()));
+                battleField.scheduleStartOnFieldAction(event, BA_DURATION);
             })
             .build()
     );
