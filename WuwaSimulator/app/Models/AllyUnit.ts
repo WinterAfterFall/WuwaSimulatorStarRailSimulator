@@ -27,7 +27,7 @@ export class AllyUnit extends Unit {
 
     // --- Swap Skills ---
     // ตัวละครที่ไม่มีท่านี้ไม่ต้อง set — ปล่อย undefined ไว้ (ไม่ใช่ทุกตัวมี outro/intro/ultimate)
-    public outroSkill?: (battleField: BattleField) => boolean;
+    public outroSkill?: (battleField: BattleField) => void;
     public introSkill?: (battleField: BattleField) => void;
     public ultimate?: (battleField: BattleField) => void;
 

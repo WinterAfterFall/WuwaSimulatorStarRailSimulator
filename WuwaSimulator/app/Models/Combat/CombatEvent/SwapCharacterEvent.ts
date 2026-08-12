@@ -64,13 +64,16 @@ export class SwapCharacterEvent extends CombatEvent {
             }
 
             // 3) Outro ของตัวที่กำลังออก — เรียกตอนยังเป็น onFieldChar อยู่จริง
-            //    return true เท่านั้นถึงจะเรียก Intro ของตัวที่กำลังเข้า
-            const outroTriggered = current?.outroSkill?.(battleField) ?? false;
+            //    ต้อง concento เต็ม 100 ก่อนถึงจะ trigger ได้ (ไม่ครบไม่มี outro/intro เกิดขึ้นเลย)
+            const concentoFull = current !== null && current.concentoEnergy >= 100;
+            if (concentoFull) {
+                current.outroSkill?.(battleField);
+            }
 
             battleField.onFieldChar = next;
 
-            if (outroTriggered) {
-                next.introSkill?.(battleField);
+            if (concentoFull) {
+                    next.introSkill?.(battleField);
             }
         };
     }
