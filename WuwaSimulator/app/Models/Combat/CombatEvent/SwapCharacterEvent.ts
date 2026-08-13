@@ -32,9 +32,20 @@ export class SwapCharacterEvent extends CombatEvent {
         this.isTempSwap = isTempSwap;
 
         this.execute = (battleField) => {
+            const current = battleField.onFieldChar;
+
+            // สลับแบบปกติ (ไม่ใช่ขาแวะ) ต้องรอ concento ของตัวที่กำลังจะออกเต็มก่อนเสมอ
+            // ถ้ายังไม่เต็มให้ดังทันทีก่อนแตะ state อะไรเลย — กันรอบ simulate เดินต่อทั้งที่ยัง
+            // ไม่ครบเงื่อนไข แล้วไปโผล่เป็นอาการแปลกๆ อีกหลายร้อย frame ถัดไป
+            if (this.isTempSwap !== 1 && current !== null && current.concentoEnergy < current.maxConcentoEnergy) {
+                throw new Error(
+                    `${this.name}: ${current.name} concento ยังไม่เต็ม (${current.concentoEnergy}/${current.maxConcentoEnergy}) — ` +
+                    `ห้ามสลับตัวแบบปกติจนกว่า concento จะเต็ม`
+                );
+            }
+
             // 1) ปิดคิวของตัวที่ยืนอยู่ก่อน — มันเพิ่งทำท่าของตัวเองจบถึงได้มีการสั่งสลับ
             //    ขาแวะไม่นับเป็นคิว ค่าจึงเท่าเดิม ตัวเดิมยังถูกหยิบได้อีกในรอบนี้
-            const current = battleField.onFieldChar;
             if (current && this.isTempSwap !== 1) {
                 current.rotationCount++;
             }
@@ -64,8 +75,9 @@ export class SwapCharacterEvent extends CombatEvent {
             }
 
             // 3) Outro ของตัวที่กำลังออก — เรียกตอนยังเป็น onFieldChar อยู่จริง
-            //    ต้อง concento เต็ม 100 ก่อนถึงจะ trigger ได้ (ไม่ครบไม่มี outro/intro เกิดขึ้นเลย)
-            const concentoFull = current !== null && current.concentoEnergy >= 100;
+            //    ต้อง concento เต็ม (concentoEnergy >= maxConcentoEnergy) ก่อนถึงจะ trigger ได้
+            //    (สลับปกติผ่านการเช็คด้านบนมาแล้วเสมอจึงเต็มอยู่แล้ว จุดนี้จึงมีผลจริงแค่กับขาแวะ)
+            const concentoFull = current !== null && current.concentoEnergy >= current.maxConcentoEnergy;
             if (concentoFull) {
                 current.outroSkill?.(battleField);
             }

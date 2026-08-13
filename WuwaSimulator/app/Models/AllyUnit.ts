@@ -52,7 +52,7 @@ export class AllyUnit extends Unit {
 
     // --- Concerto Energy ---
     public concentoEnergy    : number = 0;
-    public maxConcentoEnergy : number = 0;
+    public maxConcentoEnergy : number = 100;
 
     // --- HP / Shield ---
     public currentHP     : number = 0;

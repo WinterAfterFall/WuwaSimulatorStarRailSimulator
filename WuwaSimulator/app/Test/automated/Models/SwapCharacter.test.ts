@@ -54,6 +54,12 @@ describe('SwapCharacterEvent', () => {
 
             field.allies.push(a, b, c);
             field.onFieldChar = a;
+
+            // ค่าเริ่มต้น: concento เต็มทุกตัว — เทสที่ไม่ได้ตั้งใจเทสเรื่อง concento โดยตรง
+            // จะได้ไม่โดนบล็อกจากกติกา "สลับปกติต้อง concento เต็ม"
+            for (const ally of [a, b, c]) {
+                ally.concentoEnergy = ally.maxConcentoEnergy;
+            }
         });
 
         // ลำดับสำคัญ: ปิดคิวตัวที่ยืนอยู่ก่อน แล้วค่อยเลือกตัวถัดไป
@@ -114,6 +120,35 @@ describe('SwapCharacterEvent', () => {
 
             expect(field.onFieldChar).toBe(b);
         });
+
+        // สลับปกติต้องรอ concento เต็มก่อนเสมอ ไม่งั้นดังทันทีเพื่อกันรอบ simulate เดินต่อทั้งที่ยังไม่ครบเงื่อนไข
+        it('should throw on a normal swap when the current character\'s concento is not full', () => {
+            a.maxConcentoEnergy = 100;
+            a.concentoEnergy = 99;
+
+            field.schedule(new SwapCharacterEvent());
+
+            expect(() => field.tick()).toThrow(/concento/);
+        });
+
+        it('should not throw on a normal swap when the current character\'s concento is full', () => {
+            a.maxConcentoEnergy = 100;
+            a.concentoEnergy = 100;
+
+            field.schedule(new SwapCharacterEvent());
+
+            expect(() => field.tick()).not.toThrow();
+            expect(field.onFieldChar).toBe(b);
+        });
+
+        it('should not throw on a temp swap even when concento is not full', () => {
+            a.maxConcentoEnergy = 100;
+            a.concentoEnergy = 0;
+
+            field.schedule(new SwapCharacterEvent(1));
+
+            expect(() => field.tick()).not.toThrow();
+        });
     });
 
     // เทสระดับ Director — เคสที่ unit test ข้างบนจับไม่ได้ เพราะ battleField.rotationCount
@@ -131,7 +166,10 @@ describe('SwapCharacterEvent', () => {
             const field = sim.battleField;
             const seen: string[] = [];
 
+            // resetAllUnits() ล้าง concentoEnergy กลับ 0 ทุกครั้งที่ sim.run() เริ่มรอบใหม่ —
+            // ต้องเติมเต็มให้ตัวที่กำลังจะออกก่อนเกิด swap ปกติเสมอ (ที่นี่เติมตอนตัวเองลงมือ)
             const attack = (unit: AllyUnit, name: string, thenSwap: boolean) => () => {
+                unit.concentoEnergy = unit.maxConcentoEnergy;
                 const event = new AttackActionEvent(`${name}-f${field.currentFrame}`, unit, ActionType.BA);
                 if (thenSwap) field.appendOnExecute(event, () => field.schedule(new SwapCharacterEvent()));
                 field.scheduleStartOnFieldAction(event, 10);
@@ -164,6 +202,7 @@ describe('SwapCharacterEvent', () => {
             const field = sim.battleField;
 
             const attack = (unit: AllyUnit, name: string, thenSwap: boolean) => () => {
+                unit.concentoEnergy = unit.maxConcentoEnergy;
                 const event = new AttackActionEvent(`${name}-f${field.currentFrame}`, unit, ActionType.BA);
                 if (thenSwap) field.appendOnExecute(event, () => field.schedule(new SwapCharacterEvent()));
                 field.scheduleStartOnFieldAction(event, 10);
@@ -190,11 +229,13 @@ describe('SwapCharacterEvent', () => {
             const b     = sim.addAlly(new AllyUnit('B'));
             const field = sim.battleField;
 
-            const attack = (unit: AllyUnit, name: string) => () =>
+            const attack = (unit: AllyUnit, name: string) => () => {
+                unit.concentoEnergy = unit.maxConcentoEnergy;
                 field.scheduleStartOnFieldAction(
                     new AttackActionEvent(`${name}-f${field.currentFrame}`, unit, ActionType.BA),
                     30,
                 );
+            };
 
             const setup = new RotationBuilder()
                 .add('a1', attack(a, 'A1'))

@@ -183,7 +183,11 @@ describe('Simulate — run', () => {
         const sim  = new Simulate();
         const unit = sim.addAlly(new AllyUnit('Mornye'));
 
-        sim.run(emptyQueue(), new RotationBuilder().add('combo', () => {}).build(), 3);
+        // resetAllUnits() ล้าง concentoEnergy กลับ 0 ตอนเริ่ม sim.run() — เติมให้เต็มทุก action
+        // เพราะ swap ปกติ (ที่ endRotation() สั่งปิดท้ายแต่ละรอบ) ต้อง concento เต็มก่อนเสมอ
+        sim.run(emptyQueue(), new RotationBuilder().add('combo', () => {
+            unit.concentoEnergy = unit.maxConcentoEnergy;
+        }).build(), 3);
 
         expect(unit.rotationCount).toBe(3);
     });
