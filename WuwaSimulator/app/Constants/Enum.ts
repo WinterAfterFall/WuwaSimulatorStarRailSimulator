@@ -35,6 +35,7 @@ export enum StatsType {
     TbBoost = "Tune Break Boost",   // ยังไม่ได้ต่อสายเข้า DamageCalculate.ts — เพิ่มไว้เฉยๆ
     HealBonus = "Healing Bonus",           // ฮีลที่ส่งออกเพิ่มขึ้น — Ally เท่านั้น — ยังไม่มีสมการไหนใช้ เพิ่มไว้เฉยๆ
     IncHealBonus = "Incoming Healing Bonus",// ฮีลที่ได้รับเพิ่มขึ้น — Ally เท่านั้น — ยังไม่มีสมการไหนใช้ เพิ่มไว้เฉยๆ
+    EnergyRegen = "Energy Regen",          // Ally เท่านั้น — ยังไม่ต่อสายเข้า EnergyService/DamageCalculate เพิ่มไว้เฉยๆ (ใช้เก็บ Echo substat)
 }
 
 // รายชื่อ StatsType ที่แต่ละฝั่งใช้จริง (Ally เท่านั้น / Both) — ใช้ตอน initDefaultStats() ใน constructor ของ AllyUnit

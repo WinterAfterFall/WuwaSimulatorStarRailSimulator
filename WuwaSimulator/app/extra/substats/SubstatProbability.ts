@@ -85,6 +85,25 @@ export function compareTuneTarget(a: TuneTarget, b: TuneTarget): TuneComparison 
     };
 }
 
+// "Ratio vs prev tier (n / n-1)" — survival(n) หารด้วย survival(n-1), tier 1 ไม่มี n-1 ให้เทียบ กำหนดเป็น 100 ตรงๆ
+export function getSurvivalRatioVsPrevTier(tableKey: SubstatTableKey, tier: number): number {
+    if (tier <= 1) return 100;
+    const maxTier = getMaxTier(tableKey);
+    if (tier > maxTier) return 0;
+    return (getSurvivalChance(tableKey, tier) / getSurvivalChance(tableKey, tier - 1)) * 100;
+}
+
+// array เต็ม tier 1..maxTier ของ getSurvivalRatioVsPrevTier — ไล่ tier ตามจำนวนจริงของแต่ละตาราง
+// (main/crit มี 8 tier, flatAtk/flatDef มี 4 tier)
+export function buildSurvivalRatioArray(tableKey: SubstatTableKey): number[] {
+    const maxTier = getMaxTier(tableKey);
+    const arr: number[] = [];
+    for (let tier = 1; tier <= maxTier; tier++) {
+        arr.push(getSurvivalRatioVsPrevTier(tableKey, tier));
+    }
+    return arr;
+}
+
 // ตาราง 2 มิติ: แถว = tier a (1..maxTierของ tableA), คอลัมน์ = tier b (1..maxTierของ tableB)
 // ค่า 1 = ควรเลือกเพิ่ม tier a (chance a >= chance b), 0 = ควรเลือกเพิ่ม tier b
 // เท่ากันพอดี (tie) นับเป็น 1 (เอนเอียงไปทาง a เป็นค่า default)

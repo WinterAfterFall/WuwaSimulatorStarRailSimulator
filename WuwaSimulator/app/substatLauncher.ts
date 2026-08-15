@@ -1,5 +1,10 @@
 import { SUBSTAT_TABLES, SubstatTableKey } from "./extra/substats/SubstatData";
-import { buildProbabilityTable, buildTuneDecisionMatrix, compareTuneTarget } from "./extra/substats/SubstatProbability";
+import {
+    buildProbabilityTable,
+    buildSurvivalRatioArray,
+    buildTuneDecisionMatrix,
+    compareTuneTarget,
+} from "./extra/substats/SubstatProbability";
 
 function printTable(tableKey: SubstatTableKey) {
     const { label } = SUBSTAT_TABLES[tableKey];
@@ -10,6 +15,13 @@ function printTable(tableKey: SubstatTableKey) {
             `${row.tier}    | ${row.exact.toFixed(4).padStart(8)} | ${row.survive.toFixed(4).padStart(10)} | ${row.tuneUp.toFixed(4).padStart(8)}`
         );
     }
+}
+
+function printSurvivalRatioArray(tableKey: SubstatTableKey) {
+    const { label } = SUBSTAT_TABLES[tableKey];
+    const ratios = buildSurvivalRatioArray(tableKey);
+    console.log(`\n--- Ratio vs prev tier (n / n-1) — ${label} ---`);
+    console.log(`[${ratios.map((v) => `${v.toFixed(4)}%`).join(", ")}]`);
 }
 
 function printDecisionMatrix(tableAKey: SubstatTableKey, tableBKey: SubstatTableKey = tableAKey) {
@@ -50,6 +62,13 @@ function runSubstatProbabilityDemo() {
     printDecisionMatrix("crit");
     printDecisionMatrix("flatAtk");
     printDecisionMatrix("flatDef");
+
+    // array "Ratio vs prev tier (n / n-1)" ต่อตาราง — tier 1 = 100% เสมอ (ไม่มี n-1 ให้เทียบ)
+    console.log("\n=== Ratio vs prev tier (n / n-1) — ทั้ง 4 ตาราง ===");
+    printSurvivalRatioArray("main");
+    printSurvivalRatioArray("crit");
+    printSurvivalRatioArray("flatAtk");
+    printSurvivalRatioArray("flatDef");
 }
 
 runSubstatProbabilityDemo();
