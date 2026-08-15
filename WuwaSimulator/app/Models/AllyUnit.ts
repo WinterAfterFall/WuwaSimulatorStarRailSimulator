@@ -3,6 +3,7 @@ import { StatsType, ElementType, WeaponType, ActionState } from "../Constants/En
 import { Queue } from "../Utils/queue";
 import { RotationAction } from "./Combat/RotationAction";
 import type { BattleField } from "../Simulator/BattleField";
+import type { EchoSubstats } from "../extra/substats/EchoSubstats";
 
 export class AllyUnit extends Unit {
 
@@ -67,6 +68,10 @@ export class AllyUnit extends Unit {
     // --- Damage Record ---
     public dmgRecord    : Map<string, number> = new Map();
     public maxDmgRecord : Map<string, number> = new Map();
+
+    // --- Echo Substats ---
+    public substats?: EchoSubstats;
+    public bestSubstats?: EchoSubstats;
 
     constructor(name: string) {
         super(name);

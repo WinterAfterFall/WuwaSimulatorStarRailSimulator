@@ -12,7 +12,7 @@ import { StatsType } from "../../Constants/Enum";
 //
 // StatsType.Dmg ใช้ตารางเดียวกันกับทั้ง 4 substat ในเกม (Basic/Heavy Attack DMG Bonus,
 // Resonance Skill/Liberation DMG Bonus) เพราะค่าต่อ tier เท่ากันหมด — แยกว่าเป็น
-// action type ไหนตอน apply จริงผ่าน EchoSubstat.actionType (ดู Echo.ts) ไม่ใช่ที่นี่
+// action type ไหนตอน apply จริงผ่าน EchoSubstats.actionType (ดู EchoSubstats.ts) ไม่ใช่ที่นี่
 // ─────────────────────────────────────────────────────────────
 
 export const SUBSTAT_VALUES: Partial<Record<StatsType, number[]>> = {

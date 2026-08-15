@@ -65,30 +65,30 @@ app/
 │
 ├── Models/
 │   ├── Unit.ts                      # Base class ของทุก unit — stat system (Map-based, 3 overloads) + defaultStats/reset
-│   ├── AllyUnit.ts                  # ตัวละครฝ่ายผู้เล่น extends Unit — combat state, rotations, buff/dmg tracking, TimelineRef
+│   ├── AllyUnit.ts                  # ตัวละครฝ่ายผู้เล่น extends Unit — combat state, rotations, swap skills, echo substats, buff/dmg tracking
 │   ├── EnemyUnit.ts                 # ศัตรู extends Unit — level, baseElemRed, position, debuff tracking, dmgRecord
 │   └── Combat/
 │       ├── Damage.ts                # Data object ล้วน — รับ target เป็น EnemyUnit|EnemyUnit[] เท่านั้น ไม่ import อะไรจาก Simulator/
 │       ├── MoveData.ts              # interface รวมค่าท่า 1 ท่า — duration/damageFrame/mtpr/type + optional energyGain/concento/autoStartFrame
 │       ├── RotationAction.ts        # action ที่ถูก queue ไว้ก่อน schedule (name + execute callback, ยังไม่มี time)
 │       └── CombatEvent/
-│           ├── CombatEvent.ts       # base ของทุก event — execute เป็น field `() => void` (default no-op) ไม่ใช่ abstract method แล้ว เปลี่ยนค่าได้ทีหลัง (`event.execute = ...`) duration เป็น optional
-│           ├── ActionEvent.ts       # abstract base ของ action ที่ตัวละครทำ (unit/actionType/isManual/autoStartFrame) — ถ้ามี duration+timeline auto-schedule EndAction, ถ้ามี autoStartFrame+timeline auto-schedule ChangeToAuto — constructor internal เท่านั้น เรียกผ่าน static factory ของ subclass
-│           ├── AttackActionEvent.ts # action โจมตี — constructor private, สร้างผ่าน .manual(...)/.auto(...) เท่านั้น (ดู "static factory" ด้านล่าง) — .manual() throw ถ้าไม่มีทั้ง duration และ autoStartFrame
-│           ├── BuffActionEvent.ts   # action buff skill — pattern เดียวกับ AttackActionEvent ทุกอย่าง (.manual()/.auto()) ตั้ง execute = setBusy ใน constructor
+│           ├── resolveTimePriority.ts # helper กลาง — แยก (time?, priority?) หน้า rest params ออกจาก args ของทุก subclass ที่รองรับ 3 overload (name / name+time / name+time+priority)
+│           ├── CombatEvent.ts       # base ของทุก event — execute เป็น field `(battleField: BattleField) => void` (default no-op) ไม่ใช่ abstract method แล้ว เปลี่ยนค่าได้ทีหลัง (`event.execute = ...` หรือ `event.setExecute(...)` ทับทั้งก้อน)
+│           ├── ActionEvent.ts       # abstract base ของ action ที่ตัวละครทำ (unit/actionType/isManual) — constructor เดียว public รองรับ 3 overload ผ่าน resolveTimePriority ไม่มี static factory .manual()/.auto() แล้ว — duration/autoStartFrame ไม่ใช่ field ของ event อีกต่อไป ย้ายไปเป็น parameter ของ `battleField.scheduleStartOnFieldAction()` ตอน schedule แทน
+│           ├── AttackActionEvent.ts # action โจมตี — inherit constructor ของ ActionEvent ตรงๆ แค่ห่อ execute เพิ่มด้วย `setExecute()` เพื่อ emit `TriggerEvent.AttackAction` ทุกครั้งที่ execute
+│           ├── BuffActionEvent.ts   # action buff skill — pattern เดียวกับ AttackActionEvent ทุกอย่าง แค่ emit `TriggerEvent.BuffAction` แทน
+│           ├── CastUltimateEvent.ts # event ตอนเริ่มร่าย Ultimate — เช็ค energy พอ ultCost ไหม (throw ถ้าไม่พอ) → หัก energy → emit `TriggerEvent.UltimateCast` → เรียก `unit.ultimate?.(battleField)` — เป็น direct child ของ CombatEvent ไม่ใช่ ActionEvent — ยังไม่มี rotation ไหนสร้าง event นี้จริงตอนนี้
 │           ├── BuffEvent.ts         # abstract base ของ event บัพ/ดีบัพ (มี target)
 │           ├── BuffStartEvent.ts    # บัพเริ่มมีผล — มี duration? field ของตัวเอง (ใช้ default no-op execute จาก CombatEvent — ยังไม่มี logic)
 │           ├── BuffEndEvent.ts      # บัพหมดผล — ไม่มี duration (ใช้ default no-op execute จาก CombatEvent — ยังไม่มี logic)
-│           ├── DamageEvent.ts       # ความเสียหาย ณ frame — ถ้าส่ง triggerBus มา execute จะเรียก calculateDamage() จริง (print ในตัวอยู่แล้ว)
+│           ├── DamageEvent.ts       # ความเสียหาย ณ frame — ไม่ต้องแนบ triggerBus ตอนสร้างแล้ว — execute รับ `battleField` เข้ามาเอง เรียก `calculateDamage(damage)` แล้ว `battleField.applyResourceGain(damage)` ต่อ (ใช้ `this.triggerBus` ของ battleField เอง)
 │           └── NotificationEvent.ts # signal event (ChangeToAuto / EndAction / Buff/DebuffExpired)
 │
 ├── Services/
 │   ├── Damage/
-│   │   └── DamageCalculate.ts       # สูตรคำนวณ damage (WuWa formula) — calculateDamage(damage, triggerBus), dmgBonus รวมทั้ง attacker+target
+│   │   └── DamageCalculate.ts       # สูตรคำนวณ damage (WuWa formula) — calculateDamage(damage) เท่านั้น (ไม่รับ triggerBus แล้ว), dmgBonus รวมทั้ง attacker+target
 │   └── Combat/
-│       ├── EnergyService.ts         # increaseEnergy(unit, amount, triggerBus, actionType?) — จุดเดียวที่ mutate energy
-│       ├── EndActionService.ts      # notifyEndAction(timeline, duration, actionName?) — schedule NotificationEvent(EndAction), event.execute ปล่อย isGlobalLocked + unit.setFree()
-│       └── ChangeToAutoService.ts   # notifyChangeToAuto(timeline, autoStartFrame, actionName?) — schedule NotificationEvent(ChangeToAuto), event.execute ปล่อยแค่ isGlobalLocked (unit ยัง Busy)
+│       └── EnergyService.ts         # increaseEnergy(unit, amount, triggerBus, actionType?) — จุดเดียวที่ mutate energy — EndActionService.ts/ChangeToAutoService.ts ถูกลบไปแล้ว logic ย้ายเข้า BattleField.scheduleStartOnFieldAction()/scheduleStartOffFieldAction() ตรงๆ
 │
 ├── Simulator/
 │   ├── BattleField.ts               # การต่อสู้ 1 ครั้ง — roster (allies/enemies/onFieldChar) + คิว event (IPQ/currentFrame/isGlobalLocked) + applyResourceGain รวมอยู่ในคลาสเดียว
@@ -105,7 +105,7 @@ app/
 ├── Test/
 │   ├── automated/                   # ✅ Jest tests ที่ใช้งานได้ (ครอบคลุมโดย jest.config.js) — 10 suite / 118 tests
 │   │   ├── Utils/                   #   Queue / PriorityQueue / IndexedPriorityQueue
-│   │   ├── Simulator/               #   TriggerBus.test.ts, BattleField.test.ts, CombatTimeline.test.ts
+│   │   ├── Simulator/               #   TriggerBus.test.ts, BattleField.test.ts, Simulate.test.ts
 │   │   ├── Services/                #   DamageCalculate.test.ts, EnergyService.test.ts
 │   │   └── Models/                  #   EnemyUnit.test.ts, Damage.test.ts (การกรองตาม SkillRange ย้ายไปอยู่ที่ BattleField.test.ts แล้ว)
 │   ├── Utils/                       # ⚠️ legacy duplicate — import path ผิด (`../Utils/...`) ใช้ไม่ได้
@@ -116,8 +116,11 @@ app/
 │   └── queue.ts
 │
 ├── extra/substats/                  # เครื่องมือแยกต่างหาก ไม่เกี่ยวกับ combat sim — คำนวณความน่าจะเป็น tier ของ Echo substat
-│   ├── SubstatData.ts                #   ตาราง exactChance 4 กลุ่ม (main/crit/flatAtk/flatDef)
-│   └── SubstatProbability.ts         #   getExactChance/getSurvivalChance/getTuneUpChance/buildTuneDecisionMatrix
+│   ├── SubstatData.ts                #   ตาราง exactChance 4 กลุ่ม (main/crit/flatAtk/flatDef) — hard-code จาก wuwa_substat_table.xlsx ข้างล่าง
+│   ├── SubstatValueData.ts           #   SUBSTAT_VALUES — ค่า stat จริงต่อ tier (คู่กับ SubstatData.ts ที่เก็บแค่ "โอกาส" ไม่เก็บ "ปริมาณ") keyed ด้วย StatsType ตรงๆ, %-based เก็บเป็น percentage point ให้ตรงหน่วยกับ AllyUnit
+│   ├── SubstatProbability.ts         #   getExactChance/getSurvivalChance/getTuneUpChance/buildTuneDecisionMatrix/getSurvivalRatioVsPrevTier/buildSurvivalRatioArray
+│   ├── EchoSubstats.ts               #   interface EchoSubstats { type: StatsType; tier: number[]; actionType?: ActionType } — actionType ใช้เฉพาะตอน type===Dmg เพื่อแยก Basic/Heavy/Skill/Ult DMG Bonus ที่รวมกันเป็น StatsType.Dmg ตัวเดียว — ไม่มี class Echo ห่ออีกชั้นแล้ว
+│   └── wuwa_substat_table.xlsx       #   ไฟล์ต้นฉบับที่สร้างขึ้นใหม่แทนไฟล์เดิมที่ถูกลบไป — source ของทั้ง SubstatData.ts และ SubstatValueData.ts
 ├── substatLauncher.ts               # รัน `npx tsx app/substatLauncher.ts` — สาธิตเครื่องมือ substat ด้านบน
 │
 └── manualBuilder.ts                 # Entry point ตัวอย่าง — setup 2 units, รวม rotation, รัน RotationDirector (Test1/Test2 เท่านั้น ไม่ได้ใช้ Mornye/battleField)
@@ -134,8 +137,8 @@ app/
 | `Side` | `None`, `Ally`, `Enemy` |
 | `ActionState` | `Free`, `Busy` |
 | `NotificationType` | `ChangeToAuto`, `EndAction`, `BuffExpired`, `DebuffExpired` |
-| `TriggerEvent` | `EnergyIncrease` (เพิ่ม event ใหม่ที่นี่ + payload คู่กันใน `TriggerEventMap`) |
-| `StatsType` | `AtkP`, `FlatAtk`, `Hp`, `FlatHp`, `DefP`, `FlatDef`, `CR`, `CD`, `Dmg`, `Amp`, `Sp`, `DefShred`, `DefRed`, `Res`, `ResRed`, `ResPen`, `DmgRed`, `ElemRed`, `TbBoost`, `HealBonus`, `IncHealBonus` — แต่ละตัว comment กำกับว่า Ally/Enemy/Both ใช้จริง (อ้างอิง `DamageCalculate.ts`); `TbBoost`/`HealBonus`/`IncHealBonus` ยังไม่ต่อสายเข้าสูตรไหน — เพิ่มไว้เฉยๆ; `ALLY_STATS`/`ENEMY_STATS` (array แยก) เป็น dead export ไม่มีใครเรียกใช้ตอนนี้ |
+| `TriggerEvent` | `EnergyIncrease`, `UltimateCast`, `AttackAction`, `BuffAction` (เพิ่ม event ใหม่ที่นี่ + payload คู่กันใน `TriggerEventMap`) — 3 ตัวหลัง emit อัตโนมัติจาก engine เอง (`CastUltimateEvent`/`AttackActionEvent`/`BuffActionEvent`) ต่างจาก `EnergyIncrease` ที่ต้องเรียกผ่าน `EnergyService.increaseEnergy()` เอง |
+| `StatsType` | `AtkP`, `FlatAtk`, `Hp`, `FlatHp`, `DefP`, `FlatDef`, `CR`, `CD`, `Dmg`, `Amp`, `Sp`, `DefShred`, `DefRed`, `Res`, `ResRed`, `ResPen`, `DmgRed`, `ElemRed`, `TbBoost`, `HealBonus`, `IncHealBonus`, `EnergyRegen` — แต่ละตัว comment กำกับว่า Ally/Enemy/Both ใช้จริง (อ้างอิง `DamageCalculate.ts`); `TbBoost`/`HealBonus`/`IncHealBonus`/`EnergyRegen` ยังไม่ต่อสายเข้าสูตรไหน — เพิ่มไว้เฉยๆ (`EnergyRegen` ใช้เก็บ Echo substat ผ่าน `EchoSubstats.type` เท่านั้นตอนนี้); `ALLY_STATS`/`ENEMY_STATS` (array แยก) เป็น dead export ไม่มีใครเรียกใช้ตอนนี้ |
 | `ActionType` | `None`, `BA`, `HA`, `Skill`, `Ult`, `Echo`, `Intro`, `Outro`, `TB` |
 | `ElementType` | `None`, `Glacio`, `Fusion`, `Electro`, `Aero`, `Spectro`, `Havoc` |
 | `WeaponType` | `None`, `Broadblade`, `Sword`, `Pistols`, `Gauntlets`, `Rectifier` |
@@ -169,10 +172,14 @@ getStats(Dmg, Glacio, BA)         → key: "Dmg Bonus-Glacio-BA"
 - **state**: `isOnField`, `actionState` (+ helper `isFree()`/`setBusy()`/`setFree()`)
 - **base stats**: `level` (default 90), `baseAtk`, `baseHp`, `baseDef`
 - **info**: `elementType`, `weaponType`, `resonanceChain`
-- **energy / hp**: `energy`, `maxEnergy`, `currentHP`, `currentShield`
-- **rotations**: `Map<string, (timeline) => Queue<RotationAction>>` — แต่ละ rotation เป็น factory ที่รับ timeline แล้วคืน queue
+- **rotations**: `Map<string, (battleField) => Queue<RotationAction>>` — แต่ละ rotation เป็น factory ที่รับ `BattleField` แล้วคืน queue
+- **swap skills**: `outroSkill?`/`introSkill?`/`ultimate?` (ทั้งหมด `(battleField) => void`) — ตัวละครที่ไม่มีท่านั้นปล่อย `undefined` ไว้ — `outroSkill`/`introSkill` ถูกเรียกจาก `SwapCharacterEvent` เอง (ดูหัวข้อ Concento ด้านล่าง), `ultimate` ถูกเรียกจาก `CastUltimateEvent`
+- **energy**: `energy`, `maxEnergy`, `ultCost` (พลังงานที่ต้องใช้กด Ultimate — เช็คตอน `CastUltimateEvent` execute)
+- **concento**: `concentoEnergy`, `maxConcentoEnergy` (default **100**)
+- **hp / shield**: `currentHP`, `currentShield`
 - **tracking**: `stacks`, `buffNote`, `buffCheck`, `dmgRecord`, `maxDmgRecord` (ทั้งหมด `Map`)
-- `TimelineRef` = structural type ใช้เลี่ยง circular import กับ `CombatTimeline` — มี `schedule()`, `currentFrame`, `triggerBus`, `onFieldChar` (ตรงกับ field จริงของ `CombatTimeline` แบบ structural — เพิ่ม field ใหม่ที่ rotation ต้องใช้ที่นี่ก่อนเสมอ) — **ไม่มี `allies`/`enemies` แล้ว** rotation ที่ต้องอ่าน roster ให้ `import { battleField } from "../../Simulator/BattleField"` แล้วอ่าน `battleField.allies`/`battleField.enemies` ตรงๆ แทน
+- **echo substats**: `substats?`/`bestSubstats?` (ทั้งคู่ `EchoSubstats`, optional — ดู `extra/substats/EchoSubstats.ts`) — `substats` = ที่ปั้มติดตัวจริงตอนนี้, `bestSubstats` = เป้าหมายที่ต้องการ ยังไม่มี logic ไหนอ่าน/apply สองตัวนี้จริง แค่ประกาศ field ไว้ก่อน
+- **ไม่มี `TimelineRef`/`allies`/`enemies` บน unit แล้ว** — rotation ที่ต้องอ่าน roster ให้ `import { battleField } from "../../Simulator/BattleField"` แล้วอ่าน `battleField.allies`/`battleField.enemies` ตรงๆ แทน
 
 ### EnemyUnit (extends Unit)
 - **level** (default 90) — ใช้คำนวณ DEF: `8×level + 792`
@@ -186,37 +193,41 @@ getStats(Dmg, Glacio, BA)         → key: "Dmg Bonus-Glacio-BA"
 ใช้ `instanceof` แยกประเภท event ตอน tick
 
 ```
-CombatEvent (abstract)            — name, time, priority, execute: () => void   (ไม่มี duration แล้ว — ย้ายไปอยู่แค่ ActionEvent/BuffStartEvent เท่านั้น เพราะเป็น 2 คลาสเดียวที่ใช้จริง)
-├── ActionEvent (abstract)        — + unit, actionType, isManual, duration?, autoStartFrame?   ← เช็ค "มีการ action"
-│   ├── AttackActionEvent         — execute ตั้งเป็น setBusy + onExecute?.() + auto-schedule EndAction (ถ้ามี duration+timeline) + auto-schedule ChangeToAuto (ถ้ามี autoStartFrame+timeline)
-│   └── BuffActionEvent           — execute ตั้งเป็น setBusy (auto-schedule เหมือนกันทั้งคู่ เพราะ logic อยู่ใน ActionEvent constructor)
+CombatEvent (abstract)            — name, time, priority, execute: (battleField: BattleField) => void   (ไม่มี duration แล้ว — ย้ายไปอยู่แค่ ActionEvent/BuffStartEvent เท่านั้น เพราะเป็น 2 คลาสเดียวที่ใช้จริง)
+├── ActionEvent (abstract)        — + unit, actionType, isManual   ← เช็ค "มีการ action"
+│   ├── AttackActionEvent         — execute (ของ ActionEvent) + wrap เพิ่มด้วย setExecute() เพื่อ emit TriggerEvent.AttackAction
+│   └── BuffActionEvent           — เหมือน AttackActionEvent ทุกอย่าง แค่ emit TriggerEvent.BuffAction แทน
+├── CastUltimateEvent             — + unit — เช็ค energy พอ ultCost ไหม → หัก energy → emit TriggerEvent.UltimateCast → เรียก unit.ultimate?.()
 ├── BuffEvent (abstract)          — + target (ไม่มี duration)      ← เช็ค "บัพเริ่ม/จบ"
 │   ├── BuffStartEvent            — + duration? (เก็บ field ของตัวเอง ไม่ใช่จาก CombatEvent) — ใช้ default no-op execute (ยังไม่มี logic auto-schedule BuffEndEvent)
 │   └── BuffEndEvent              — ไม่มี duration — ใช้ default no-op execute (ยังไม่มี logic)
-├── DamageEvent                   — + damage, target, (onExecute?, triggerBus?) — ถ้ามี triggerBus execute จะเรียก calculateDamage() จริง
-└── NotificationEvent             — + notifyType, unit (ใช้ default no-op execute — signal-only ให้ CombatTimeline.tick() อ่าน notifyType เอง)
+├── DamageEvent                   — + damage, target, onExecute? — execute เรียก calculateDamage(damage) แล้ว battleField.applyResourceGain(damage) ต่อเอง ไม่ต้องแนบ triggerBus ตอนสร้างแล้ว
+└── NotificationEvent             — + notifyType, unit (ใช้ default no-op execute — signal-only ให้ BattleField.tick() อ่าน notifyType เอง)
 ```
 
-**`execute` เป็น field ไม่ใช่ abstract method แล้ว** — `CombatEvent.execute: () => void = () => {}` (default no-op) ทุก subclass ตั้งค่าจริงด้วย `this.execute = () => {...}` ใน constructor แทนการ override method เดิม ผลคือ **เปลี่ยนค่าได้ทีหลังต่อ instance** เหมือนตัวแปรทั่วไป เช่น `event.execute = () => {...}` แก้แค่ตัวนั้นตัวเดียว ไม่กระทบ instance อื่นของ class เดียวกันเลย (`CombatTimeline.tick()` เรียก `event.execute()` เหมือนเดิมทุกอย่าง เพราะ syntax เรียก field-ที่เป็น-function กับเรียก method เหมือนกัน)
+**`execute` เป็น field ไม่ใช่ abstract method แล้ว** — `CombatEvent.execute: (battleField: BattleField) => void = () => {}` (default no-op) ทุก subclass ตั้งค่าจริงด้วย `this.execute = (battleField) => {...}` ใน constructor แทนการ override method เดิม ผลคือ **เปลี่ยนค่าได้ทีหลังต่อ instance** เหมือนตัวแปรทั่วไป — `event.execute = (battleField) => {...}` แก้ทับทั้งก้อน หรือใช้ `event.setExecute(fn)` (เพิ่งเพิ่ม, เหมือนกันแค่เป็น method) แก้แค่ instance นั้นตัวเดียว ไม่กระทบ instance อื่นของ class เดียวกันเลย — ถ้าจะ **ต่อท้าย** ของเดิมแทนที่จะทับ ใช้ `battleField.appendOnExecute(event, fn)` แทน (ดูตัวอย่างใน `Test1.ts`/`Test2.ts`)
 
-**`duration` ไม่ได้อยู่ใน `CombatEvent` แล้ว** — ย้ายลงไปเป็น field ของตัวเองใน `ActionEvent` และ `BuffStartEvent` เท่านั้น (2 คลาสเดียวที่มี logic ใช้จริง) `DamageEvent`/`NotificationEvent`/`BuffEvent`/`BuffEndEvent` ไม่มี `duration` อีกต่อไป — `super()` ของแต่ละ event ตอนนี้เรียกแค่ `(name, time, priority)` ไม่มี `duration` ปนแล้ว
+**`duration` ไม่ได้อยู่ใน `CombatEvent` แล้ว** — ย้ายลงไปเป็น field ของตัวเองใน `BuffStartEvent` เท่านั้น (คลาสเดียวที่ยังมี logic ใช้จริง) ส่วน `ActionEvent`/`AttackActionEvent`/`BuffActionEvent` **ไม่มี `duration`/`autoStartFrame` เป็น field เลย** — มันไม่ใช่ "ข้อมูลของ action" จริงๆ แค่ค่าที่ใช้ครั้งเดียวตอน schedule จึงย้ายไปเป็น parameter ของ `battleField.scheduleStartOnFieldAction(event, duration?, changeToAutoTime?)` แทน — `super()` ของแต่ละ event ตอนนี้เรียกแค่ `(name, time, priority)` ไม่มี `duration` ปนแล้ว
 
-### `AttackActionEvent` / `BuffActionEvent` — static factory, ไม่มี `new` ตรงๆ แล้ว
+### `ActionEvent`/`AttackActionEvent`/`BuffActionEvent` — constructor เดียว, ไม่มี static factory `.manual()`/`.auto()` แล้ว
 
-`constructor` เป็น **private** — ห้ามเรียก `new AttackActionEvent(...)`/`new BuffActionEvent(...)` ตรงๆ จากข้างนอก ต้องผ่าน static factory 2 ตัวเท่านั้น (ตั้งชื่อต่างกันแทนการเดา runtime type จาก arg แบบเดิม — เลิกใช้ `parseActionTail`/tail-parsing แล้วทั้งหมด เพราะมีปัญหา `duration:0` ชนกับ `isManual:false` ที่ทำให้ `Mornye`'s `Ult` rotation ค้าง `isGlobalLocked:true` ตลอดไปจริง):
+ทุกตัวมี **constructor เดียว public** รองรับ 3 รูปแบบเรียกเหมือน `CombatEvent` (`name` / `name+time` / `name+time+priority` ก่อน `unit, actionType, isManual?`) ผ่าน `resolveTimePriority.ts` (helper กลาง แยก `time`/`priority` ออกจาก args ด้วย `typeof` เช็คว่าเป็น `number` ไหม — required param ตัวแรกของทุก subclass อย่าง `unit`/`target`/`notifyType`/`damage` ไม่ใช่ `number` เลย จึงแยกได้ชัดเจนโดยไม่ชนกัน ต่างจาก tail-parsing แบบเดิมที่เดา arg จากตำแหน่งท้าย):
 
-| Factory | Signature | ใช้เมื่อ |
-|---|---|---|
-| `.manual(name, time, priority, unit, actionType, duration?, autoStartFrame?, onExecute?, timeline?)` | `isManual: true` เสมอ | action ที่ต้องล็อก GlobalLock — **throw ทันทีถ้า `duration` และ `autoStartFrame` เป็น `undefined` ทั้งคู่** (ป้องกัน `isGlobalLocked` ค้าง `true` ตลอดไปโดยไม่มีทางปลด) |
-| `.auto(name, time, priority, unit, actionType, onExecute?, timeline?)` | `isManual: false` เสมอ | action ที่ไม่ล็อก GlobalLock — ไม่รับ `duration`/`autoStartFrame` เลยเพราะไม่มีอะไรต้องปลดล็อก |
+```ts
+new AttackActionEvent(name, unit, actionType, isManual?)
+new AttackActionEvent(name, time, unit, actionType, isManual?)
+new AttackActionEvent(name, time, priority, unit, actionType, isManual?)
+```
 
-`duration: 0` เป็นค่าปกติธรรมดาแล้ว ไม่ชนกับอะไรอีกต่อไป (ไม่มี "0 = isManual:false" แบบเดิม) — `Mornye.ts`'s `Ult` (`duration: 0`) ส่งผ่าน `.manual(..., Ult.duration, undefined, ...)` ได้ตรงๆ แล้ว ผลคือ auto-schedule `EndAction` ที่ frame เดียวกันทันที (unlock ทันที) ไม่ค้างอีกต่อไป
+`isManual` (optional, default `true`) คือความต่างเดียวระหว่าง manual (`GlobalLock` ON) กับ auto (`UnitLock` เท่านั้น) — `AttackActionEvent`/`BuffActionEvent` ไม่มี field เพิ่มของตัวเองเลย inherit constructor ของ `ActionEvent` ตรงๆ แค่ห่อ `execute` เพิ่มอีกชั้นด้วย `setExecute()` เพื่อ emit `TriggerEvent.AttackAction`/`BuffAction` ตามลำดับทุกครั้งที่ execute จริง
 
-ถ้าใส่ `duration` + `timeline` มาด้วย `execute()` จะเรียก `notifyEndAction(timeline, duration)` ([EndActionService.ts](app/Services/Combat/EndActionService.ts)) ให้อัตโนมัติ — `Test1.ts`/`Test2.ts` เก่ายังเรียกแบบไม่ส่ง `timeline` เข้าไป จึงยังต้อง schedule `NotificationEvent(EndAction)` มือเหมือนเดิม (ไม่เกิดการ schedule ซ้ำ) — เรียกผ่าน `.manual(..., duration, undefined, onExecute)` (ต้องใส่ `undefined` แทน `autoStartFrame` ที่ข้ามไปเพราะเป็น named param ธรรมดาแล้ว ไม่ใช่ tail แบบเดิม)
+การ schedule (duration + auto-schedule `EndAction`/`ChangeToAuto`) ทำผ่าน `battleField.scheduleStartOnFieldAction(event, duration?, changeToAutoTime?)` ไม่ใช่ผ่าน constructor อีกต่อไป — ผลข้างเคียงเฉพาะท่า (log, บวก stack, ติดบัพ) ให้ต่อผ่าน `battleField.appendOnExecute(event, fn)` แทน ดูตัวอย่างจริงใน `Test1.ts`/`Test2.ts`:
 
-ถ้าใส่ `autoStartFrame` + `timeline` มาด้วย `execute()` จะเรียก `notifyChangeToAuto(timeline, autoStartFrame)` ([ChangeToAutoService.ts](app/Services/Combat/ChangeToAutoService.ts)) ให้อัตโนมัติเช่นกัน (คนละ branch กับ EndAction — ใส่ทั้งคู่พร้อมกันได้) ปล่อยแค่ `isGlobalLocked` ส่วน unit ยังคง `Busy` ต่อ — ยังไม่มีตัวละครไหนส่งค่านี้จริงตอนนี้ (`MoveData.autoStartFrame` ก็เป็น field รอข้อมูลเช่นกัน)
-
-`ActionEvent` เอง (abstract, internal, เรียกผ่าน `super()` จาก 2 factory เท่านั้น) รับ arg แบบ resolve ครบแล้ว: `(name, time, priority, unit, actionType, isManual=true, duration?, autoStartFrame?, onExecute?, timeline?)`
+```ts
+const event = new AttackActionEvent(`Test1-BA1-f${t}`, unit, ActionType.BA);
+battleField.appendOnExecute(event, () => console.log(`[f${t}] Test1-BA1`));
+battleField.scheduleStartOnFieldAction(event, BA_DURATION);
+```
 
 ---
 
@@ -225,15 +236,15 @@ CombatEvent (abstract)            — name, time, priority, execute: () => void 
 ```
 1. setupTestX(unit)            กำหนด base stats + ลง rotations (factory) ลง unit.rotations
 2. RotationBuilder              .add(name, execute).add(...).build() → Queue<RotationAction>
-3. RotationDirector(timeline, setupQueue, loopQueue, maxLoops)
+3. RotationDirector(battleField, setupQueue, loopQueue, maxLoops)
        .run()
         ├── step(): ถ้า !isGlobalLocked → nextAction() → action.execute()
-        │           (execute จะ schedule AttackActionEvent + NotificationEvent ลง timeline)
-        │           แล้ว tick() วนจน global lock ปลด หรือ timeline ว่าง
+        │           (execute จะ schedule AttackActionEvent/CastUltimateEvent/... ลง battleField)
+        │           แล้ว tick() วนจน global lock ปลด หรือ battleField ว่าง
         ├── nextAction(): drain setupQueue ก่อน → จากนั้น rotate() loopQueue จนครบ maxLoops
-        └── timeline.runAll() drain event ที่เหลือ
+        └── battleField.runAll() drain event ที่เหลือ
 
-CombatTimeline.tick()
+BattleField.tick()
         ├── pop event ที่ (time น้อยสุด, priority เป็น tie-breaker)
         ├── currentFrame = event.time
         ├── event.execute()
@@ -268,9 +279,25 @@ action ที่ใช้ `scheduleStartOnFieldAction()` (ท่าจริง�
 
 ---
 
+## Concento เต็ม — เงื่อนไขสลับตัว + Outro/Intro (`SwapCharacterEvent.ts`)
+
+`SwapCharacterEvent.execute` เช็ค `concentoEnergy` ของตัวที่กำลังจะออก (`current`) ก่อนแตะ state อะไรเลย:
+
+- **สลับแบบปกติ** (`isTempSwap !== 1`) **ต้องรอ `current.concentoEnergy >= current.maxConcentoEnergy` ก่อนเสมอ** — ถ้ายังไม่เต็ม `throw` ทันที (กันรอบ simulate เดินต่อทั้งที่ยังไม่ครบเงื่อนไข แล้วไปโผล่เป็นอาการแปลกๆ อีกหลายร้อย frame ถัดไป)
+- **ขาแวะ** (`isTempSwap === 1`) ไม่ต้องเช็คเงื่อนไขนี้
+
+หลังผ่านเช็คแล้ว ก่อนตั้ง `onFieldChar = next`:
+1. ถ้า `current` มี concento เต็มจริง (`concentoFull`) → เรียก `current.outroSkill?.(battleField)` ก่อนออกจากสนาม
+2. ตั้ง `battleField.onFieldChar = next`
+3. ถ้า `concentoFull` เดียวกันนั้นเป็น `true` → เรียก `next.introSkill?.(battleField)` ต่อทันที
+
+เพราะสลับปกติผ่านเช็คด้านบนมาแล้วเสมอ (`concentoFull` จึงเป็น `true` เสมอในเคสนั้น) เงื่อนไข `concentoFull` นี้จึงมีผลจริงแค่กับ **ขาแวะ** เท่านั้น — ขาแวะที่ concento ยังไม่เต็มจะสลับตัวได้ปกติแต่ **ไม่** trigger outro/intro
+
+---
+
 ## หน่วยเวลา
 - ใช้ **frame** (integer) — `1 วินาที = 60 frame` (ค่าคงที่ `F = 60` ใน `manualBuilder.ts`)
-- `CombatTimeline.currentFrame` เก็บ frame ปัจจุบัน
+- `BattleField.currentFrame` เก็บ frame ปัจจุบัน
 - IPQ เรียง event: `time` น้อยออกก่อน → ถ้าเท่ากันใช้ `priority` น้อยออกก่อน
 
 ---
@@ -283,20 +310,24 @@ action ที่ใช้ `scheduleStartOnFieldAction()` (ท่าจริง�
 — แทนที่จะ hardcode logic เฉพาะตัวไว้ตรงจุดเกิด event
 
 ```
-CombatTimeline.triggerBus : TriggerBus                    ← instance เดียวต่อ 1 battle
+BattleField.triggerBus : TriggerBus                        ← instance เดียวต่อ 1 battle
     .on(event, callback, priority?)                       ← ลงทะเบียน listener (มากไปน้อยออกก่อน, เท่ากัน = ตามลำดับ register)
     .emit(event, ctx)                                      ← engine เรียกตอน action จริง trigger event นั้น
 ```
 
 - `TriggerEventMap` (ใน `TriggerBus.ts`) map แต่ละ `TriggerEvent` ไปยัง payload/context ของมัน — เพิ่ม event ใหม่ต้อง
   เพิ่มทั้ง `TriggerEvent` enum (`Constants/Enum.ts`) และ entry ใน `TriggerEventMap` คู่กัน
-- `AllyUnit.rotations` factory รับ `TimelineRef` ซึ่งมี `triggerBus` ติดมาด้วย (structural type, `import type` เลี่ยง
-  circular import กับ `AllyUnit` ↔ `TriggerBus`) — ตัวละคร register passive ได้จากใน rotation setup
+- `AllyUnit.rotations` factory รับ `BattleField` ตรงๆ ซึ่งมี `triggerBus` ติดมาด้วยอยู่แล้ว (ไม่มี `TimelineRef` แยกแล้ว) —
+  ตัวละคร register passive ได้จากใน rotation setup
 - **energy gain ทั้งหมดต้องผ่าน `EnergyService.increaseEnergy(unit, amount, triggerBus, actionType?)`** — ฟังก์ชันนี้
   `emit(TriggerEvent.EnergyIncrease, { unit, amount, actionType })` **ก่อน** clamp กับ `maxEnergy` (listener เห็นค่า
   ดิบที่ "จะ" เพิ่ม ก่อนโดนตัด จึงตรวจ overflow ได้ เช่น passive ที่แปลง energy ส่วนเกินเป็นบัพอื่น)
-- `DamageCalculate.calculateDamage(damage, triggerBus)` เรียก `increaseEnergy` แทนการ mutate `attacker.energy` ตรงๆ —
-  ต้องส่ง `triggerBus` (จาก `CombatTimeline.triggerBus`) เข้าไปเสมอ
+- `DamageCalculate.calculateDamage(damage)` **ไม่รับ `triggerBus` แล้ว** — คำนวณ+print ดาเมจล้วนๆ ไม่แตะ state — energy/concento/gauge
+  (รวมถึง `increaseEnergy`) ถูกจ่ายแยกผ่าน `BattleField.applyResourceGain(damage)` ที่ `DamageEvent.execute` เรียกต่อเอง โดยใช้
+  `this.triggerBus` ของ `battleField` เอง ไม่ต้องส่ง `triggerBus` ผ่านมาจากผู้เรียกอีกต่อไป
+- **3 trigger event ใหม่ emit อัตโนมัติจาก engine เอง ไม่ต้องเรียกเอง**: `TriggerEvent.UltimateCast` (จาก `CastUltimateEvent.execute`),
+  `TriggerEvent.AttackAction`/`BuffAction` (จาก `AttackActionEvent`/`BuffActionEvent.execute` ทุกครั้งที่ execute) — ต่างจาก
+  `EnergyIncrease` ที่ต้องมีคนเรียก `increaseEnergy()` เองถึงจะ emit
 
 ---
 
@@ -307,12 +338,17 @@ CombatTimeline.triggerBus : TriggerBus                    ← instance เดี
 | กลุ่ม | member |
 |---|---|
 | ใครอยู่ในสนาม | `allies`, `enemies`, `onFieldChar`, `createEnemy()`, `enemiesInRange()`, `resetAllUnits()` |
-| เวลาและคิว event | `currentFrame`, `isGlobalLocked`, `schedule()`, `scheduleStartCombo()`, `scheduleBuffStart()`, `tick()`, `runAll()`, `peek()`, `isEmpty`, `size` |
+| เวลาและคิว event | `currentFrame`, `isGlobalLocked`, `schedule()`, `scheduleStartOnFieldAction()`, `scheduleStartOffFieldAction()`, `appendOnExecute()`, `scheduleBuffStart()`, `endRotation()`, `tick()`, `runAll()`, `peek()`, `isEmpty`, `size` |
 | อื่นๆ | `triggerBus` (รับทาง constructor แบบมี default), `applyResourceGain()` |
 
 - **1 instance = 1 การต่อสู้ที่แยกขาด** — ไม่ใช่ global singleton แล้ว ไม่มี state รั่วข้ามรอบ simulate หรือข้าม test case
 - `enemiesInRange(range)` กรอง `enemies` ที่ `position < range` (`SkillRange.None = "0"` จึงคืน array ว่างเสมอ)
-- `resetAllUnits()` วน unit ทุกตัวเรียก `initDefaultStats()` — **ตัวละครที่ `setStat()` ต้อง `setDefaultStat()` คู่กันเสมอ** ไม่งั้นค่าจะกลายเป็น 0 ตั้งแต่รอบแรก
+- `resetAllUnits()` เรียกก่อนเริ่ม simulate รอบใหม่เสมอ — วน unit ทุกตัวเรียก `initDefaultStats()` (**ตัวละครที่ `setStat()`
+  ต้อง `setDefaultStat()` คู่กันเสมอ** ไม่งั้นค่าจะกลายเป็น 0 ตั้งแต่รอบแรก) แล้วล้างสถานะรันไทม์ทั้งหมดที่ combat จริง mutate
+  ระหว่างสู้ไม่ให้ค้างข้ามรอบ: ฝั่ง ally — `rotationCount`, `energy`, `concentoEnergy`, `currentHP`, `currentShield`,
+  `stacks`/`buffNote`/`gauges`/`buffCheck` (clear ทั้งหมด); ฝั่ง enemy — `debuffStacks`/`debuffNote`/`debuffCheck` (clear) —
+  **ไม่รวม `dmgRecord`/`maxDmgRecord`** ตั้งใจเก็บไว้ให้ดูผลสรุปย้อนหลังได้หลังจบรอบ — ปิดท้ายด้วยตั้ง `onFieldChar = allies[0]`
+  เสมอ (รอบก่อนหน้าอาจทิ้งไว้ที่ตัวไหนก็ได้)
 - `applyResourceGain(damage)` จ่าย energy/concento/gauge ให้ผู้ตี — แยกออกมาจาก `calculateDamage` เพราะเป็นคนละเรื่องกับสูตรดาเมจ
 - **ไม่มี `TimelineRef` แล้ว** — `AllyUnit.rotations` รับ `BattleField` ตรงๆ (`import type` เลี่ยง circular import)
 - `Damage` ไม่รู้จัก `BattleField` — รับเฉพาะ `EnemyUnit | EnemyUnit[]` คนเรียกกรองเองก่อน: `new Damage(unit, "BA1", ActionType.BA, battleField.enemiesInRange(SkillRange.Contact))`
@@ -350,10 +386,10 @@ damage = base × dmgBonus × crit × amp × def × res × reduction
 ---
 
 ## ข้อควรระวัง / Known issues
-- `DamageEvent` เรียก `calculateDamage()` ได้แล้ว **แต่ต้องส่ง `triggerBus` เข้า constructor เอง** (parameter สุดท้าย) ถ้าไม่ส่งจะ no-op เงียบๆ (ไม่ error แต่ก็ไม่คำนวณอะไรเลย) — ยังไม่บันทึกผลลงใน `attacker.dmgRecord` (แค่ print เฉยๆ ผ่าน `calculateDamage`)
+- `DamageEvent` เรียก `calculateDamage(damage)` ตรงๆ ไม่ต้องแนบ `triggerBus` แล้ว (energy/concento/gauge จ่ายแยกผ่าน `battleField.applyResourceGain()` ที่ใช้ `triggerBus` ของ `battleField` เอง) — ยังไม่บันทึกผลลงใน `attacker.dmgRecord` (แค่ print เฉยๆ ผ่าน `calculateDamage`)
 - `BuffStartEvent` / `BuffEndEvent` ยังใช้ default no-op execute จาก `CombatEvent` (ยังไม่มี logic เพิ่ม/ลบ stat จริง)
 - `Test/Utils/` เป็น duplicate เก่าที่ import path ผิด — ใช้ `Test/automated/Utils/` แทน
 - `Mornye` เป็นตัวละครจริงตัวแรก (base stats + default stats + rotation ครบทุกท่า: "BA Combo", "EBA Combo", "HA_GEOPOTENTIAL_SHIFT_DAMAGE_FRAME", "HA_INVERSION_DAMAGE_FRAME", "ESkill", "Ult", "Intro") ค่าท่าเก็บเป็น `MoveData` ตัวเดียวต่อท่า (import จาก `Models/Combat/MoveData.ts`) — `BA1`/`BA2`/`BA3` มี `mtpr`/`type` จริงแล้ว ส่วนท่าที่เหลือมี `duration`/`damageFrame` จริงแต่ `mtpr` ยังเป็น placeholder `0` (type เดา `MultiplierType.Atk` ไว้ก่อน) รอข้อมูลจริง (ดีล 0.00 ตอนนี้) — `Test1`/`Test2` ยังเป็น scaffolding เดิม ไม่มี passive ที่ register กับ `TriggerBus` จริง
-- `manualBuilder.ts` ยังใช้แค่ `Test1`/`Test2` ไม่ได้เปลี่ยนไปใช้ `Mornye` หรือ `battleField`/`createEnemy` เลย — ถ้าจะรัน Mornye จริงต้องประกอบ `manualBuilder` ใหม่เอง (ดูตัวอย่างการรันใน scratchpad ระหว่างพัฒนา) **สำคัญ**: ถ้าจะรัน Mornye ในซีนที่มีมากกว่า 1 ตัวละคร ต้องคอยสลับ `timeline.onFieldChar` ให้ตรงตัวที่กำลัง action อยู่เองด้วย — `EndActionService.ts`/`ChangeToAutoService.ts` resolve unit จาก `timeline.onFieldChar` ไม่ใช่จาก unit ของ action โดยตรง ถ้าไม่ sync ให้ตรง `unit?.setFree()` จะ no-op เงียบๆ (unit ค้าง Busy ตลอดไปแม้ `isGlobalLocked` จะปลดถูกก็ตาม) — `manualBuilder.ts` เองก็ set `onFieldChar = test1` ครั้งเดียวไม่เคยสลับเป็น `test2` เลย (ไม่พังเพราะ `Test1`/`Test2` schedule `NotificationEvent` มือพร้อม unit ตรงๆ ไม่ผ่าน `onFieldChar`)
+- `manualBuilder.ts` ยังใช้แค่ `Test1`/`Test2` ไม่ได้เปลี่ยนไปใช้ `Mornye` หรือ `battleField`/`createEnemy` เลย — ถ้าจะรัน Mornye จริงต้องประกอบ `manualBuilder` ใหม่เอง (ดูตัวอย่างการรันใน scratchpad ระหว่างพัฒนา) — หมายเหตุ: `EndActionService.ts`/`ChangeToAutoService.ts` ที่เคยเขียนถึงในเอกสารรุ่นก่อนถูกลบไปแล้ว ตอนนี้ปลดล็อกผ่าน `ActionFreeEvent`/`GlobalFreeEvent` ที่ resolve unit จาก **`event.unit` ของตัวเอง** โดยตรง ไม่ได้พึ่ง `battleField.onFieldChar` แล้ว จึงไม่มีปัญหา sync ตามที่เคยเตือนไว้อีก
 - `ALLY_STATS`/`ENEMY_STATS` ใน `Enum.ts` เป็น dead export (เคยตั้งใจใช้ populate `defaultStats` อัตโนมัติตอนสร้าง `AllyUnit`/`EnemyUnit` แต่ถูกยกเลิกไปแล้ว)
 - เอกสาร trace แบบ static ใน `Test/manual/*.html` (`manualBuilder-trace.html`, `void-fn-problem.html`) ล้าสมัยแล้วหลัง refactor `execute` เป็น field — ไม่ใช่โค้ดที่รันจริง แค่เอกสารประกอบเก่า
