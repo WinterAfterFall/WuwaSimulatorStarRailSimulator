@@ -119,7 +119,7 @@ app/
 │   ├── SubstatData.ts                #   ตาราง exactChance 4 กลุ่ม (main/crit/flatAtk/flatDef) — hard-code จาก wuwa_substat_table.xlsx ข้างล่าง
 │   ├── SubstatValueData.ts           #   SUBSTAT_VALUES — ค่า stat จริงต่อ tier (คู่กับ SubstatData.ts ที่เก็บแค่ "โอกาส" ไม่เก็บ "ปริมาณ") keyed ด้วย StatsType ตรงๆ, %-based เก็บเป็น percentage point ให้ตรงหน่วยกับ AllyUnit
 │   ├── SubstatProbability.ts         #   getExactChance/getSurvivalChance/getTuneUpChance/buildTuneDecisionMatrix/getSurvivalRatioVsPrevTier/buildSurvivalRatioArray
-│   ├── EchoSubstats.ts               #   interface EchoSubstats { type: StatsType; tier: number[]; actionType?: ActionType } — actionType ใช้เฉพาะตอน type===Dmg เพื่อแยก Basic/Heavy/Skill/Ult DMG Bonus ที่รวมกันเป็น StatsType.Dmg ตัวเดียว — ไม่มี class Echo ห่ออีกชั้นแล้ว
+│   ├── EchoSubstats.ts               #   interface EchoSubstats { type: StatsType; level: number[]; actionType?: ActionType } — actionType ใช้เฉพาะตอน type===Dmg เพื่อแยก Basic/Heavy/Skill/Ult DMG Bonus ที่รวมกันเป็น StatsType.Dmg ตัวเดียว — ไม่มี class Echo ห่ออีกชั้นแล้ว
 │   └── wuwa_substat_table.xlsx       #   ไฟล์ต้นฉบับที่สร้างขึ้นใหม่แทนไฟล์เดิมที่ถูกลบไป — source ของทั้ง SubstatData.ts และ SubstatValueData.ts
 ├── substatLauncher.ts               # รัน `npx tsx app/substatLauncher.ts` — สาธิตเครื่องมือ substat ด้านบน
 │
@@ -178,7 +178,7 @@ getStats(Dmg, Glacio, BA)         → key: "Dmg Bonus-Glacio-BA"
 - **concento**: `concentoEnergy`, `maxConcentoEnergy` (default **100**)
 - **hp / shield**: `currentHP`, `currentShield`
 - **tracking**: `stacks`, `buffNote`, `buffCheck`, `dmgRecord`, `maxDmgRecord` (ทั้งหมด `Map`)
-- **echo substats**: `substats?`/`bestSubstats?` (ทั้งคู่ `EchoSubstats`, optional — ดู `extra/substats/EchoSubstats.ts`) — `substats` = ที่ปั้มติดตัวจริงตอนนี้, `bestSubstats` = เป้าหมายที่ต้องการ ยังไม่มี logic ไหนอ่าน/apply สองตัวนี้จริง แค่ประกาศ field ไว้ก่อน
+- **echo substats**: `substats?`/`bestSubstats?` (ทั้งคู่ `EchoSubstats[]`, optional — ดู `extra/substats/EchoSubstats.ts`) — `substats` = ที่ปั้มติดตัวจริงตอนนี้, `bestSubstats` = เป้าหมายที่ต้องการ — คู่กับ `luckBudget` (`number`, default `0`) = ค่า prob ขั้นต่ำที่ยอมรับได้ ("ระดับดวง") ใช้เป็นงบเริ่มต้นของ algorithm เช็คว่ารับ substat level ไหนเพิ่มได้ไหม (เช็ค `budget / p < 1` แล้วหารทับ `budget` ทุกครั้งที่รับเพิ่ม — ยังไม่มี logic จริง แค่ประกาศ field ไว้ก่อน)
 - **ไม่มี `TimelineRef`/`allies`/`enemies` บน unit แล้ว** — rotation ที่ต้องอ่าน roster ให้ `import { battleField } from "../../Simulator/BattleField"` แล้วอ่าน `battleField.allies`/`battleField.enemies` ตรงๆ แทน
 
 ### EnemyUnit (extends Unit)

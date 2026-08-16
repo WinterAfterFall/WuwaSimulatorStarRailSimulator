@@ -1,9 +1,12 @@
 import { Unit } from "./Unit";
-import { StatsType, ElementType, WeaponType, ActionState } from "../Constants/Enum";
+import { StatsType, ActionType, ElementType, WeaponType, ActionState } from "../Constants/Enum";
 import { Queue } from "../Utils/queue";
 import { RotationAction } from "./Combat/RotationAction";
 import type { BattleField } from "../Simulator/BattleField";
 import type { EchoSubstats } from "../extra/substats/EchoSubstats";
+
+// จำนวน substat type ทั้งหมดที่มีในเกม (main 9 + crit 2 + flatAtk 1 + flatDef 1) — ใช้เป็นตัวหารตั้งต้นใน setSubstats()
+const TOTAL_SUBSTAT_POOL = 13;
 
 export class AllyUnit extends Unit {
 
@@ -70,8 +73,9 @@ export class AllyUnit extends Unit {
     public maxDmgRecord : Map<string, number> = new Map();
 
     // --- Echo Substats ---
-    public substats?: EchoSubstats;
-    public bestSubstats?: EchoSubstats;
+    public substats?: EchoSubstats[];
+    public bestSubstats?: EchoSubstats[];
+    public luckBudget: number = 0; // ค่า prob ขั้นต่ำที่ยอมรับได้ (ระดับดวง) — budget เริ่มต้นของ algorithm เช็คว่ารับ substat level ไหนเพิ่มได้ไหม
 
     constructor(name: string) {
         super(name);
@@ -91,6 +95,42 @@ export class AllyUnit extends Unit {
 
     public setFree(): void {
         this.actionState = ActionState.Free;
+    }
+
+    /**
+     * ตั้ง substats/bestSubstats/luckBudget ให้ตัวละครทีเดียว
+     *
+     * substats/bestSubstats ถูกสร้างจาก statsTypes ตามลำดับ (size = statsTypes.length ทั้งสองฝั่ง)
+     * ทุก entry เริ่ม level ที่ [1]
+     *
+     * luckBudget หารต่อเนื่องด้วย pattern: (size)/13 · (size-1)/12 · (size-2)/11 · ... · 1/(13-size+1)
+     * (13 = จำนวน substat type ทั้งหมดที่มีในเกม) — ถ้าใส่ num1/num2 มาด้วย num2 พจน์สุดท้าย
+     * (นับจากพจน์ท้ายสุดของ pattern) จะบวก num1 เข้ากับตัวเศษก่อนหาร
+     */
+    public setSubstats(
+        luckBudget: number,
+        statsTypes: { type: StatsType; actionType?: ActionType }[],
+        num1?: number,
+        num2?: number,
+    ): void {
+        const size = statsTypes.length;
+
+        this.substats     = statsTypes.map(({ type, actionType }) => ({ type, level: [1], actionType }));
+        this.bestSubstats = statsTypes.map(({ type, actionType }) => ({ type, level: [1], actionType }));
+
+        let budget = luckBudget;
+        for (let i = 0; i < size; i++) {
+            let numerator = size - i;
+            const denominator = TOTAL_SUBSTAT_POOL - i;
+
+            if (num1 !== undefined && num2 !== undefined && i >= size - num2) {
+                numerator += num1;
+            }
+
+            budget /= numerator / denominator;
+        }
+
+        this.luckBudget = budget;
     }
 
 }
