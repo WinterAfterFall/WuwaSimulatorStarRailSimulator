@@ -3,7 +3,10 @@ import { StatsType, ActionType, ElementType, WeaponType, ActionState } from "../
 import { Queue } from "../Utils/queue";
 import { RotationAction } from "./Combat/RotationAction";
 import type { BattleField } from "../Simulator/BattleField";
-import type { EchoSubstats } from "../extra/substats/EchoSubstats";
+import { EchoSubstats } from "../extra/substats/EchoSubstats";
+import { SUBSTAT_VALUES } from "../extra/substats/SubstatValueData";
+import { getTableKeyForStat } from "../extra/substats/SubstatData";
+import { getTuneUpChance } from "../extra/substats/SubstatProbability";
 
 // จำนวน substat type ทั้งหมดที่มีในเกม (main 9 + crit 2 + flatAtk 1 + flatDef 1) — ใช้เป็นตัวหารตั้งต้นใน setSubstats()
 const TOTAL_SUBSTAT_POOL = 13;
@@ -34,6 +37,7 @@ export class AllyUnit extends Unit {
     public outroSkill?: (battleField: BattleField) => void;
     public introSkill?: (battleField: BattleField) => void;
     public ultimate?: (battleField: BattleField) => void;
+    public echoSkill?: (battleField: BattleField) => void;
 
     /**
      * rotation ของตัวนี้ถูกสั่งไปแล้วกี่ครั้ง — **นับเฉพาะของ unit ตัวนี้**
@@ -101,7 +105,8 @@ export class AllyUnit extends Unit {
      * ตั้ง substats/bestSubstats/luckBudget ให้ตัวละครทีเดียว
      *
      * substats/bestSubstats ถูกสร้างจาก statsTypes ตามลำดับ (size = statsTypes.length ทั้งสองฝั่ง)
-     * ทุก entry เริ่ม level ที่ [1]
+     * แต่ละ entry เป็น `new EchoSubstats(type, actionType)` — level เริ่มเป็น array 5 ตัว (1 ต่อ echo)
+     * ค่า 1 ทั้งหมด ตามที่กำหนดไว้ใน constructor ของ EchoSubstats เอง
      *
      * luckBudget หารต่อเนื่องด้วย pattern: (size)/13 · (size-1)/12 · (size-2)/11 · ... · 1/(13-size+1)
      * (13 = จำนวน substat type ทั้งหมดที่มีในเกม) — ถ้าใส่ num1/num2 มาด้วย num2 พจน์สุดท้าย
@@ -115,8 +120,8 @@ export class AllyUnit extends Unit {
     ): void {
         const size = statsTypes.length;
 
-        this.substats     = statsTypes.map(({ type, actionType }) => ({ type, level: [1], actionType }));
-        this.bestSubstats = statsTypes.map(({ type, actionType }) => ({ type, level: [1], actionType }));
+        this.substats     = statsTypes.map(({ type, actionType }) => new EchoSubstats(type, actionType));
+        this.bestSubstats = statsTypes.map(({ type, actionType }) => new EchoSubstats(type, actionType));
 
         let budget = luckBudget;
         for (let i = 0; i < size; i++) {
@@ -131,6 +136,60 @@ export class AllyUnit extends Unit {
         }
 
         this.luckBudget = budget;
+
+        // --- tune tier ของ substats[0] ---
+        // เทียบคู่ level[n]/level[n+1] ทีละคู่ ฝั่งที่โอกาส tune ขึ้นสูงกว่าหรือเท่ากันชนะ (เอนซ้าย) —
+        // ชนะแล้วเพิ่ม tier ทันที เช็ค n เดิมซ้ำ (อาจชนะต่อได้อีก) แพ้ค่อยเลื่อนไปเช็คคู่ถัดไป
+        // ถึงช่องสุดท้าย (ไม่มีคู่ให้เทียบแล้ว) ให้เช็คเดี่ยวๆ แล้ววนกลับ n=0 ใหม่ — จบเมื่อ luckBudget ไม่พอ
+        const level = this.substats[0].level;
+        const tableKey = getTableKeyForStat(this.substats[0].type);
+        let n = 0;
+        while (true) {
+            const isLastSlot = n === level.length - 1;
+            const chanceN = getTuneUpChance(tableKey, level[n]) / 100;
+
+            if (!isLastSlot) {
+                const chanceN1 = getTuneUpChance(tableKey, level[n + 1]) / 100;
+                if (chanceN < chanceN1) {
+                    n++;
+                    continue;
+                }
+            }
+
+            // tier ชนสูงสุดแล้ว (chanceN === 0) ไม่มีอะไรให้ tune ต่อ — เช็คตรงๆ แทนหวังพึ่ง
+            // budget/chanceN === Infinity เพราะ budget === 0 (เคสจริง) ทำให้ 0/0 === NaN แล้ว NaN>1 เป็น false วนไม่รู้จบ
+            if (chanceN === 0) break;
+
+            const afterTune = this.luckBudget / chanceN;
+            if (afterTune > 1) break;
+
+            level[n] += 1;
+            this.luckBudget = afterTune;
+            if (isLastSlot) n = 0;
+        }
+    }
+
+    /**
+     * บวกค่า stat จริงของ `substats` เข้า `this.stats` — เรียกหลัง `initDefaultStats()` ทุกครั้งที่ reset
+     * (echo คือของติดตัว ไม่ใช่ runtime state ที่ initDefaultStats() คืนค่าให้เอง)
+     *
+     * แต่ละ EchoSubstats.level มี 5 ค่า (1 ต่อรอบ roll ตอนอัพเกรด echo) — บวกค่าจาก SUBSTAT_VALUES
+     * ทีละ tier เข้า stat ประเภทเดียวกันจนครบ ผลคือ stat รวมของ substat นั้น
+     */
+    public applySubstats(): void {
+        if (!this.substats) return;
+
+        for (const { type, level, actionType } of this.substats) {
+            const values = SUBSTAT_VALUES[type]!;
+            for (const tier of level) {
+                const value = values[tier - 1];
+                if (actionType !== undefined) {
+                    this.addStat(type, actionType, value);
+                } else {
+                    this.addStat(type, value);
+                }
+            }
+        }
     }
 
 }

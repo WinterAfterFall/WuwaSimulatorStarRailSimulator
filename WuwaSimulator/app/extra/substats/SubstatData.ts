@@ -11,6 +11,8 @@
 // getSurvivalChance() ใน SubstatProbability.ts (sum จาก tier ที่ระบุขึ้นไปจนสุด)
 // ─────────────────────────────────────────────────────────────
 
+import { StatsType } from "../../Constants/Enum";
+
 export type SubstatTableKey = "main" | "crit" | "flatAtk" | "flatDef";
 
 export interface SubstatTable {
@@ -41,3 +43,23 @@ export const SUBSTAT_TABLES: Record<SubstatTableKey, SubstatTable> = {
         exactChance: [14.5631, 44.6602, 32.0388, 8.7379],
     },
 };
+
+// StatsType ไหนใช้ตาราง probability ไหน — คู่กับ key ของ SUBSTAT_VALUES ใน SubstatValueData.ts
+const STAT_TABLE_KEY: Partial<Record<StatsType, SubstatTableKey>> = {
+    [StatsType.FlatHp]:      "main",
+    [StatsType.DefP]:        "main",
+    [StatsType.AtkP]:        "main",
+    [StatsType.Hp]:          "main",
+    [StatsType.Dmg]:         "main",
+    [StatsType.EnergyRegen]: "main",
+    [StatsType.CR]:          "crit",
+    [StatsType.CD]:          "crit",
+    [StatsType.FlatAtk]:     "flatAtk",
+    [StatsType.FlatDef]:     "flatDef",
+};
+
+export function getTableKeyForStat(type: StatsType): SubstatTableKey {
+    const key = STAT_TABLE_KEY[type];
+    if (!key) throw new Error(`getTableKeyForStat: "${type}" ไม่ใช่ substat type ที่มีตาราง probability`);
+    return key;
+}

@@ -96,6 +96,9 @@ export class BattleField {
         }
 
         for (const ally of this.allies) {
+            // echo คือของติดตัว ไม่ใช่ runtime state — ต้องบวกกลับเข้า stats ทุกครั้งหลัง initDefaultStats() ข้างบนล้างไป
+            ally.applySubstats();
+
             // rotationCount ทั้งฝั่ง unit และฝั่งสนามต้องกลับไปที่ 0 พร้อมกัน
             // ถ้าเหลื่อมกันเมื่อไหร่ SwapCharacterEvent จะหาตัวที่ "ถึงคิว" ไม่เจอตั้งแต่รอบแรก
             ally.rotationCount = 0;

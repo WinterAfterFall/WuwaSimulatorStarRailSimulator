@@ -7,6 +7,7 @@ import { CombatEvent } from '../../../Models/Combat/CombatEvent/CombatEvent';
 import { DamageEvent } from '../../../Models/Combat/CombatEvent/DamageEvent';
 import { AttackActionEvent } from '../../../Models/Combat/CombatEvent/AttackActionEvent';
 import { EnemyPosition, SkillRange, StatsType, ActionType, ElementType, TriggerEvent } from '../../../Constants/Enum';
+import { SUBSTAT_VALUES } from '../../../extra/substats/SubstatValueData';
 
 function makeEnemy(name: string, position: EnemyPosition): EnemyUnit {
     const e = new EnemyUnit(name);
@@ -144,6 +145,20 @@ describe('BattleField', () => {
 
             expect(ally.getStats(StatsType.CR)).toBe(5);
             expect(ally.getStats(StatsType.CD)).toBe(150);
+        });
+
+        it('should re-apply ally substats on top of the reset defaults', () => {
+            const ally = new AllyUnit('Ally');
+            ally.setDefaultStat(StatsType.AtkP, 10);
+            ally.setStat(StatsType.AtkP, 10);
+            ally.setSubstats(0, [{ type: StatsType.AtkP }]);
+            ally.substats![0].level = [1, 1, 1, 1, 1];
+            field.allies.push(ally);
+
+            field.resetAllUnits();
+
+            const values = SUBSTAT_VALUES[StatsType.AtkP]!;
+            expect(ally.getStats(StatsType.AtkP)).toBeCloseTo(10 + values[0] * 5);
         });
     });
 
