@@ -6,7 +6,7 @@ import type { BattleField } from "../Simulator/BattleField";
 import { EchoSubstats } from "../extra/substats/EchoSubstats";
 import { SUBSTAT_VALUES } from "../extra/substats/SubstatValueData";
 import { getTableKeyForStat } from "../extra/substats/SubstatData";
-import { getTuneUpChance } from "../extra/substats/SubstatProbability";
+import { getTuneUpChance, pickBestTuneUpSlot, pickBestDecreaseSlot } from "../extra/substats/SubstatProbability";
 
 // จำนวน substat type ทั้งหมดที่มีในเกม (main 9 + crit 2 + flatAtk 1 + flatDef 1) — ใช้เป็นตัวหารตั้งต้นใน setSubstats()
 const TOTAL_SUBSTAT_POOL = 13;
@@ -81,6 +81,12 @@ export class AllyUnit extends Unit {
     public bestSubstats?: EchoSubstats[];
     public luckBudget: number = 0; // ค่า prob ขั้นต่ำที่ยอมรับได้ (ระดับดวง) — budget เริ่มต้นของ algorithm เช็คว่ารับ substat level ไหนเพิ่มได้ไหม
 
+    // --- Substat Reroll (สับเปลี่ยน point ระหว่าง substat ท้ายรอบ sim) ---
+    /** ตัวที่กำลังปั๊มอยู่ตอนนี้ — index ใน substats[] (เริ่มที่ 1 เพราะตัวที่ 0 ใช้ logic tune ของ setSubstats() เอง) */
+    public rerollSubstatIndex: number = 1;
+    /** ตัวที่กำลังถูกดึง point อยู่ตอนนี้ — index ใน substats[], เริ่มจากตัวใกล้ rerollSubstatIndex ที่สุดก่อนเสมอ */
+    public rerollSourceIndex: number = 0;
+
     constructor(name: string) {
         super(name);
         // ค่าตั้งต้นของทุกตัวละคร (ก่อนบวก Echo/อาวุธ/บัพ) — Crit Rate 5% / Crit DMG 150%
@@ -141,6 +147,10 @@ export class AllyUnit extends Unit {
         // เทียบคู่ level[n]/level[n+1] ทีละคู่ ฝั่งที่โอกาส tune ขึ้นสูงกว่าหรือเท่ากันชนะ (เอนซ้าย) —
         // ชนะแล้วเพิ่ม tier ทันที เช็ค n เดิมซ้ำ (อาจชนะต่อได้อีก) แพ้ค่อยเลื่อนไปเช็คคู่ถัดไป
         // ถึงช่องสุดท้าย (ไม่มีคู่ให้เทียบแล้ว) ให้เช็คเดี่ยวๆ แล้ววนกลับ n=0 ใหม่ — จบเมื่อ luckBudget ไม่พอ
+        //
+        // หมายเหตุ: ตั้งใจ "จำ n" ไว้ข้าม iteration ของ loop นี้ (ไม่ใช้ pickBestTuneUpSlot ซึ่ง scan จาก
+        // index 0 ใหม่ทุกครั้ง) เพราะถ้า scan ใหม่ทุกรอบ ผลจะเอนเอียงกลับไปช่องต้นๆ ซ้ำๆ แทนที่จะ sweep
+        // ทั่วถึงทุกช่องเหมือนที่ตั้งใจไว้ — ทดสอบแล้วผลต่างจริง (level กระจายไม่เท่ากันถ้า scan ใหม่ทุกครั้ง)
         const level = this.substats[0].level;
         const tableKey = getTableKeyForStat(this.substats[0].type);
         let n = 0;
@@ -189,6 +199,69 @@ export class AllyUnit extends Unit {
                     this.addStat(type, value);
                 }
             }
+        }
+    }
+
+    /**
+     * ทำ substat reroll 1 ก้าว — เรียกท้ายแต่ละรอบ sim (เหมือน StarRailSimulator's StandardReroll)
+     * ก้าวนี้: หยิบ 1 point จาก substats[rerollSourceIndex] ไปให้ substats[rerollSubstatIndex]
+     *
+     * - slot ที่ได้ point (ฝั่งปั๊ม) เลือกด้วย pickBestTuneUpSlot — ชนะคือ slot ที่โอกาส tune ขึ้นสูงกว่าหรือเท่ากัน
+     * - slot ที่เสีย point (ฝั่งถูกดึง) เลือกด้วย pickBestDecreaseSlot — เอา slot tier สูงสุดที่โอกาสปัจจุบัน
+     *   ยังน้อยกว่า threshold ของฝั่งปั๊ม (เสียของจาก slot ที่แข็งอยู่แล้วเสียน้อยกว่า)
+     * - ไม่มี slot ให้ดึงจาก rerollSourceIndex แล้ว (คืน null) → ถอยไปลองตัวที่ถูกดึงตัวถัดไปที่ไกลออกไป
+     * - ลองครบทุกตัวก่อนหน้าแล้วไม่มีอะไรให้แลกเลย → เลื่อนไปปั๊มตัวถัดไป เริ่ม source ใหม่จากตัวใกล้สุด
+     * - เลื่อนจนเกิน substats ทั้งหมด → จบการค้นหา คืน false
+     *
+     * trade สำเร็จทุกครั้งอัพเดต luckBudget ด้วย: ซื้อ (ฝั่งได้ point) หารด้วย chance ที่ใช้ซื้อ,
+     * ขาย (ฝั่งเสีย point) คูณกลับด้วย chance ของ tier ที่เหลือ (คืน budget ที่เคยเสียไปตอนได้ tier นั้นมา)
+     *
+     * ifDamageMoreThan เป็น stub (hardcode true ไว้ก่อน) — รอ wiring กับผลดาเมจจริงจาก combat sim ทีหลัง
+     */
+    public rerollSubstats(): boolean {
+        if (!this.substats) return false;
+
+        while (true) {
+            if (this.rerollSubstatIndex > this.substats.length - 1) {
+                return false;
+            }
+
+            if (this.rerollSourceIndex < 0) {
+                this.rerollSubstatIndex++;
+                this.rerollSourceIndex = this.rerollSubstatIndex - 1;
+                continue;
+            }
+
+            const target = this.substats[this.rerollSubstatIndex];
+            const source = this.substats[this.rerollSourceIndex];
+
+            const sourceTableKey = getTableKeyForStat(source.type);
+            const { index: n, chance: threshold } = pickBestTuneUpSlot(getTableKeyForStat(target.type), target.level);
+            const m = pickBestDecreaseSlot(sourceTableKey, source.level, threshold);
+
+            if (m === null) {
+                this.rerollSourceIndex--;
+                continue;
+            }
+
+            target.level[n] += 1;
+            source.level[m] -= 1;
+
+            const ifDamageMoreThan = 1;
+            if (!ifDamageMoreThan) {
+                target.level[n] -= 1;
+                source.level[m] += 1;
+                this.rerollSourceIndex--;
+                continue;
+            }
+
+            // ซื้อ (target ได้ point เพิ่ม) = หาร luckBudget ด้วย chance ที่ใช้ซื้อ (threshold เดิม ก่อนบวก)
+            // ขาย (source เสีย point) = คูณ luckBudget กลับด้วย chance ของ tier ที่เหลือ (คืน budget ที่เคยเสียไปตอนได้ tier นั้นมา)
+            this.luckBudget = this.luckBudget / threshold;
+            const sellChance = getTuneUpChance(sourceTableKey, source.level[m]) / 100;
+            this.luckBudget = this.luckBudget * sellChance;
+
+            return true;
         }
     }
 

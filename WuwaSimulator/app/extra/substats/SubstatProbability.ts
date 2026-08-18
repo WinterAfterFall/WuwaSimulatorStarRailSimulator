@@ -107,6 +107,55 @@ export function buildSurvivalRatioArray(tableKey: SubstatTableKey): number[] {
 // ตาราง 2 มิติ: แถว = tier a (1..maxTierของ tableA), คอลัมน์ = tier b (1..maxTierของ tableB)
 // ค่า 1 = ควรเลือกเพิ่ม tier a (chance a >= chance b), 0 = ควรเลือกเพิ่ม tier b
 // เท่ากันพอดี (tie) นับเป็น 1 (เอนเอียงไปทาง a เป็นค่า default)
+export interface TuneSlotPick {
+    index : number;
+    chance: number; // fraction 0-1 (ไม่ใช่ percentage point)
+}
+
+// เทียบคู่ level[n]/level[n+1] ทีละคู่ ฝั่งที่โอกาส tune ขึ้นสูงกว่าหรือเท่ากันชนะ (เอนซ้าย) —
+// แพ้ค่อยเลื่อนไปเช็คคู่ถัดไป ถึงช่องสุดท้าย (ไม่มีคู่ให้เทียบแล้ว) คืนค่าช่องนั้นตรงๆ
+// คืนแค่ "ตัวไหนชนะ" เท่านั้น ไม่ได้ตัดสินใจว่าจะ tune ขึ้นจริงไหม (budget/threshold เป็นหน้าที่ของ caller)
+export function pickBestTuneUpSlot(tableKey: SubstatTableKey, level: number[]): TuneSlotPick {
+    let n = 0;
+    while (true) {
+        const isLastSlot = n === level.length - 1;
+        const chanceN = getTuneUpChance(tableKey, level[n]) / 100;
+
+        if (!isLastSlot) {
+            const chanceN1 = getTuneUpChance(tableKey, level[n + 1]) / 100;
+            if (chanceN < chanceN1) {
+                n++;
+                continue;
+            }
+        }
+
+        return { index: n, chance: chanceN };
+    }
+}
+
+// หา slot ที่ "เสีย point ออกไปคุ้มที่สุด" — ต้อง level > 1 (ลดต่ำกว่า tier 1 ไม่ได้) และ
+// โอกาส tune ขึ้นปัจจุบัน < threshold เท่านั้นถึงจะเป็นตัวเลือก — ในบรรดาตัวเลือกที่ผ่าน เอาตัวที่ tier
+// สูงสุด (เทียบเท่ากับ chance ต่ำสุด) เพราะการเสีย point จาก slot ที่ tier สูงอยู่แล้วเสียของน้อยกว่า
+// คืน null ถ้าไม่มี slot ไหนผ่านเงื่อนไขเลย (แลกจาก substat ตัวนี้ไม่ได้แล้ว)
+export function pickBestDecreaseSlot(tableKey: SubstatTableKey, level: number[], threshold: number): number | null {
+    let bestIndex: number | null = null;
+    let bestTier = -1;
+
+    for (let m = 0; m < level.length; m++) {
+        if (level[m] <= 1) continue;
+
+        const currentChance = getTuneUpChance(tableKey, level[m]) / 100;
+        if (currentChance >= threshold) continue;
+
+        if (level[m] > bestTier) {
+            bestTier = level[m];
+            bestIndex = m;
+        }
+    }
+
+    return bestIndex;
+}
+
 export function buildTuneDecisionMatrix(
     tableAKey: SubstatTableKey,
     tableBKey: SubstatTableKey = tableAKey
