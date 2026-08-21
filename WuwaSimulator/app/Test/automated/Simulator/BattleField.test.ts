@@ -55,6 +55,13 @@ describe('BattleField', () => {
             const b = field.createEnemy('B');
             expect(field.enemies).toEqual([a, b]);
         });
+
+        it('should assign enemyNum as the index of the enemy within the roster', () => {
+            const a = field.createEnemy('A');
+            const b = field.createEnemy('B');
+            expect(a.enemyNum).toBe(0);
+            expect(b.enemyNum).toBe(1);
+        });
     });
 
     // ─────────────────────────────────────────────

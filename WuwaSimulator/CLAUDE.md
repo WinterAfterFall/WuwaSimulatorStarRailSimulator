@@ -177,7 +177,9 @@ getStats(Dmg, Glacio, BA)         → key: "Dmg Bonus-Glacio-BA"
 - **energy**: `energy`, `maxEnergy`, `ultCost` (พลังงานที่ต้องใช้กด Ultimate — เช็คตอน `CastUltimateEvent` execute)
 - **concento**: `concentoEnergy`, `maxConcentoEnergy` (default **100**)
 - **hp / shield**: `currentHP`, `currentShield`
-- **tracking**: `stacks`, `buffNote`, `buffCheck`, `dmgRecord`, `maxDmgRecord` (ทั้งหมด `Map`)
+- **tracking**: `stacks`, `buffNote`, `buffCheck` (ทั้งหมด `Map`) + `dmgRecord`/`maxDmgRecord` (`Map`, มาจาก `Unit`)
+- **roster position**: `allyNum` (`number`, default `0`) — ลำดับตัวเองในทีม ตั้งให้ตอน `Simulate.addAlly()` (index ก่อน push)
+- **damage record (รวมทุกท่า)**: `totalDamageRecord`/`maxTotalDamageRecord` (ทั้งคู่ `number`) — `totalDamageRecord` คือผลรวมดาเมจที่ตีได้ในรอบปัจจุบัน (อัพเดตทุกครั้งใน `calculateDamage()`), `maxTotalDamageRecord` คือ record ของรอบที่ดีที่สุดเท่าที่เคยมี **ไม่ได้อัพเดตแบบ real-time** — อัพเดตทีเดียวท้ายรอบผ่าน `updateMaxRecords(enemies)` เท่านั้น (เมธอดนี้เช็ค `totalDamageRecord > maxTotalDamageRecord`, ถ้าใช่ snapshot `dmgRecord` ทับ `maxDmgRecord`, ตั้ง `maxTotalDamageRecord = totalDamageRecord`, แล้วอัพเดต `enemy.maxTotalDamageRecord[allyNum]` ของทุก enemy ที่ส่งเข้ามาด้วย — เรียก **ก่อน** `rerollSubstats()` เสมอ ผลลัพธ์ boolean ใช้เป็น `ifDamageMoreThan` ที่ตอนนี้ยัง hardcode `true` อยู่ในนั้น)
 - **echo substats**: `substats?`/`bestSubstats?` (ทั้งคู่ `EchoSubstats[]`, optional — ดู `extra/substats/EchoSubstats.ts`) — `substats` = ที่ปั้มติดตัวจริงตอนนี้, `bestSubstats` = เป้าหมายที่ต้องการ — คู่กับ `luckBudget` (`number`, default `0`) = ค่า prob ขั้นต่ำที่ยอมรับได้ ("ระดับดวง") ใช้เป็นงบเริ่มต้นของ algorithm เช็คว่ารับ substat level ไหนเพิ่มได้ไหม (เช็ค `budget / p < 1` แล้วหารทับ `budget` ทุกครั้งที่รับเพิ่ม — ยังไม่มี logic จริง แค่ประกาศ field ไว้ก่อน)
 - **ไม่มี `TimelineRef`/`allies`/`enemies` บน unit แล้ว** — rotation ที่ต้องอ่าน roster ให้ `import { battleField } from "../../Simulator/BattleField"` แล้วอ่าน `battleField.allies`/`battleField.enemies` ตรงๆ แทน
 
@@ -185,7 +187,9 @@ getStats(Dmg, Glacio, BA)         → key: "Dmg Bonus-Glacio-BA"
 - **level** (default 90) — ใช้คำนวณ DEF: `8×level + 792`
 - **baseElemRed** (default 0) — resistance ตั้งต้นของมอน, บวกเพิ่มจาก stat system ได้
 - **position**: `EnemyPosition`
-- **tracking**: `debuffStacks`, `debuffNote`, `debuffCheck`, `dmgRecord`, `maxDmgRecord`
+- **tracking**: `debuffStacks`, `debuffNote`, `debuffCheck` (ทั้งหมด `Map`) + `dmgRecord`/`maxDmgRecord` (`Map`, มาจาก `Unit`)
+- **roster position**: `enemyNum` (`number`, default `0`) — ลำดับตัวเองในสนาม ตั้งให้ตอน `BattleField.createEnemy()` (index ก่อน push)
+- **damage record (แยกตาม ally ที่ตี)**: `totalDamageRecord`/`maxTotalDamageRecord` (ทั้งคู่ `number[]`, index ด้วย `attacker.allyNum`) — คนละแบบกับ `AllyUnit` เพราะ enemy โดนดาเมจจากหลาย ally พร้อมกันได้ ต้องแยกผลตาม ally แต่ละคน — `totalDamageRecord[allyNum]` อัพเดตทุกครั้งใน `calculateDamage()`, `maxTotalDamageRecord[allyNum]` อัพเดตเฉพาะตอน `AllyUnit.updateMaxRecords()` ของ ally คนนั้นเจอ record ใหม่
 
 ---
 
@@ -386,7 +390,7 @@ damage = base × dmgBonus × crit × amp × def × res × reduction
 ---
 
 ## ข้อควรระวัง / Known issues
-- `DamageEvent` เรียก `calculateDamage(damage)` ตรงๆ ไม่ต้องแนบ `triggerBus` แล้ว (energy/concento/gauge จ่ายแยกผ่าน `battleField.applyResourceGain()` ที่ใช้ `triggerBus` ของ `battleField` เอง) — ยังไม่บันทึกผลลงใน `attacker.dmgRecord` (แค่ print เฉยๆ ผ่าน `calculateDamage`)
+- `DamageEvent` เรียก `calculateDamage(damage)` ตรงๆ ไม่ต้องแนบ `triggerBus` แล้ว (energy/concento/gauge จ่ายแยกผ่าน `battleField.applyResourceGain()` ที่ใช้ `triggerBus` ของ `battleField` เอง) — `calculateDamage` บันทึกผลลง `dmgRecord` (ตามชื่อ damage) และ `totalDamageRecord` (รวมทุกชื่อ) ของทั้ง attacker และ target ก่อน print (`recordDmgRecord()`/`recordTotalDamage()` helper ใน `DamageCalculate.ts`) — **ไม่แตะ `maxDmgRecord`/`maxTotalDamageRecord` เลย** สองตัวนั้นเป็น record ของ "รอบที่ดีที่สุด" อัพเดตเฉพาะตอนเรียก `AllyUnit.updateMaxRecords(enemies)` ท้ายรอบ (ก่อน `rerollSubstats()`) เท่านั้น
 - `BuffStartEvent` / `BuffEndEvent` ยังใช้ default no-op execute จาก `CombatEvent` (ยังไม่มี logic เพิ่ม/ลบ stat จริง)
 - `Test/Utils/` เป็น duplicate เก่าที่ import path ผิด — ใช้ `Test/automated/Utils/` แทน
 - `Mornye` เป็นตัวละครจริงตัวแรก (base stats + default stats + rotation ครบทุกท่า: "BA Combo", "EBA Combo", "HA_GEOPOTENTIAL_SHIFT_DAMAGE_FRAME", "HA_INVERSION_DAMAGE_FRAME", "ESkill", "Ult", "Intro") ค่าท่าเก็บเป็น `MoveData` ตัวเดียวต่อท่า (import จาก `Models/Combat/MoveData.ts`) — `BA1`/`BA2`/`BA3` มี `mtpr`/`type` จริงแล้ว ส่วนท่าที่เหลือมี `duration`/`damageFrame` จริงแต่ `mtpr` ยังเป็น placeholder `0` (type เดา `MultiplierType.Atk` ไว้ก่อน) รอข้อมูลจริง (ดีล 0.00 ตอนนี้) — `Test1`/`Test2` ยังเป็น scaffolding เดิม ไม่มี passive ที่ register กับ `TriggerBus` จริง

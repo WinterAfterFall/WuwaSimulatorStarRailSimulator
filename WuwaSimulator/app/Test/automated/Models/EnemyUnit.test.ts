@@ -94,6 +94,20 @@ describe('EnemyUnit', () => {
     });
 
     // ─────────────────────────────────────────────
+    // totalDamageRecord / maxTotalDamageRecord / enemyNum
+    // ─────────────────────────────────────────────
+    describe('totalDamageRecord / maxTotalDamageRecord / enemyNum', () => {
+        it('defaults totalDamageRecord and maxTotalDamageRecord to empty lists', () => {
+            expect(enemy.totalDamageRecord).toEqual([]);
+            expect(enemy.maxTotalDamageRecord).toEqual([]);
+        });
+
+        it('defaults enemyNum to 0', () => {
+            expect(enemy.enemyNum).toBe(0);
+        });
+    });
+
+    // ─────────────────────────────────────────────
     // Inherited Unit stat system
     // ─────────────────────────────────────────────
     describe('inherited stat system', () => {

@@ -6,6 +6,13 @@ export class Unit {
     public status: UnitStatus = UnitStatus.Alive;
     public name: string;
     public side : Side = Side.None;
+
+    // --- Damage Record ---
+    // totalDamageRecord/maxTotalDamageRecord ย้ายไปเป็นสมาชิกของ AllyUnit/EnemyUnit แทน
+    // (Ally เก็บเป็นค่าเดียว ส่วน Enemy เก็บเป็น list เพราะรูปแบบข้อมูลที่ต้องการต่างกัน)
+    public dmgRecord    : Map<string, number> = new Map();
+    public maxDmgRecord : Map<string, number> = new Map();
+
     constructor(name: string);
     constructor(name: string, initialStats: Partial<Record<StatsType, number>>);
     constructor(name: string, initialStats?: Partial<Record<StatsType, number>>) {

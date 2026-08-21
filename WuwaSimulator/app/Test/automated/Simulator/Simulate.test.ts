@@ -60,6 +60,15 @@ describe('Simulate — roster', () => {
         expect(sim.battleField.onFieldChar).toBe(first);
     });
 
+    it('should assign allyNum as the index of the ally within the roster', () => {
+        const sim    = new Simulate();
+        const first  = sim.addAlly(new AllyUnit('First'));
+        const second = sim.addAlly(new AllyUnit('Second'));
+
+        expect(first.allyNum).toBe(0);
+        expect(second.allyNum).toBe(1);
+    });
+
     it('should spawn an enemy into the battleField', () => {
         const sim   = new Simulate();
         const enemy = sim.spawnEnemy('Dummy');

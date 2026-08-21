@@ -1,9 +1,94 @@
 import { AllyUnit } from '../../../Models/AllyUnit';
+import { EnemyUnit } from '../../../Models/EnemyUnit';
 import { StatsType, ActionType } from '../../../Constants/Enum';
 import { SUBSTAT_VALUES } from '../../../extra/substats/SubstatValueData';
 import { getTuneUpChance, getMaxTier } from '../../../extra/substats/SubstatProbability';
 
 describe('AllyUnit', () => {
+    describe('totalDamageRecord / maxTotalDamageRecord / allyNum', () => {
+        it('defaults totalDamageRecord and maxTotalDamageRecord to 0', () => {
+            const ally = new AllyUnit('Ally');
+
+            expect(ally.totalDamageRecord).toBe(0);
+            expect(ally.maxTotalDamageRecord).toBe(0);
+        });
+
+        it('defaults allyNum to 0', () => {
+            const ally = new AllyUnit('Ally');
+
+            expect(ally.allyNum).toBe(0);
+        });
+    });
+
+    describe('updateMaxRecords', () => {
+        it('returns false and leaves every record untouched when totalDamageRecord does not beat the record', () => {
+            const ally = new AllyUnit('Ally');
+            ally.totalDamageRecord    = 100;
+            ally.maxTotalDamageRecord = 100;
+            ally.dmgRecord.set('BA', 100);
+
+            const enemy = new EnemyUnit('Boss');
+            enemy.totalDamageRecord[0]    = 100;
+            enemy.maxTotalDamageRecord[0] = 999;
+
+            const isNewRecord = ally.updateMaxRecords([enemy]);
+
+            expect(isNewRecord).toBe(false);
+            expect(ally.maxDmgRecord.size).toBe(0);
+            expect(ally.maxTotalDamageRecord).toBe(100);
+            expect(enemy.maxTotalDamageRecord[0]).toBe(999);
+        });
+
+        it('snapshots dmgRecord into maxDmgRecord when totalDamageRecord beats the record', () => {
+            const ally = new AllyUnit('Ally');
+            ally.totalDamageRecord    = 500;
+            ally.maxTotalDamageRecord = 300;
+            ally.dmgRecord.set('BA', 200);
+            ally.dmgRecord.set('Ult', 300);
+
+            const isNewRecord = ally.updateMaxRecords([]);
+
+            expect(isNewRecord).toBe(true);
+            expect(ally.maxDmgRecord.get('BA')).toBe(200);
+            expect(ally.maxDmgRecord.get('Ult')).toBe(300);
+            expect(ally.maxTotalDamageRecord).toBe(500);
+        });
+
+        it("updates every enemy's maxTotalDamageRecord at this ally's index when the record breaks", () => {
+            const ally = new AllyUnit('Ally');
+            ally.allyNum = 2;
+            ally.totalDamageRecord    = 500;
+            ally.maxTotalDamageRecord = 300;
+
+            const enemyA = new EnemyUnit('A');
+            enemyA.totalDamageRecord[2] = 400;
+            const enemyB = new EnemyUnit('B');
+            enemyB.totalDamageRecord[2] = 100;
+
+            ally.updateMaxRecords([enemyA, enemyB]);
+
+            expect(enemyA.maxTotalDamageRecord[2]).toBe(400);
+            expect(enemyB.maxTotalDamageRecord[2]).toBe(100);
+        });
+
+        it("does not touch other allies' slots in an enemy's record arrays", () => {
+            const ally = new AllyUnit('Ally');
+            ally.allyNum = 1;
+            ally.totalDamageRecord    = 500;
+            ally.maxTotalDamageRecord = 0;
+
+            const enemy = new EnemyUnit('Boss');
+            enemy.totalDamageRecord[0]    = 999;
+            enemy.maxTotalDamageRecord[0] = 999;
+            enemy.totalDamageRecord[1]    = 500;
+
+            ally.updateMaxRecords([enemy]);
+
+            expect(enemy.maxTotalDamageRecord[0]).toBe(999);
+            expect(enemy.maxTotalDamageRecord[1]).toBe(500);
+        });
+    });
+
     describe('applySubstats', () => {
         it('does nothing when substats is undefined', () => {
             const ally = new AllyUnit('Ally');

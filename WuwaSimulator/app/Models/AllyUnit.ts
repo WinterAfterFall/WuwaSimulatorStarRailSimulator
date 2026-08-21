@@ -3,6 +3,7 @@ import { StatsType, ActionType, ElementType, WeaponType, ActionState } from "../
 import { Queue } from "../Utils/queue";
 import { RotationAction } from "./Combat/RotationAction";
 import type { BattleField } from "../Simulator/BattleField";
+import type { EnemyUnit } from "./EnemyUnit";
 import { EchoSubstats } from "../extra/substats/EchoSubstats";
 import { SUBSTAT_VALUES } from "../extra/substats/SubstatValueData";
 import { getTableKeyForStat } from "../extra/substats/SubstatData";
@@ -72,9 +73,14 @@ export class AllyUnit extends Unit {
     public gauges    : Map<string, number>  = new Map();
     public buffCheck : Map<string, boolean> = new Map();
 
-    // --- Damage Record ---
-    public dmgRecord    : Map<string, number> = new Map();
-    public maxDmgRecord : Map<string, number> = new Map();
+    // --- Roster Position ---
+    public allyNum: number = 0; // ลำดับของตัวละครนี้ในทีม (index ใน battleField.allies) — ตั้งให้ตอน Simulate.addAlly()
+
+    // --- Damage Record (รวมทุกท่า ไม่แยกตามชื่อ — แยกตามชื่อดูที่ dmgRecord/maxDmgRecord ของ Unit) ---
+    /** ผลรวมดาเมจทั้งหมดที่ตัวละครนี้ตีในรอบปัจจุบัน */
+    public totalDamageRecord    : number = 0;
+    /** totalDamageRecord ของรอบที่ทำดาเมจได้มากที่สุดเท่าที่เคยมี — อัพเดตผ่าน updateMaxRecords() เท่านั้น */
+    public maxTotalDamageRecord : number = 0;
 
     // --- Echo Substats ---
     public substats?: EchoSubstats[];
@@ -200,6 +206,34 @@ export class AllyUnit extends Unit {
                 }
             }
         }
+    }
+
+    /**
+     * เช็คว่ารอบปัจจุบัน (`totalDamageRecord`) ทำดาเมจได้มากกว่า record เดิม (`maxTotalDamageRecord`) ไหม —
+     * เรียกท้ายรอบ sim **ก่อน** `rerollSubstats()` เสมอ ผลลัพธ์ (boolean) ใช้ตัดสินใจว่าจะเก็บหรือย้อน
+     * trade ที่เพิ่งลองใน `rerollSubstats()` (ตอนนี้ `ifDamageMoreThan` ในนั้นยัง hardcode `true` รอ wiring จริง)
+     *
+     * ถ้ามากกว่า — บันทึกรอบนี้เป็น record ใหม่:
+     * 1. `maxDmgRecord` ของตัวเอง อิงตาม key ทุกตัวใน `dmgRecord` ของตัวเอง (snapshot ทับของเดิม)
+     * 2. `maxTotalDamageRecord` ของตัวเอง = `totalDamageRecord`
+     * 3. `maxTotalDamageRecord[allyNum]` ของ enemy **ทุกตัว** ที่ส่งเข้ามา = `totalDamageRecord[allyNum]` ของ enemy ตัวนั้น
+     *    (แตะเฉพาะ index ของตัวเอง ไม่ยุ่งกับ ally คนอื่นใน array เดียวกัน)
+     */
+    public updateMaxRecords(enemies: EnemyUnit[]): boolean {
+        const isNewRecord = this.totalDamageRecord > this.maxTotalDamageRecord;
+
+        if (isNewRecord) {
+            for (const [key, value] of this.dmgRecord) {
+                this.maxDmgRecord.set(key, value);
+            }
+            this.maxTotalDamageRecord = this.totalDamageRecord;
+
+            for (const enemy of enemies) {
+                enemy.maxTotalDamageRecord[this.allyNum] = enemy.totalDamageRecord[this.allyNum] ?? 0;
+            }
+        }
+
+        return isNewRecord;
     }
 
     /**

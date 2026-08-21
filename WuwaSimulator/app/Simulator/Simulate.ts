@@ -37,6 +37,7 @@ export class Simulate {
      * แล้วตัวละครค้าง Busy ตลอดไปแบบเงียบๆ
      */
     public addAlly(unit: AllyUnit): AllyUnit {
+        unit.allyNum = this.battleField.allies.length;
         this.battleField.allies.push(unit);
 
         if (this.battleField.onFieldChar === null) {

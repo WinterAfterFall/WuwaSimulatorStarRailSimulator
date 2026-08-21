@@ -73,6 +73,7 @@ export class BattleField {
     /** สร้าง EnemyUnit (stats พื้นฐาน default อยู่แล้วใน class) แล้ว push เข้า enemies ให้เลย */
     public createEnemy(name: string): EnemyUnit {
         const enemy = new EnemyUnit(name);
+        enemy.enemyNum = this.enemies.length;
         this.enemies.push(enemy);
         return enemy;
     }

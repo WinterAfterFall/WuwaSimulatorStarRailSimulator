@@ -177,13 +177,30 @@ function applyDamageFormula(
 }
 
 // ─────────────────────────────────────────────────────────────
+// recordDamage — บันทึกผลดาเมจ 1 ครั้งลง dmgRecord/totalDamageRecord ของ unit
+// (maxDmgRecord/maxTotalDamageRecord ไม่แตะที่นี่ — เป็น record ของ "รอบที่ดีที่สุด"
+//  อัพเดตทีเดียวท้ายรอบผ่าน AllyUnit.updateMaxRecords() เท่านั้น ไม่ใช่ทุกครั้งที่ตี)
+// ─────────────────────────────────────────────────────────────
+
+function recordDmgRecord(unit: Unit, name: string, result: number): void {
+    unit.dmgRecord.set(name, (unit.dmgRecord.get(name) ?? 0) + result);
+}
+
+function recordTotalDamage(attacker: AllyUnit, target: EnemyUnit, result: number): void {
+    attacker.totalDamageRecord += result;
+    target.totalDamageRecord[attacker.allyNum] = (target.totalDamageRecord[attacker.allyNum] ?? 0) + result;
+}
+
+// ─────────────────────────────────────────────────────────────
 // calculateDamage (public API)
 // ─────────────────────────────────────────────────────────────
 
 /**
- * คำนวณดาเมจอย่างเดียว ไม่แตะ state ของผู้ตีเลย
+ * คำนวณดาเมจ + บันทึกผลลง dmgRecord (ตามชื่อ damage) และ totalDamageRecord (รวมทุกชื่อ) ของทั้ง attacker และ target
+ * target.totalDamageRecord แยกเป็น list ตาม attacker.allyNum เพราะ enemy โดนดาเมจจากหลาย ally พร้อมกันได้
+ *
  * ทรัพยากรที่ได้จากท่า (energy/concento/gauge) เป็นหน้าที่ของ `BattleField.applyResourceGain()`
- * ซึ่ง `DamageEvent` เรียกต่อให้เองตอน execute
+ * ซึ่ง `DamageEvent` เรียกต่อให้เองตอน execute — ไม่เกี่ยวกับดาเมจโดยตรงจึงไม่ทำในนี้
  */
 export function calculateDamage(damage: Damage): void {
     const attacker      = damage.attacker;
@@ -192,6 +209,10 @@ export function calculateDamage(damage: Damage): void {
     for (const target of damage.targets) {
         const targetStats = computeTargetStats(target, damage);
         const result      = applyDamageFormula(damage, attackerStats, targetStats);
+
+        recordDmgRecord(attacker, damage.name, result);
+        recordDmgRecord(target, damage.name, result);
+        recordTotalDamage(attacker, target, result);
 
         console.log(`[Damage] ${attacker.name} ตี ${target.name}: ${result.toFixed(2)}`);
     }
