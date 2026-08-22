@@ -86,12 +86,21 @@ export class AllyUnit extends Unit {
     public substats?: EchoSubstats[];
     public bestSubstats?: EchoSubstats[];
     public luckBudget: number = 0; // ค่า prob ขั้นต่ำที่ยอมรับได้ (ระดับดวง) — budget เริ่มต้นของ algorithm เช็คว่ารับ substat level ไหนเพิ่มได้ไหม
+    /** luckBudget ณ ตอนที่ bestSubstats ถูกเซฟ — ต้องเดินคู่กับ bestSubstats เสมอ (ดู saveBest()/restoreBest()) */
+    public bestLuckBudget: number = 0;
 
-    // --- Substat Reroll (สับเปลี่ยน point ระหว่าง substat ท้ายรอบ sim) ---
+    // --- Substat Reroll (สับเปลี่ยน point ระหว่าง substat ท้ายรอบ sim — พอร์ตมาจาก StarRailSimulator's
+    //     StandardReroll แปลงจากโมเดล "แต้ม quota รวม" ของ StarRail มาเป็นโมเดล "tier ต่อช่อง" ของ WuWa) ---
     /** ตัวที่กำลังปั๊มอยู่ตอนนี้ — index ใน substats[] (เริ่มที่ 1 เพราะตัวที่ 0 ใช้ logic tune ของ setSubstats() เอง) */
     public rerollSubstatIndex: number = 1;
-    /** ตัวที่กำลังถูกดึง point อยู่ตอนนี้ — index ใน substats[], เริ่มจากตัวใกล้ rerollSubstatIndex ที่สุดก่อนเสมอ */
-    public rerollSourceIndex: number = 0;
+    /** source ที่กำลังสไลด์ทดสอบอยู่ตอนนี้ใน sweep ปัจจุบัน — ไล่ขึ้นจาก 0 ไปหา rerollSubstatIndex-1
+     *  -1 = ยังไม่เริ่ม sweep ใหม่ (sentinel) reset กลับ -1 ทุกครั้งที่จะเริ่ม sweep ใหม่
+     *  (ทั้งตอนขึ้น target ใหม่ และตอน retry sweep เดิมหลังเจอ improvement) */
+    public rerollSourceIndex: number = -1;
+    /** เจอ improvement (ผ่าน updateMaxRecords()) ระหว่าง sweep ปัจจุบันของ rerollSubstatIndex นี้ไหม —
+     *  true = ตั้งโดย updateMaxRecords() เอง — ใช้ตัดสินตอน sweep จบว่าจะ retry sweep เดิมซ้ำ (ยังมีลุ้น)
+     *  หรือเลื่อนไป target ถัดไป (ไม่มีอะไรดีขึ้นเลยทั้ง sweep) */
+    public rerollImproved: boolean = false;
 
     constructor(name: string) {
         super(name);
@@ -183,6 +192,36 @@ export class AllyUnit extends Unit {
             this.luckBudget = afterTune;
             if (isLastSlot) n = 0;
         }
+
+        // bestSubstats ต้องตรงกับ substats ที่เพิ่ง tune เสร็จเสมอ — ยังไม่มีผลดาเมจจริงมาเทียบเลย
+        // ตอนนี้ configuration นี้จึงถือเป็น "ดีที่สุดเท่าที่รู้" โดยปริยาย (rerollSubstats() ใช้เป็น baseline)
+        this.saveBest();
+    }
+
+    private cloneSubstat(source: EchoSubstats): EchoSubstats {
+        const copy = new EchoSubstats(source.type, source.actionType);
+        copy.level = [...source.level];
+        return copy;
+    }
+
+    /**
+     * เซฟ config ปัจจุบันเป็น "ดีที่สุดเท่าที่รู้"
+     *
+     * `luckBudget` ต้องถูกเซฟคู่กับ `substats` เสมอ เพราะ `trySwapSubstat()` แก้ทั้งสองอย่างพร้อมกัน —
+     * ถ้าเซฟแค่ substats แล้ว restore ทีหลัง level จะย้อนกลับได้แต่ budget ไม่ย้อน งบจะเพี้ยนสะสม
+     * ทุก sweep ที่ล้มเหลว แล้ว algorithm จะ "ซื้อ" tier ได้ผิดจากความจริง
+     */
+    private saveBest(): void {
+        if (!this.substats) return;
+        this.bestSubstats   = this.substats.map(s => this.cloneSubstat(s));
+        this.bestLuckBudget = this.luckBudget;
+    }
+
+    /** ย้อนกลับไป config ที่ดีที่สุด — คู่ตรงข้ามของ saveBest() ต้องคืนครบทั้งสองอย่างเหมือนกัน */
+    private restoreBest(): void {
+        if (!this.bestSubstats) return;
+        this.substats   = this.bestSubstats.map(s => this.cloneSubstat(s));
+        this.luckBudget = this.bestLuckBudget;
     }
 
     /**
@@ -210,14 +249,16 @@ export class AllyUnit extends Unit {
 
     /**
      * เช็คว่ารอบปัจจุบัน (`totalDamageRecord`) ทำดาเมจได้มากกว่า record เดิม (`maxTotalDamageRecord`) ไหม —
-     * เรียกท้ายรอบ sim **ก่อน** `rerollSubstats()` เสมอ ผลลัพธ์ (boolean) ใช้ตัดสินใจว่าจะเก็บหรือย้อน
-     * trade ที่เพิ่งลองใน `rerollSubstats()` (ตอนนี้ `ifDamageMoreThan` ในนั้นยัง hardcode `true` รอ wiring จริง)
+     * เรียกท้ายรอบ sim **ก่อน** `rerollSubstats()` เสมอ (เทียบเท่า StarRailSimulator's `changeMaxDamage()`
+     * ที่ `StandardReroll()` เรียกเป็นบรรทัดแรกสุด)
      *
-     * ถ้ามากกว่า — บันทึกรอบนี้เป็น record ใหม่:
+     * ถ้ามากกว่า — บันทึกรอบนี้เป็น record ใหม่ทั้งหมด:
      * 1. `maxDmgRecord` ของตัวเอง อิงตาม key ทุกตัวใน `dmgRecord` ของตัวเอง (snapshot ทับของเดิม)
      * 2. `maxTotalDamageRecord` ของตัวเอง = `totalDamageRecord`
      * 3. `maxTotalDamageRecord[allyNum]` ของ enemy **ทุกตัว** ที่ส่งเข้ามา = `totalDamageRecord[allyNum]` ของ enemy ตัวนั้น
      *    (แตะเฉพาะ index ของตัวเอง ไม่ยุ่งกับ ally คนอื่นใน array เดียวกัน)
+     * 4. `bestSubstats` = snapshot ของ `substats` ปัจจุบัน (เทียบเท่า `Max_damage_Substats[i] = Substats[i].second`)
+     * 5. `rerollImproved = true` — บอก `rerollSubstats()` ว่า sweep ปัจจุบันเจอของดีขึ้นแล้ว ให้ลอง sweep ซ้ำอีกรอบ
      */
     public updateMaxRecords(enemies: EnemyUnit[]): boolean {
         const isNewRecord = this.totalDamageRecord > this.maxTotalDamageRecord;
@@ -231,72 +272,112 @@ export class AllyUnit extends Unit {
             for (const enemy of enemies) {
                 enemy.maxTotalDamageRecord[this.allyNum] = enemy.totalDamageRecord[this.allyNum] ?? 0;
             }
+
+            this.saveBest();
+            this.rerollImproved = true;
         }
 
         return isNewRecord;
     }
 
     /**
-     * ทำ substat reroll 1 ก้าว — เรียกท้ายแต่ละรอบ sim (เหมือน StarRailSimulator's StandardReroll)
-     * ก้าวนี้: หยิบ 1 point จาก substats[rerollSourceIndex] ไปให้ substats[rerollSubstatIndex]
+     * ทำ substat reroll 1 ก้าว — เรียกท้ายแต่ละรอบ sim **หลัง** `updateMaxRecords()` เสมอ
+     * พอร์ตมาจาก StarRailSimulator's `StandardReroll()` (ดู `RelicAdjust.h`) — โครงสร้าง sweep/retry/advance
+     * เหมือนต้นฉบับทุกจุด ต่างแค่ "1 point" ของ StarRail (แต้ม quota ธรรมดา) ถูกแทนด้วย "1 tier ของ 1 ช่อง
+     * echo" ของ WuWa (เลือกช่องด้วย pickBestTuneUpSlot/pickBestDecreaseSlot แทนการบวก/ลบเลขตรงๆ)
      *
-     * - slot ที่ได้ point (ฝั่งปั๊ม) เลือกด้วย pickBestTuneUpSlot — ชนะคือ slot ที่โอกาส tune ขึ้นสูงกว่าหรือเท่ากัน
-     * - slot ที่เสีย point (ฝั่งถูกดึง) เลือกด้วย pickBestDecreaseSlot — เอา slot tier สูงสุดที่โอกาสปัจจุบัน
-     *   ยังน้อยกว่า threshold ของฝั่งปั๊ม (เสียของจาก slot ที่แข็งอยู่แล้วเสียน้อยกว่า)
-     * - ไม่มี slot ให้ดึงจาก rerollSourceIndex แล้ว (คืน null) → ถอยไปลองตัวที่ถูกดึงตัวถัดไปที่ไกลออกไป
-     * - ลองครบทุกตัวก่อนหน้าแล้วไม่มีอะไรให้แลกเลย → เลื่อนไปปั๊มตัวถัดไป เริ่ม source ใหม่จากตัวใกล้สุด
-     * - เลื่อนจนเกิน substats ทั้งหมด → จบการค้นหา คืน false
+     * แนวคิด: สำหรับ target = substats[rerollSubstatIndex] ตัวปัจจุบัน ไล่ "สไลด์" หา source ทีละตัว
+     * **จาก substats[0] ไล่ขึ้นเข้าหา target** — substats[0] → substats[1] → ... →
+     * substats[rerollSubstatIndex - 1] (rerollSourceIndex ตามตำแหน่งสไลด์)
      *
-     * trade สำเร็จทุกครั้งอัพเดต luckBudget ด้วย: ซื้อ (ฝั่งได้ point) หารด้วย chance ที่ใช้ซื้อ,
-     * ขาย (ฝั่งเสีย point) คูณกลับด้วย chance ของ tier ที่เหลือ (คืน budget ที่เคยเสียไปตอนได้ tier นั้นมา)
+     * ทิศทางนี้เลือกไว้เพราะอ่านง่าย (ไล่ขึ้นเป็นทิศที่คนอ่านโค้ดคาดหวังโดยธรรมชาติ) แต่**ไม่ใช่รายละเอียด
+     * ที่สลับได้ตามใจ** — ลำดับมีผลต่อผลลัพธ์จริง เพราะแต่ละคอลจบทันทีที่แลกสำเร็จตัวแรก, trade สะสมกัน
+     * ภายใน sweep เดียว (ไม่ revert ระหว่างทาง) และ bestSubstats ขยับตามไปด้วย
+     * ถ้าจะเปลี่ยนทิศต้องตั้งใจเปลี่ยน และแก้ test `sweeps sources from substats[0] upward toward the target` คู่กัน
      *
-     * ifDamageMoreThan เป็น stub (hardcode true ไว้ก่อน) — รอ wiring กับผลดาเมจจริงจาก combat sim ทีหลัง
+     * ลองย้าย 1 tier จาก source ไป target จริง (ไม่ revert เอง) แล้วคืน `true` ให้ caller ไปรัน sim จริง + เรียก
+     * `updateMaxRecords()` ก่อนเรียกฟังก์ชันนี้อีกครั้ง — ถ้า source ตัวไหนแลกไม่ได้เลย (pickBestDecreaseSlot
+     * คืน null) ข้ามไปตัวถัดไปทันทีในลูปเดียวกัน ไม่เสีย 1 รอบ sim ไปเปล่าๆ
+     *
+     * เมื่อสไลด์ครบทุก source แล้ว (จบ sweep):
+     * - ถ้า `rerollImproved` (updateMaxRecords() เจอ record ใหม่ระหว่าง sweep นี้อย่างน้อย 1 ครั้ง) →
+     *   ลอง sweep ใหม่อีกรอบกับ target เดิม (อาจมีอีกหลาย point ที่ควรย้ายเข้า target นี้)
+     * - ถ้าไม่เจอเลยทั้ง sweep → เลื่อนไปปั๊ม target ตัวถัดไป
+     *
+     * ทุกครั้งที่ "เริ่ม sweep ใหม่" (ทั้งขึ้น target ใหม่ และ retry target เดิม) reset `substats` กลับเป็น
+     * สำเนาของ `bestSubstats` ก่อนเสมอ — กัน sweep ก่อนหน้าที่ลองแล้วไม่ดีขึ้นทิ้งร่องรอยค้างไว้
+     *
+     * เลื่อนจนเกิน substats ทั้งหมด → จบการค้นหา, คืน `substats` กลับเป็นเวอร์ชันดีที่สุด (`bestSubstats`)
+     * เผื่อ sweep สุดท้ายเดินเลย best ไปแล้วโดยไม่เจอของที่ดีกว่า, คืน `false`
      */
     public rerollSubstats(): boolean {
         if (!this.substats) return false;
 
         while (true) {
             if (this.rerollSubstatIndex > this.substats.length - 1) {
+                this.restoreBest();
                 return false;
             }
 
-            if (this.rerollSourceIndex < 0) {
+            if (this.rerollSourceIndex === -1) {
+                this.restoreBest();
+
+                // sweep เริ่มที่ substats[0] เสมอ แล้วไล่ขึ้นเข้าหา target
+                if (this.trySwapSubstat(0)) {
+                    this.rerollSourceIndex = 0;
+                    return true;
+                }
+
+                this.rerollSourceIndex = 0;
+                continue;
+            }
+
+            // ตัวถัดไปจะชน target แล้ว (แลกกับตัวเองไม่ได้) = สไลด์ครบทุก source แล้ว
+            if (this.rerollSourceIndex + 1 >= this.rerollSubstatIndex) {
+                if (this.rerollImproved) {
+                    this.rerollImproved = false;
+                    this.rerollSourceIndex = -1;
+                    continue;
+                }
+
                 this.rerollSubstatIndex++;
-                this.rerollSourceIndex = this.rerollSubstatIndex - 1;
+                this.rerollSourceIndex = -1;
                 continue;
             }
 
-            const target = this.substats[this.rerollSubstatIndex];
-            const source = this.substats[this.rerollSourceIndex];
-
-            const sourceTableKey = getTableKeyForStat(source.type);
-            const { index: n, chance: threshold } = pickBestTuneUpSlot(getTableKeyForStat(target.type), target.level);
-            const m = pickBestDecreaseSlot(sourceTableKey, source.level, threshold);
-
-            if (m === null) {
-                this.rerollSourceIndex--;
-                continue;
+            const nextSource = this.rerollSourceIndex + 1;
+            if (this.trySwapSubstat(nextSource)) {
+                this.rerollSourceIndex = nextSource;
+                return true;
             }
-
-            target.level[n] += 1;
-            source.level[m] -= 1;
-
-            const ifDamageMoreThan = 1;
-            if (!ifDamageMoreThan) {
-                target.level[n] -= 1;
-                source.level[m] += 1;
-                this.rerollSourceIndex--;
-                continue;
-            }
-
-            // ซื้อ (target ได้ point เพิ่ม) = หาร luckBudget ด้วย chance ที่ใช้ซื้อ (threshold เดิม ก่อนบวก)
-            // ขาย (source เสีย point) = คูณ luckBudget กลับด้วย chance ของ tier ที่เหลือ (คืน budget ที่เคยเสียไปตอนได้ tier นั้นมา)
-            this.luckBudget = this.luckBudget / threshold;
-            const sellChance = getTuneUpChance(sourceTableKey, source.level[m]) / 100;
-            this.luckBudget = this.luckBudget * sellChance;
-
-            return true;
+            this.rerollSourceIndex = nextSource;
         }
+    }
+
+    /**
+     * ลองย้าย 1 tier จาก substats[sourceIndex] ไปยัง substats[rerollSubstatIndex] จริง (ไม่ revert เอง)
+     * คืน false เฉยๆ ถ้า source ตัวนี้ไม่มีช่องให้ลด (pickBestDecreaseSlot คืน null) — ไม่แตะ state อะไรเลย
+     */
+    private trySwapSubstat(sourceIndex: number): boolean {
+        const target = this.substats![this.rerollSubstatIndex];
+        const targetTableKey = getTableKeyForStat(target.type);
+        const { index: n, chance: threshold } = pickBestTuneUpSlot(targetTableKey, target.level);
+
+        const source = this.substats![sourceIndex];
+        const sourceTableKey = getTableKeyForStat(source.type);
+        const m = pickBestDecreaseSlot(sourceTableKey, source.level, threshold);
+
+        if (m === null) return false;
+
+        target.level[n] += 1;
+        source.level[m] -= 1;
+
+        // ซื้อ (target ได้ point เพิ่ม) = หาร luckBudget ด้วย chance ที่ใช้ซื้อ (threshold ก่อนบวก)
+        // ขาย (source เสีย point) = คูณ luckBudget กลับด้วย chance ของ tier ที่เหลือหลังลด
+        const sellChance = getTuneUpChance(sourceTableKey, source.level[m]) / 100;
+        this.luckBudget = (this.luckBudget / threshold) * sellChance;
+
+        return true;
     }
 
 }

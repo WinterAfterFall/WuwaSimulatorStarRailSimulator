@@ -89,7 +89,13 @@ export class BattleField {
     /**
      * เรียกก่อนเริ่ม simulate รอบใหม่ — reset stats ของทุก unit กลับค่า default
      * แล้วล้างสถานะรันไทม์ทั้งหมดที่ combat จริง mutate ระหว่างสู้ ไม่ให้ค้างข้ามรอบ
-     * (ไม่รวม dmgRecord/maxDmgRecord — ตั้งใจเก็บไว้ให้ดูผลสรุปย้อนหลังได้หลังจบรอบ)
+     *
+     * **ล้าง `dmgRecord`/`totalDamageRecord` ด้วย** เพราะสองตัวนี้แทน "ผลของรอบนี้รอบเดียว" —
+     * ถ้าปล่อยให้สะสมข้ามรอบ การเทียบ `totalDamageRecord > maxTotalDamageRecord` ใน
+     * `AllyUnit.updateMaxRecords()` จะเป็นจริงตลอดไปแบบไร้ความหมาย แล้ว substat reroll จะพัง
+     *
+     * **ไม่ล้าง `maxDmgRecord`/`maxTotalDamageRecord`** — สองตัวนั้นคือผลสรุปข้ามรอบ (record ตลอดกาล)
+     * เป็นที่เก็บ "รอบที่ดีที่สุด" ให้ดูย้อนหลังได้หลังจบ optimize ทั้งหมด
      */
     public resetAllUnits(): void {
         for (const unit of [...this.allies, ...this.enemies]) {
@@ -113,12 +119,18 @@ export class BattleField {
             ally.buffNote.clear();
             ally.gauges.clear();
             ally.buffCheck.clear();
+
+            ally.dmgRecord.clear();
+            ally.totalDamageRecord = 0;
         }
 
         for (const enemy of this.enemies) {
             enemy.debuffStacks.clear();
             enemy.debuffNote.clear();
             enemy.debuffCheck.clear();
+
+            enemy.dmgRecord.clear();
+            enemy.totalDamageRecord.length = 0;
         }
 
         this.rotationCount = 0;

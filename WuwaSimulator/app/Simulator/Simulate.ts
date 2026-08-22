@@ -76,4 +76,43 @@ export class Simulate {
 
         return director.currentLoopCount;
     }
+
+    /**
+     * วนหา substat allocation ที่ให้ดาเมจสูงสุดให้ `unit` — ตัวประกอบวงจร sim ↔ reroll
+     *
+     * แต่ละรอบทำ 3 จังหวะตามลำดับนี้เท่านั้น สลับไม่ได้:
+     * 1. `run()` — รันจริง (ข้างในเรียก `resetAllUnits()` ซึ่ง `applySubstats()` ให้เอง
+     *    ดังนั้น substat ที่ `rerollSubstats()` เพิ่งเปลี่ยนจะถูกโหลดเข้า stats ให้อัตโนมัติ ไม่ต้องเรียกเอง)
+     * 2. `updateMaxRecords()` — วัดผลรอบนี้ ถ้าชนะ record เดิมจะเซฟ `bestSubstats`/`bestLuckBudget` + ชูธง `rerollImproved`
+     * 3. `rerollSubstats()` — เสนอก้าวถัดไป คืน `false` เมื่อค้นหาจบ
+     *
+     * ปิดท้ายด้วย `run()` อีกหนึ่งรอบเสมอ เพราะตอน `rerollSubstats()` คืน `false` มันคืนแค่
+     * `substats` กลับเป็น `bestSubstats` — แต่ `stats`/`dmgRecord` ของ unit ยังค้างผลของ candidate
+     * ตัวสุดท้ายที่แพ้อยู่ รันปิดท้ายเพื่อให้ทุกอย่างตรงกับ config ที่ชนะจริง
+     *
+     * `maxIterations` เป็นเบรกมือกันวนไม่รู้จบ (ปกติ `rerollSubstats()` จบเองเพราะ tier มีขอบบน/ล่าง)
+     * คืนจำนวนรอบ simulate ที่ทำจริงในลูปหลัก (ไม่นับรอบปิดท้าย)
+     */
+    public optimizeSubstats(
+        unit      : AllyUnit,
+        setupQueue: Queue<RotationAction>,
+        loopQueue : Queue<RotationAction>,
+        maxLoops  : number,
+        maxIterations: number = 1000,
+    ): number {
+        let iterations = 0;
+
+        while (iterations < maxIterations) {
+            this.run(setupQueue, loopQueue, maxLoops);
+            iterations++;
+
+            unit.updateMaxRecords(this.battleField.enemies);
+
+            if (!unit.rerollSubstats()) break;
+        }
+
+        this.run(setupQueue, loopQueue, maxLoops);
+
+        return iterations;
+    }
 }

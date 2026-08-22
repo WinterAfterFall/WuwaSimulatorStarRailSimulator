@@ -179,8 +179,15 @@ getStats(Dmg, Glacio, BA)         → key: "Dmg Bonus-Glacio-BA"
 - **hp / shield**: `currentHP`, `currentShield`
 - **tracking**: `stacks`, `buffNote`, `buffCheck` (ทั้งหมด `Map`) + `dmgRecord`/`maxDmgRecord` (`Map`, มาจาก `Unit`)
 - **roster position**: `allyNum` (`number`, default `0`) — ลำดับตัวเองในทีม ตั้งให้ตอน `Simulate.addAlly()` (index ก่อน push)
-- **damage record (รวมทุกท่า)**: `totalDamageRecord`/`maxTotalDamageRecord` (ทั้งคู่ `number`) — `totalDamageRecord` คือผลรวมดาเมจที่ตีได้ในรอบปัจจุบัน (อัพเดตทุกครั้งใน `calculateDamage()`), `maxTotalDamageRecord` คือ record ของรอบที่ดีที่สุดเท่าที่เคยมี **ไม่ได้อัพเดตแบบ real-time** — อัพเดตทีเดียวท้ายรอบผ่าน `updateMaxRecords(enemies)` เท่านั้น (เมธอดนี้เช็ค `totalDamageRecord > maxTotalDamageRecord`, ถ้าใช่ snapshot `dmgRecord` ทับ `maxDmgRecord`, ตั้ง `maxTotalDamageRecord = totalDamageRecord`, แล้วอัพเดต `enemy.maxTotalDamageRecord[allyNum]` ของทุก enemy ที่ส่งเข้ามาด้วย — เรียก **ก่อน** `rerollSubstats()` เสมอ ผลลัพธ์ boolean ใช้เป็น `ifDamageMoreThan` ที่ตอนนี้ยัง hardcode `true` อยู่ในนั้น)
-- **echo substats**: `substats?`/`bestSubstats?` (ทั้งคู่ `EchoSubstats[]`, optional — ดู `extra/substats/EchoSubstats.ts`) — `substats` = ที่ปั้มติดตัวจริงตอนนี้, `bestSubstats` = เป้าหมายที่ต้องการ — คู่กับ `luckBudget` (`number`, default `0`) = ค่า prob ขั้นต่ำที่ยอมรับได้ ("ระดับดวง") ใช้เป็นงบเริ่มต้นของ algorithm เช็คว่ารับ substat level ไหนเพิ่มได้ไหม (เช็ค `budget / p < 1` แล้วหารทับ `budget` ทุกครั้งที่รับเพิ่ม — ยังไม่มี logic จริง แค่ประกาศ field ไว้ก่อน)
+- **damage record (รวมทุกท่า)**: `totalDamageRecord`/`maxTotalDamageRecord` (ทั้งคู่ `number`) — `totalDamageRecord` คือผลรวมดาเมจที่ตีได้ในรอบปัจจุบัน (อัพเดตทุกครั้งใน `calculateDamage()`), `maxTotalDamageRecord` คือ record ของรอบที่ดีที่สุดเท่าที่เคยมี **ไม่ได้อัพเดตแบบ real-time** — อัพเดตทีเดียวท้ายรอบผ่าน `updateMaxRecords(enemies)` เท่านั้น (เมธอดนี้เช็ค `totalDamageRecord > maxTotalDamageRecord`, ถ้าใช่ snapshot `dmgRecord`→`maxDmgRecord`, `substats`→`bestSubstats`, ตั้ง `maxTotalDamageRecord = totalDamageRecord`, `rerollImproved = true`, แล้วอัพเดต `enemy.maxTotalDamageRecord[allyNum]` ของทุก enemy ที่ส่งเข้ามาด้วย — เรียก **ก่อน** `rerollSubstats()` เสมอ เทียบเท่า StarRailSimulator's `changeMaxDamage()`)
+- **echo substats**: `substats?`/`bestSubstats?` (ทั้งคู่ `EchoSubstats[]`, optional — ดู `extra/substats/EchoSubstats.ts`) — `substats` = ที่ปั้มติดตัวจริงตอนนี้ (ที่ `rerollSubstats()` แก้ไปเรื่อยๆ ระหว่างค้นหา), `bestSubstats` = snapshot ของ config ที่ดาเมจสูงสุดเท่าที่เคยเจอ (`setSubstats()` sync ให้ตรงกับ `substats` ทันทีหลัง tune เสร็จ, แล้ว `updateMaxRecords()` อัพเดตต่อทุกครั้งที่เจอ record ใหม่) — คู่กับ `luckBudget` (`number`, default `0`) = ค่า prob ขั้นต่ำที่ยอมรับได้ ("ระดับดวง") ใช้เป็นงบเริ่มต้นของ algorithm เช็คว่ารับ substat level ไหนเพิ่มได้ไหม
+- **`saveBest()`/`restoreBest()`** (private): เซฟ/คืน `substats` **คู่กับ** `luckBudget` เสมอ (`bestSubstats` + `bestLuckBudget`) — `trySwapSubstat()` แก้ทั้งสองอย่างพร้อมกัน ถ้าเซฟ/คืนแค่ substats งบจะเพี้ยนสะสมทุก sweep ที่ล้มเหลว **ห้ามแยกสองบรรทัดนี้ออกจากกัน**
+- **substat reroll** (`rerollSubstatIndex`/`rerollSourceIndex`/`rerollImproved`): `rerollSubstats()` พอร์ตมาจาก StarRailSimulator's `StandardReroll()` (`RelicAdjust.h`) — แปลงจากโมเดล "แต้ม quota รวม" ของ StarRail เป็นโมเดล "tier ต่อช่อง" ของ WuWa (เลือกช่องด้วย `pickBestTuneUpSlot`/`pickBestDecreaseSlot` แทนการบวก/ลบเลขตรงๆ) เรียกท้ายรอบ sim **หลัง** `updateMaxRecords()` เสมอ ทำงานเป็น step เดียวต่อ 1 คอล (คืน `true` = มี trade จริงเกิดขึ้น รอ caller รัน sim จริงรอบใหม่แล้วเรียก `updateMaxRecords()` ก่อนเรียกซ้ำ, `false` = ค้นหาจบแล้ว):
+  - สำหรับ target = `substats[rerollSubstatIndex]` สไลด์หา source ทีละตัว **จาก `substats[0]` ไล่ขึ้นเข้าหา target**: `substats[0]` → `substats[1]` → … → `substats[rerollSubstatIndex-1]` (`rerollSourceIndex` = ตำแหน่งสไลด์ปัจจุบัน, `-1` = ยังไม่เริ่ม sweep) ลองย้าย 1 tier จริง (ไม่ revert เอง) — source ที่แลกไม่ได้ (`pickBestDecreaseSlot` คืน `null`) ข้ามทันทีในลูปเดียวกัน ไม่เสีย sim รอบไปเปล่าๆ
+  - ⚠️ **ทิศทาง sweep เป็นตัวเลือกที่ตั้งใจ (เลือกไล่ขึ้นเพราะอ่านง่ายกว่า) ไม่ใช่รายละเอียดที่สลับได้ตามใจ** — ลำดับมีผลต่อผลลัพธ์จริง เพราะแต่ละคอลจบทันทีที่แลกสำเร็จตัวแรก, trade สะสมกันภายใน sweep เดียว (ไม่ revert ระหว่างทาง) และ `bestSubstats` ขยับตามไปด้วย — จะเปลี่ยนทิศต้องแก้ test `sweeps sources from substats[0] upward toward the target` คู่กัน
+  - จบ sweep (สไลด์ครบทุก source) แล้ว: ถ้า `rerollImproved` (เจอ record ใหม่ระหว่าง sweep นี้) → retry sweep เดิมซ้ำกับ target เดิม, ถ้าไม่เจอเลย → เลื่อนไป target ถัดไป
+  - ทุกครั้งที่ "เริ่ม sweep ใหม่" (ทั้งขึ้น target ใหม่และ retry เดิม) reset `substats` กลับเป็นสำเนาของ `bestSubstats` ก่อนเสมอ — กัน sweep ที่ลองแล้วไม่ดีขึ้นทิ้งร่องรอยค้าง
+  - เลื่อนจนเกิน `substats` ทั้งหมด → จบการค้นหา คืน `substats` กลับเป็น `bestSubstats`, คืน `false`
 - **ไม่มี `TimelineRef`/`allies`/`enemies` บน unit แล้ว** — rotation ที่ต้องอ่าน roster ให้ `import { battleField } from "../../Simulator/BattleField"` แล้วอ่าน `battleField.allies`/`battleField.enemies` ตรงๆ แทน
 
 ### EnemyUnit (extends Unit)
@@ -350,8 +357,11 @@ BattleField.triggerBus : TriggerBus                        ← instance เด�
 - `resetAllUnits()` เรียกก่อนเริ่ม simulate รอบใหม่เสมอ — วน unit ทุกตัวเรียก `initDefaultStats()` (**ตัวละครที่ `setStat()`
   ต้อง `setDefaultStat()` คู่กันเสมอ** ไม่งั้นค่าจะกลายเป็น 0 ตั้งแต่รอบแรก) แล้วล้างสถานะรันไทม์ทั้งหมดที่ combat จริง mutate
   ระหว่างสู้ไม่ให้ค้างข้ามรอบ: ฝั่ง ally — `rotationCount`, `energy`, `concentoEnergy`, `currentHP`, `currentShield`,
-  `stacks`/`buffNote`/`gauges`/`buffCheck` (clear ทั้งหมด); ฝั่ง enemy — `debuffStacks`/`debuffNote`/`debuffCheck` (clear) —
-  **ไม่รวม `dmgRecord`/`maxDmgRecord`** ตั้งใจเก็บไว้ให้ดูผลสรุปย้อนหลังได้หลังจบรอบ — ปิดท้ายด้วยตั้ง `onFieldChar = allies[0]`
+  `stacks`/`buffNote`/`gauges`/`buffCheck` (clear ทั้งหมด) + `dmgRecord` (clear) / `totalDamageRecord` (= 0);
+  ฝั่ง enemy — `debuffStacks`/`debuffNote`/`debuffCheck` (clear) + `dmgRecord` (clear) / `totalDamageRecord` (`length = 0`) —
+  **ไม่รวม `maxDmgRecord`/`maxTotalDamageRecord`** สองตัวนั้นคือ record ข้ามรอบ (ผลของ "รอบที่ดีที่สุด") เก็บไว้ดูย้อนหลังหลังจบ optimize —
+  ส่วน `dmgRecord`/`totalDamageRecord` **ต้องล้างทุกรอบ** เพราะแทน "ผลของรอบนี้รอบเดียว" ถ้าสะสมข้ามรอบ การเทียบใน
+  `AllyUnit.updateMaxRecords()` จะเป็นจริงตลอดไปแบบไร้ความหมาย แล้ว substat reroll จะพัง — ปิดท้ายด้วยตั้ง `onFieldChar = allies[0]`
   เสมอ (รอบก่อนหน้าอาจทิ้งไว้ที่ตัวไหนก็ได้)
 - `applyResourceGain(damage)` จ่าย energy/concento/gauge ให้ผู้ตี — แยกออกมาจาก `calculateDamage` เพราะเป็นคนละเรื่องกับสูตรดาเมจ
 - **ไม่มี `TimelineRef` แล้ว** — `AllyUnit.rotations` รับ `BattleField` ตรงๆ (`import type` เลี่ยง circular import)
@@ -367,6 +377,15 @@ const unit  = sim.addAlly(new AllyUnit("Mornye"));   // ตัวแรกกล
 const enemy = sim.spawnEnemy("Dummy");
 const loops = sim.run(setupQueue, loopQueue, maxLoops);   // resetAllUnits ก่อนเสมอ
 ```
+
+### `optimizeSubstats(unit, setupQueue, loopQueue, maxLoops, maxIterations = 1000)`
+วงจร sim ↔ reroll — ตัวประกอบ `run()` / `AllyUnit.updateMaxRecords()` / `AllyUnit.rerollSubstats()` เข้าด้วยกัน วนหา substat allocation ที่ดาเมจสูงสุด
+
+แต่ละรอบทำ 3 จังหวะ **เรียงลำดับนี้เท่านั้น**: `run()` → `updateMaxRecords(enemies)` → `rerollSubstats()` (คืน `false` = ค้นหาจบ, break)
+
+- **ไม่ต้องเรียก `applySubstats()` เอง** — `run()` เรียก `resetAllUnits()` ซึ่ง `applySubstats()` ให้อยู่แล้ว substat ที่ `rerollSubstats()` เพิ่งเปลี่ยนจึงถูกโหลดเข้า `stats` อัตโนมัติในรอบถัดไป
+- **มี `run()` ปิดท้ายอีก 1 รอบเสมอ** หลังออกจากลูป เพราะตอน `rerollSubstats()` คืน `false` มันคืนแค่ `substats` กลับเป็น `bestSubstats` แต่ `stats`/`dmgRecord` ยังค้างผลของ candidate ตัวสุดท้ายที่แพ้อยู่
+- คืนจำนวนรอบ simulate ในลูปหลัก (ไม่นับรอบปิดท้าย) — `maxIterations` เป็นเบรกมือกันวนไม่รู้จบ
 
 `sim.triggerBus` เป็น getter ที่ชี้ไปที่ `battleField.triggerBus` ตัวเดียวกัน ไม่ใช่ instance ที่สอง
 

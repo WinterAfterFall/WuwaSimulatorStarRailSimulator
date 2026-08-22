@@ -4,6 +4,7 @@ import { TriggerBus } from '../../../Simulator/TriggerBus';
 import { AllyUnit } from '../../../Models/AllyUnit';
 import { EnemyUnit } from '../../../Models/EnemyUnit';
 import { RotationBuilder } from '../../../Simulator/RotationBuilder';
+import { EchoSubstats } from '../../../extra/substats/EchoSubstats';
 import { TriggerEvent, ActionType, StatsType } from '../../../Constants/Enum';
 
 describe('Simulate — ownership & wiring', () => {
@@ -251,5 +252,81 @@ describe('Simulate — run', () => {
 
             expect(sim.battleField.rotationCount).toBe(0);
         });
+    });
+});
+
+// วงจร sim ↔ reroll — ตัวที่ประกอบ run()/updateMaxRecords()/rerollSubstats() เข้าด้วยกัน
+describe('Simulate — optimizeSubstats', () => {
+    const emptyQueue = () => new RotationBuilder().build();
+
+    const newSim = () => {
+        const sim  = new Simulate();
+        const unit = sim.addAlly(new AllyUnit('Mornye'));
+        unit.setSubstats(0, [{ type: StatsType.CR }, { type: StatsType.CD }]);
+        return { sim, unit };
+    };
+
+    it('should run at least one simulation round even when there is nothing left to reroll', () => {
+        const sim  = new Simulate();
+        const unit = sim.addAlly(new AllyUnit('Mornye'));
+        // ไม่มี substats เลย -> rerollSubstats() คืน false ทันทีตั้งแต่คอลแรก
+        let runs = 0;
+
+        sim.optimizeSubstats(
+            unit,
+            emptyQueue(),
+            // เติม concento ให้เต็มทุก action — swap ปิดรอบที่ endRotation() สั่งต้องการ concento เต็มเสมอ
+            new RotationBuilder().add('loop', () => {
+                runs++;
+                unit.concentoEnergy = unit.maxConcentoEnergy;
+            }).build(),
+            1,
+        );
+
+        expect(runs).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should keep looping until rerollSubstats() is exhausted', () => {
+        const { sim, unit } = newSim();
+
+        const iterations = sim.optimizeSubstats(unit, emptyQueue(), emptyQueue(), 0);
+
+        expect(iterations).toBeGreaterThan(1);
+        expect(unit.rerollSubstats()).toBe(false); // ยืนยันว่าหยุดเพราะค้นหาจบจริง
+    });
+
+    it('should leave substats identical to bestSubstats when it finishes', () => {
+        const { sim, unit } = newSim();
+
+        sim.optimizeSubstats(unit, emptyQueue(), emptyQueue(), 0);
+
+        expect(unit.substats!.map(s => s.level)).toEqual(unit.bestSubstats!.map(s => s.level));
+    });
+
+    it('should stop at maxIterations even if the search has not finished', () => {
+        const { sim, unit } = newSim();
+
+        const iterations = sim.optimizeSubstats(unit, emptyQueue(), emptyQueue(), 0, 2);
+
+        expect(iterations).toBe(2);
+    });
+
+    it('should apply the winning substats to the unit stats before returning', () => {
+        const { sim, unit } = newSim();
+
+        sim.optimizeSubstats(unit, emptyQueue(), emptyQueue(), 0);
+
+        // รอบสุดท้ายต้องรันด้วย bestSubstats — stats จึงต้องตรงกับที่ applySubstats() ของ config นั้นให้
+        const expected = new AllyUnit('Probe');
+        expected.substats = unit.bestSubstats!.map(s => {
+            const copy = new EchoSubstats(s.type, s.actionType);
+            copy.level = [...s.level];
+            return copy;
+        });
+        expected.initDefaultStats();
+        expected.applySubstats();
+
+        expect(unit.getStats(StatsType.CR)).toBeCloseTo(expected.getStats(StatsType.CR));
+        expect(unit.getStats(StatsType.CD)).toBeCloseTo(expected.getStats(StatsType.CD));
     });
 });

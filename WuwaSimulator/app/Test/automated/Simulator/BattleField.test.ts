@@ -167,6 +167,50 @@ describe('BattleField', () => {
             const values = SUBSTAT_VALUES[StatsType.AtkP]!;
             expect(ally.getStats(StatsType.AtkP)).toBeCloseTo(10 + values[0] * 5);
         });
+
+        // dmgRecord/totalDamageRecord แทน "ผลของรอบนี้รอบเดียว" — ถ้าค้างข้ามรอบ การเทียบ
+        // totalDamageRecord > maxTotalDamageRecord ใน updateMaxRecords() จะเป็นจริงตลอดไปแบบไร้ความหมาย
+        it('should clear the per-round damage records on the ally', () => {
+            const ally = new AllyUnit('Ally');
+            ally.dmgRecord.set('BA', 500);
+            ally.totalDamageRecord = 500;
+            field.allies.push(ally);
+
+            field.resetAllUnits();
+
+            expect(ally.dmgRecord.size).toBe(0);
+            expect(ally.totalDamageRecord).toBe(0);
+        });
+
+        it('should clear the per-round damage records on the enemy', () => {
+            const enemy = field.createEnemy('Boss');
+            enemy.dmgRecord.set('BA', 500);
+            enemy.totalDamageRecord[0] = 500;
+
+            field.resetAllUnits();
+
+            expect(enemy.dmgRecord.size).toBe(0);
+            expect(enemy.totalDamageRecord).toEqual([]);
+        });
+
+        // ตรงข้ามกับ per-round record — max* คือผลสรุปข้ามรอบ ต้องรอดจาก reset เสมอ
+        it('should keep the all-time max records on both sides', () => {
+            const ally = new AllyUnit('Ally');
+            ally.maxDmgRecord.set('BA', 900);
+            ally.maxTotalDamageRecord = 900;
+            field.allies.push(ally);
+
+            const enemy = field.createEnemy('Boss');
+            enemy.maxDmgRecord.set('BA', 900);
+            enemy.maxTotalDamageRecord[0] = 900;
+
+            field.resetAllUnits();
+
+            expect(ally.maxDmgRecord.get('BA')).toBe(900);
+            expect(ally.maxTotalDamageRecord).toBe(900);
+            expect(enemy.maxDmgRecord.get('BA')).toBe(900);
+            expect(enemy.maxTotalDamageRecord[0]).toBe(900);
+        });
     });
 
     // ─────────────────────────────────────────────
